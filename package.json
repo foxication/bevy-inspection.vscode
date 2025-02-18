@@ -1,7 +1,7 @@
 {
-	"name": "bevy-inspector",
-	"displayName": "bevy-inspector",
-	"description": "Bevy Inspector on BRP",
+	"name": "bevy-inspection",
+	"displayName": "bevy-inspection",
+	"description": "Bevy Inspection",
 	"version": "0.1.0",
 	"repository": {
 		"url": "https://github.com/foxication/bevy-inspector"
@@ -23,14 +23,14 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "bevy-inspector",
-					"title": "Bevy Inspector",
+					"id": "bevy-inspection",
+					"title": "Bevy Inspection",
 					"icon": "assets/bevy.svg"
 				}
 			]
 		},
 		"views": {
-			"bevy-inspector": [
+			"bevy-inspection": [
 				{
 					"id": "hierarchyView",
 					"name": "Hierarchy"
