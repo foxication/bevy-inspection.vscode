@@ -63,10 +63,6 @@
 		},
 		"commands": [
 			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
-			},
-			{
 				"command": "extension.bevyList",
 				"title": "Bevy Call List"
 			}
