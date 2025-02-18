@@ -1,19 +1,66 @@
 {
-	"name": "helloworld-sample",
-	"displayName": "helloworld-sample",
-	"description": "HelloWorld example for VS Code",
-	"version": "0.0.1",
-	"publisher": "vscode-samples",
-	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-sample",
+	"name": "bevy-inspector",
+	"displayName": "bevy-inspector",
+	"description": "Bevy Inspector on BRP",
+	"version": "0.1.0",
+	"repository": {
+		"url": "https://github.com/foxication/bevy-inspector"
+	},
 	"engines": {
 		"vscode": "^1.74.0"
 	},
+	"extensionKind": [
+		"ui",
+		"workspace"
+	],
 	"categories": [
+		"Debuggers",
 		"Other"
 	],
 	"activationEvents": [],
 	"main": "./out/extension.js",
 	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "bevy-inspector",
+					"title": "Bevy Inspector",
+					"icon": "assets/bevy.svg"
+				}
+			]
+		},
+		"views": {
+			"bevy-inspector": [
+				{
+					"id": "hierarchyView",
+					"name": "Hierarchy"
+				},
+				{
+					"id": "inspectorView",
+					"name": "Inspector"
+				},
+				{
+					"id": "resourcesView",
+					"name": "Resources",
+					"visibility": "collapsed"
+				},
+				{
+					"id": "eventsView",
+					"name": "Events",
+					"visibility": "collapsed"
+				},
+				{
+					"id": "diagnosticsView",
+					"name": "Diagnostics",
+					"visibility": "collapsed"
+				},
+				{
+					"id": "schemaView",
+					"name": "Schema",
+					"visibility": "collapsed"
+				}
+			]
+		},
 		"commands": [
 			{
 				"command": "extension.helloWorld",
