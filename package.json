@@ -4,7 +4,7 @@
 	"description": "Bevy Inspection",
 	"version": "0.1.0",
 	"repository": {
-		"url": "https://github.com/foxication/bevy-inspector"
+		"url": "https://github.com/foxication/bevy-inspection.vcscode"
 	},
 	"engines": {
 		"vscode": "^1.74.0"
