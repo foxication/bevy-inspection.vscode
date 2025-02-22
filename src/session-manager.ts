@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as assert from 'assert';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
-import { EntityNode, HierarchyProvider } from './hierachy';
-import { ComponentsProvider, InspectionElement } from './inspection';
+import { EntityNode, HierarchyProvider } from './entitiesProvider';
+import { ComponentsProvider, InspectionElement } from './componentsProvider';
 import { InspectionSession } from './session';
 
 export class SessionManager {
@@ -59,10 +59,6 @@ export class SessionManager {
         }
         vscode.window.showErrorMessage(reason.message);
       });
-  }
-
-  public getCurrentSession(): InspectionSession {
-    return this.lastSession;
   }
 
   private initializeViewsOnce() {

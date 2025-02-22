@@ -1,6 +1,6 @@
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from "bevy-remote-protocol";
-import { EntityNode } from "./hierachy";
-import { Component, NamedValue, ComponentValue } from "./inspection";
+import { EntityNode } from "./entitiesProvider";
+import { Component, NamedValue, ComponentValue } from "./componentsProvider";
 
 export class InspectionSession {
   async getComponentsTree(entity: EntityId): Promise<Component[]> {
