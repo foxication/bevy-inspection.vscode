@@ -9,10 +9,13 @@ use std::f32::consts::PI;
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
 use bevy::{
-    color::palettes::basic::SILVER, prelude::*, remote::{http::RemoteHttpPlugin, RemotePlugin}, render::{
+    color::palettes::basic::SILVER,
+    prelude::*,
+    remote::{RemotePlugin, http::RemoteHttpPlugin},
+    render::{
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
-    }
+    },
 };
 
 fn main() {
@@ -50,67 +53,80 @@ fn setup(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let debug_material = materials.add(StandardMaterial {
-        base_color_texture: Some(images.add(uv_debug_texture())),
-        ..default()
-    });
+    // ground plane
+    commands
+        .spawn((
+            Name::from("Plane"),
+            Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(10))),
+            MeshMaterial3d(materials.add(Color::from(SILVER))),
+        ))
+        .with_children(|parent| {
+            let debug_material = materials.add(StandardMaterial {
+                base_color_texture: Some(images.add(uv_debug_texture())),
+                ..default()
+            });
 
-    let shapes = [
-        meshes.add(Cuboid::default()),
-        meshes.add(Tetrahedron::default()),
-        meshes.add(Capsule3d::default()),
-        meshes.add(Torus::default()),
-        meshes.add(Cylinder::default()),
-        meshes.add(Cone::default()),
-        meshes.add(ConicalFrustum::default()),
-        meshes.add(Sphere::default().mesh().ico(5).unwrap()),
-        meshes.add(Sphere::default().mesh().uv(32, 18)),
-    ];
+            let shapes = [
+                meshes.add(Cuboid::default()),
+                meshes.add(Tetrahedron::default()),
+                meshes.add(Capsule3d::default()),
+                meshes.add(Torus::default()),
+                meshes.add(Cylinder::default()),
+                meshes.add(Cone::default()),
+                meshes.add(ConicalFrustum::default()),
+                meshes.add(Sphere::default().mesh().ico(5).unwrap()),
+                meshes.add(Sphere::default().mesh().uv(32, 18)),
+            ];
 
-    let extrusions = [
-        meshes.add(Extrusion::new(Rectangle::default(), 1.)),
-        meshes.add(Extrusion::new(Capsule2d::default(), 1.)),
-        meshes.add(Extrusion::new(Annulus::default(), 1.)),
-        meshes.add(Extrusion::new(Circle::default(), 1.)),
-        meshes.add(Extrusion::new(Ellipse::default(), 1.)),
-        meshes.add(Extrusion::new(RegularPolygon::default(), 1.)),
-        meshes.add(Extrusion::new(Triangle2d::default(), 1.)),
-    ];
+            let extrusions = [
+                meshes.add(Extrusion::new(Rectangle::default(), 1.)),
+                meshes.add(Extrusion::new(Capsule2d::default(), 1.)),
+                meshes.add(Extrusion::new(Annulus::default(), 1.)),
+                meshes.add(Extrusion::new(Circle::default(), 1.)),
+                meshes.add(Extrusion::new(Ellipse::default(), 1.)),
+                meshes.add(Extrusion::new(RegularPolygon::default(), 1.)),
+                meshes.add(Extrusion::new(Triangle2d::default(), 1.)),
+            ];
+            
+            let num_shapes = shapes.len();
 
-    let num_shapes = shapes.len();
+            for (i, shape) in shapes.into_iter().enumerate() {
+                parent.spawn((
+                    Name::from("Shape"),
+                    Mesh3d(shape),
+                    MeshMaterial3d(debug_material.clone()),
+                    Transform::from_xyz(
+                        -SHAPES_X_EXTENT / 2.
+                            + i as f32 / (num_shapes - 1) as f32 * SHAPES_X_EXTENT,
+                        2.0,
+                        Z_EXTENT / 2.,
+                    )
+                    .with_rotation(Quat::from_rotation_x(-PI / 4.)),
+                    Shape,
+                ));
+            }
 
-    for (i, shape) in shapes.into_iter().enumerate() {
-        commands.spawn((
-            Mesh3d(shape),
-            MeshMaterial3d(debug_material.clone()),
-            Transform::from_xyz(
-                -SHAPES_X_EXTENT / 2. + i as f32 / (num_shapes - 1) as f32 * SHAPES_X_EXTENT,
-                2.0,
-                Z_EXTENT / 2.,
-            )
-            .with_rotation(Quat::from_rotation_x(-PI / 4.)),
-            Shape,
-        ));
-    }
+            let num_extrusions = extrusions.len();
 
-    let num_extrusions = extrusions.len();
-
-    for (i, shape) in extrusions.into_iter().enumerate() {
-        commands.spawn((
-            Mesh3d(shape),
-            MeshMaterial3d(debug_material.clone()),
-            Transform::from_xyz(
-                -EXTRUSION_X_EXTENT / 2.
-                    + i as f32 / (num_extrusions - 1) as f32 * EXTRUSION_X_EXTENT,
-                2.0,
-                -Z_EXTENT / 2.,
-            )
-            .with_rotation(Quat::from_rotation_x(-PI / 4.)),
-            Shape,
-        ));
-    }
+            for (i, shape) in extrusions.into_iter().enumerate() {
+                parent.spawn((
+                    Name::from("Extrusion"),
+                    Mesh3d(shape),
+                    MeshMaterial3d(debug_material.clone()),
+                    Transform::from_xyz(
+                        -EXTRUSION_X_EXTENT / 2.
+                            + i as f32 / (num_extrusions - 1) as f32 * EXTRUSION_X_EXTENT,
+                        2.0,
+                        -Z_EXTENT / 2.,
+                    )
+                    .with_rotation(Quat::from_rotation_x(-PI / 4.)),
+                    Shape,
+                ));
+            }
+        });
 
     commands.spawn((
+        Name::from("Light Source"),
         PointLight {
             shadows_enabled: true,
             intensity: 10_000_000.,
@@ -121,19 +137,15 @@ fn setup(
         Transform::from_xyz(8.0, 16.0, 8.0),
     ));
 
-    // ground plane
     commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(10))),
-        MeshMaterial3d(materials.add(Color::from(SILVER))),
-    ));
-
-    commands.spawn((
+        Name::from("Camera"),
         Camera3d::default(),
         Transform::from_xyz(0.0, 7., 14.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
     ));
 
     #[cfg(not(target_arch = "wasm32"))]
     commands.spawn((
+        Name::from("Text"),
         Text::new("Press space to toggle wireframes"),
         Node {
             position_type: PositionType::Absolute,
