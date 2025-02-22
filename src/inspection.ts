@@ -152,7 +152,6 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       }
       this.inspectionTree.push(new Component(typePath, errorData));
     }
-    console.log(getResponse.result.errors);
   }
 }
 
