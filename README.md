@@ -42,6 +42,11 @@ fn main() {
 }
 ```
 
+## Awareness of Future Changes in Bevy
+
+- [Issue: BRP resource methods](https://github.com/bevyengine/bevy/pull/17423)
+- [Issue: OpenRPC support in Bevy Remote Protocol](https://github.com/bevyengine/bevy/issues/16744)
+
 ## Credits
 
 Made by [Foxication](https://github.com/foxication)
