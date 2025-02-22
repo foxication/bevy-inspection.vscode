@@ -6,7 +6,7 @@ type Value = boolean | number | string;
 
 export class ComponentElement {
   typePath: TypePath;
-  children: NamedValueElement[] | ValueElement[];
+  children: (NamedValueElement | ValueElement)[];
 
   constructor(name: string, children: typeof this.children) {
     this.typePath = name;
@@ -24,7 +24,7 @@ export class ValueElement {
 
 export class NamedValueElement {
   name: string;
-  children: NamedValueElement[];
+  children: (NamedValueElement | ValueElement)[];
   value?: Value;
 
   constructor(name: string, children: typeof this.children, value?: Value) {

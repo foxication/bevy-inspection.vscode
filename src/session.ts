@@ -65,44 +65,57 @@ export class ProtocolSession {
       throw Error();
     }
 
-    const parseNamedValues = (obj: object): NamedValueElement[] => {
-      const collection: NamedValueElement[] = [];
+    // Parsing values
+    const parseValues = (obj: object, isParentArray = false): (NamedValueElement | ValueElement)[] => {
+      const collection: (NamedValueElement | ValueElement)[] = [];
 
       for (const entry of Object.entries(obj) as [string, BrpValue][]) {
         const name = entry[0];
         const toParse = entry[1];
 
-        if (Array.isArray(toParse) || typeof toParse === 'object') {
+        if (typeof toParse === 'object') {
           if (toParse === null) {
-            collection.push(new NamedValueElement(name, [], 'NULL'));
+            collection.push(new NamedValueElement(name, [], 'NULL')); // null
             continue;
           }
-          collection.push(new NamedValueElement(name, parseNamedValues(toParse)));
+          if (Array.isArray(toParse)) {
+            collection.push(new NamedValueElement(name, parseValues(toParse, true))); // array...
+            continue;
+          }
+          collection.push(new NamedValueElement(name, parseValues(toParse))); // object...
           continue;
         }
-        collection.push(new NamedValueElement(name, [], toParse));
+        if (isParentArray) {
+          collection.push(new ValueElement(toParse)); // array value
+          continue;
+        }
+        collection.push(new NamedValueElement(name, [], toParse)); // value
       }
       return collection;
     };
 
-    // Parsing result
+    // Parsing components
     const componentTree = [];
     for (const entry of Object.entries(getResponse.result.components) as [string, BrpValue][]) {
       const typePath = entry[0];
       const toParse = entry[1];
 
-      if (Array.isArray(toParse) || typeof toParse === 'object') {
+      if (typeof toParse === 'object') {
         if (toParse === null) {
-          componentTree.push(new ComponentElement(typePath, [new ValueElement('NULL')]));
+          componentTree.push(new ComponentElement(typePath, [new ValueElement('NULL')])); // null
           continue;
         }
-        componentTree.push(new ComponentElement(typePath, parseNamedValues(toParse)));
+        if (Array.isArray(toParse)) {
+          componentTree.push(new ComponentElement(typePath, parseValues(toParse, true))); // array...
+          continue;
+        }
+        componentTree.push(new ComponentElement(typePath, parseValues(toParse))); // object...
         continue;
       }
-      componentTree.push(new ComponentElement(typePath, [new ValueElement(toParse)]));
+      componentTree.push(new ComponentElement(typePath, [new ValueElement(toParse)])); // value
     }
 
-    // Parsing errors
+    // Parsing components (errors)
     for (const entry of Object.entries(getResponse.result.errors) as [string, BrpError][]) {
       const typePath = entry[0];
       const toParse = entry[1];
