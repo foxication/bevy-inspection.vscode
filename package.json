@@ -29,42 +29,86 @@
 				}
 			]
 		},
+		"viewsWelcome": [
+			{
+				"view": "hierarchyView",
+				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.connect)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
+			},
+			{
+				"view": "inspectionView",
+				"contents": "To monitor components select any entity from hierarchy of entites."
+			},
+			{
+				"view": "resourcesView",
+				"contents": "Not implemented."
+			},
+			{
+				"view": "eventsView",
+				"contents": "Not implemented."
+			},
+			{
+				"view": "diagnosticsView",
+				"contents": "Not implemented."
+			},
+			{
+				"view": "schemaView",
+				"contents": "Not implemented."
+			}
+		],
 		"views": {
 			"bevy-inspection": [
 				{
 					"id": "hierarchyView",
-					"name": "Hierarchy"
+					"name": "Hierarchy of Entities"
 				},
 				{
-					"id": "inspectorView",
-					"name": "Inspector"
+					"id": "inspectionView",
+					"name": "Inspector",
+					"when": "extension.areViewsVisible"
 				},
 				{
 					"id": "resourcesView",
 					"name": "Resources",
-					"visibility": "collapsed"
+					"visibility": "collapsed",
+					"when": "extension.areViewsVisible"
 				},
 				{
 					"id": "eventsView",
 					"name": "Events",
-					"visibility": "collapsed"
+					"visibility": "collapsed",
+					"when": "extension.areViewsVisible"
 				},
 				{
 					"id": "diagnosticsView",
 					"name": "Diagnostics",
-					"visibility": "collapsed"
+					"visibility": "collapsed",
+					"when": "extension.areViewsVisible"
 				},
 				{
 					"id": "schemaView",
 					"name": "Schema",
-					"visibility": "collapsed"
+					"visibility": "collapsed",
+					"when": "extension.areViewsVisible"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "extension.bevyList",
-				"title": "Bevy Call List"
+				"command": "extension.debugLog",
+				"title": "Log debugging data",
+				"category": "Bevy Inspection"
+			},
+			{
+				"command": "extension.inspectEntity",
+				"title": "Inspect Entity",
+				"category": "Bevy Inspection",
+				"enablement": "false"
+			},
+			{
+				"command": "extension.connect",
+				"title": "Connect to Bevy Instance",
+				"category": "Bevy Inspection",
+				"enablement": "false"
 			}
 		]
 	},
