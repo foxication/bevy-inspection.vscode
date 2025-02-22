@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { BevyRemoteProtocol, EntityId, ServerVersion, TypePath } from 'bevy-remote-protocol';
 import * as assert from 'node:assert';
 import { EntityNode, HierarchyProvider } from './hierachy';
-import { ComponentsDataProvider } from './inspection';
+import { ComponentsDataProvider as ComponentsProvider } from './inspection';
 
 // class MethodAfterChange<T> {
 //   private variable: T;
@@ -98,7 +98,7 @@ export class SessionManager {
     SessionManager.areViewsInitialized = true;
 
     const hierachyProvider = new HierarchyProvider(this.lastSession);
-    const componentsDataProvider = new ComponentsDataProvider(this.lastSession);
+    const componentsProvider = new ComponentsProvider(this.lastSession);
 
     const hiearchyView = vscode.window.createTreeView('hierarchyView', {
       treeDataProvider: hierachyProvider,
@@ -112,11 +112,11 @@ export class SessionManager {
         return;
       }
       const selected = event.selection[0];
-      componentsDataProvider.focusOnEntity(selected.id);
+      componentsProvider.focusOnEntity(selected.id);
     });
 
     vscode.window.createTreeView('inspectionView', {
-      treeDataProvider: componentsDataProvider,
+      treeDataProvider: componentsProvider,
       canSelectMany: false,
       showCollapseAll: true,
       dragAndDropController: undefined,
