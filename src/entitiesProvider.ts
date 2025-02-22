@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId } from 'bevy-remote-protocol';
-import { InspectionSession } from './session';
+import { ProtocolSession } from './session';
 
 export class EntityNode {
   id: EntityId;
@@ -19,9 +19,9 @@ export class EntityNode {
 export type HierarchyElement = EntityNode;
 
 export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyElement> {
-  private session: InspectionSession;
+  private session: ProtocolSession;
 
-  constructor(session: InspectionSession) {
+  constructor(session: ProtocolSession) {
     this.session = session;
   }
 

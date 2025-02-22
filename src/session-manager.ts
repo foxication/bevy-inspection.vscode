@@ -3,16 +3,16 @@ import * as assert from 'assert';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { EntityNode, HierarchyProvider } from './entitiesProvider';
 import { ComponentsProvider, InspectionElement } from './componentsProvider';
-import { InspectionSession } from './session';
+import { ProtocolSession } from './session';
 
 export class SessionManager {
-  private lastSession: InspectionSession;
+  private lastSession: ProtocolSession;
   static areViewsInitialized = false;
   static hierarchyView: vscode.TreeView<EntityNode> | undefined;
   static inspectionView: vscode.TreeView<InspectionElement> | undefined;
 
   constructor() {
-    this.lastSession = new InspectionSession(
+    this.lastSession = new ProtocolSession(
       'empty',
       BevyRemoteProtocol.DEFAULT_URL,
       ServerVersion.IGNORE,
@@ -35,7 +35,7 @@ export class SessionManager {
 
     const chosen = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(version)];
 
-    const newSession = new InspectionSession('dead', new URL(url), chosen, this.afterDeath);
+    const newSession = new ProtocolSession('dead', new URL(url), chosen, this.afterDeath);
     newSession
       .postConstructor()
       .then(() => {

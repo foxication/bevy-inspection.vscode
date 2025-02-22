@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
-import { InspectionSession } from './session';
+import { ProtocolSession } from './session';
 
 type Value = boolean | number | string;
 
-export class Component {
+export class ComponentElement {
   typePath: TypePath;
-  children: NamedValue[] | ComponentValue[];
+  children: NamedValueElement[] | ValueElement[];
 
   constructor(name: string, children: typeof this.children) {
     this.typePath = name;
@@ -14,7 +14,7 @@ export class Component {
   }
 }
 
-export class ComponentValue {
+export class ValueElement {
   value: Value;
 
   constructor(value: Value) {
@@ -22,9 +22,9 @@ export class ComponentValue {
   }
 }
 
-export class NamedValue {
+export class NamedValueElement {
   name: string;
-  children: NamedValue[];
+  children: NamedValueElement[];
   value?: Value;
 
   constructor(name: string, children: typeof this.children, value?: Value) {
@@ -34,18 +34,18 @@ export class NamedValue {
   }
 }
 
-export type InspectionElement = Component | ComponentValue | NamedValue;
+export type InspectionElement = ComponentElement | ValueElement | NamedValueElement;
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
-  private session: InspectionSession;
+  private session: ProtocolSession;
   private focusedEntity: null | EntityId;
-  private inspectionTree: Component[];
+  private inspectionTree: ComponentElement[];
   private treeIsChangedEmitter: vscode.EventEmitter<InspectionElement | undefined | void> = new vscode.EventEmitter<
     InspectionElement | undefined | void
   >();
   readonly onDidChangeTreeData: vscode.Event<InspectionElement | undefined | void> = this.treeIsChangedEmitter.event;
 
-  constructor(session: InspectionSession) {
+  constructor(session: ProtocolSession) {
     this.session = session;
     this.focusedEntity = null;
     this.inspectionTree = [];
@@ -54,17 +54,17 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
   async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
     if (!parent) {
       if (this.inspectionTree.length === 0) {
-        return [new NamedValue('No components in this entity', [])];
+        return [new NamedValueElement('No components in this entity', [])];
       }
       return this.inspectionTree;
     }
-    if (parent instanceof Component || parent instanceof NamedValue) {
+    if (parent instanceof ComponentElement || parent instanceof NamedValueElement) {
       return parent.children;
     }
     return [];
   }
   async getTreeItem(element: InspectionElement): Promise<vscode.TreeItem> {
-    if (element instanceof Component) {
+    if (element instanceof ComponentElement) {
       const shortPath = (/[^::]*$/.exec(element.typePath) ?? '???')[0];
       const treeItem = new vscode.TreeItem(shortPath);
       if (element.children.length > 0) {
@@ -74,12 +74,12 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
       treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log-unverified');
       return treeItem;
     }
-    if (element instanceof ComponentValue) {
+    if (element instanceof ValueElement) {
       const treeItem = new vscode.TreeItem(element.value.toString());
       treeItem.iconPath = getThemeIconOnType(element.value);
       return treeItem;
     }
-    if (element instanceof NamedValue) {
+    if (element instanceof NamedValueElement) {
       let treeItem;
       if (element.value !== undefined) {
         treeItem = new vscode.TreeItem(element.value.toString());
