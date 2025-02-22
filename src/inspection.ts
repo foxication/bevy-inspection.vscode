@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { BrpError, BrpValue, EntityId, TypePath } from 'bevy-remote-protocol';
-import { InspectionSession } from './extension';
+import { EntityId, TypePath } from 'bevy-remote-protocol';
+import { InspectionSession } from './session';
 
 type Value = boolean | number | string;
 
@@ -36,7 +36,7 @@ export class NamedValue {
 
 export type InspectionElement = Component | ComponentValue | NamedValue;
 
-export class ComponentsDataProvider implements vscode.TreeDataProvider<InspectionElement> {
+export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
   private session: InspectionSession;
   private focusedEntity: null | EntityId;
   private inspectionTree: Component[];
@@ -101,78 +101,9 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       return;
     }
     this.focusedEntity = entity;
-    await this.requestData();
+    this.inspectionTree = await this.session.getComponentsTree(entity);
     this.treeIsChangedEmitter.fire();
   }
-  async requestData() {
-    if (!this.focusedEntity) {
-      return [];
-    }
-
-    const listResponse = await this.session.protocol.list(this.focusedEntity);
-    if (!listResponse.result) {
-      if (listResponse.error) {
-        throw Error(listResponse.error.message);
-      }
-      throw Error();
-    }
-
-    const getResponse = await this.session.protocol.get(this.focusedEntity, listResponse.result);
-    if (!getResponse.result) {
-      if (getResponse.error) {
-        throw Error(getResponse.error.message);
-      }
-      throw Error();
-    }
-
-    // Parsing result
-    this.inspectionTree = [];
-    for (const entry of Object.entries(getResponse.result.components) as [string, BrpValue][]) {
-      const typePath = entry[0];
-      const toParse = entry[1];
-
-      if (Array.isArray(toParse) || typeof toParse === 'object') {
-        if (toParse === null) {
-          this.inspectionTree.push(new Component(typePath, [new ComponentValue('NULL')]));
-          continue;
-        }
-        this.inspectionTree.push(new Component(typePath, parseNamedValues(toParse)));
-        continue;
-      }
-      this.inspectionTree.push(new Component(typePath, [new ComponentValue(toParse)]));
-    }
-
-    // Parsing errors
-    for (const entry of Object.entries(getResponse.result.errors) as [string, BrpError][]) {
-      const typePath = entry[0];
-      const toParse = entry[1];
-      const errorData = [new NamedValue('code', [], toParse.code), new NamedValue('message', [], toParse.message)];
-      if (toParse.data !== undefined && typeof toParse.data !== 'object') {
-        new NamedValue('message', [], toParse.data);
-      }
-      this.inspectionTree.push(new Component(typePath, errorData));
-    }
-  }
-}
-
-function parseNamedValues(obj: object): NamedValue[] {
-  const collection: NamedValue[] = [];
-
-  for (const entry of Object.entries(obj) as [string, BrpValue][]) {
-    const name = entry[0];
-    const toParse = entry[1];
-
-    if (Array.isArray(toParse) || typeof toParse === 'object') {
-      if (toParse === null) {
-        collection.push(new NamedValue(name, [], 'NULL'));
-        continue;
-      }
-      collection.push(new NamedValue(name, parseNamedValues(toParse)));
-      continue;
-    }
-    collection.push(new NamedValue(name, [], toParse));
-  }
-  return collection;
 }
 
 function getThemeIconOnType(value: Value): vscode.ThemeIcon | undefined {

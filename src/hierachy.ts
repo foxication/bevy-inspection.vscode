@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId } from 'bevy-remote-protocol';
-import { InspectionSession } from './extension';
+import { InspectionSession } from './session';
 
 export class EntityNode {
   id: EntityId;
@@ -49,7 +49,7 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
   async getTreeItem(element: HierarchyElement): Promise<vscode.TreeItem> {
     const treeItem = new vscode.TreeItem(
       element.name ?? element.id.toString(),
-      element.children ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None,
+      element.children ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
     );
     if (!element.children) {
       treeItem.iconPath = new vscode.ThemeIcon('circle-outline');
