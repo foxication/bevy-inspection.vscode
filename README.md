@@ -49,8 +49,6 @@ fn main() {
 
 ## Credits
 
-Made by [Foxication](https://github.com/foxication)
-
 Extension was inspired by [splo/vscode-bevy-inspector](https://github.com/splo/vscode-bevy-inspector)
 
 ## Support
