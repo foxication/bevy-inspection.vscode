@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
 import { Extension } from './extension';
+import { EntityElement } from './entities';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
   return vscode.window.createTreeView('componentsView', {
@@ -100,29 +101,34 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     throw Error('unknown type of ComponentTreeElement');
   }
 
-  public update(entityId: null | EntityId) {
+  public update(entity: null | EntityElement) {
     // Check if update needed
     const session = Extension.sessionManager.current();
     if (!session) {
       return;
     }
-    if (this.focusedEntityId === entityId) {
+    if (this.focusedEntityId === (entity === null ? null : entity.id)) {
       return;
     }
 
+    // Update title
+    Extension.componentsView.title = 'Components of ' + (entity?.name ?? 'Entity');
+
     // Make empty
-    if (entityId === null) {
+    if (entity === null) {
       this.focusedEntityId = null;
       this.inspectionTree = [];
       this.treeIsChangedEmitter.fire();
+      Extension.componentsView.description = undefined;
       return;
     }
 
     // Or change to entity
-    session.getComponentsTree(entityId).then((tree) => {
-      this.focusedEntityId = entityId;
+    session.getComponentsTree(entity.id).then((tree) => {
+      this.focusedEntityId = entity.id;
       this.inspectionTree = tree;
       this.treeIsChangedEmitter.fire();
+      Extension.componentsView.description = entity.id.toString();
     });
   }
 }

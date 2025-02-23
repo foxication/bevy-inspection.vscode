@@ -14,7 +14,7 @@ export function createEntitiesView(entitiesProvider: EntitiesProvider) {
       return;
     }
     const selected = event.selection[0];
-    Extension.componentsProvider.update(selected.id);
+    Extension.componentsProvider.update(selected);
   });
   return view;
 }
