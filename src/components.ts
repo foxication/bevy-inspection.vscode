@@ -45,13 +45,13 @@ export class NamedValueElement {
 export type InspectionElement = ComponentElement | ValueElement | NamedValueElement;
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
-  private focusedEntity: null | EntityId;
+  private focusedEntityId: null | EntityId;
   private inspectionTree: ComponentElement[];
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   constructor() {
-    this.focusedEntity = null;
+    this.focusedEntityId = null;
     this.inspectionTree = [];
   }
 
@@ -100,22 +100,27 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     throw Error('unknown type of ComponentTreeElement');
   }
 
-  public update(entity: null | EntityId) {
+  public update(entityId: null | EntityId) {
+    // Check if update needed
     const session = Extension.sessionManager.current();
     if (!session) {
       return;
     }
-    if (this.focusedEntity === entity) {
+    if (this.focusedEntityId === entityId) {
       return;
     }
-    if (entity === null) {
-      this.focusedEntity = null;
+
+    // Make empty
+    if (entityId === null) {
+      this.focusedEntityId = null;
       this.inspectionTree = [];
       this.treeIsChangedEmitter.fire();
       return;
     }
-    session.getComponentsTree(entity).then((tree) => {
-      this.focusedEntity = entity;
+
+    // Or change to entity
+    session.getComponentsTree(entityId).then((tree) => {
+      this.focusedEntityId = entityId;
       this.inspectionTree = tree;
       this.treeIsChangedEmitter.fire();
     });
