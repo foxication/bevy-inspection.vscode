@@ -183,7 +183,6 @@ export class SessionManager {
 
         // Update views
         Extension.componentsProvider.update(null);
-        Extension.entitiesView.message = this.lastSession.getSessionInfo();
         Extension.entitiesProvider.update();
 
         // Make views visible
