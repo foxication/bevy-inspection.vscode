@@ -1,6 +1,14 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
-import { ProtocolSession } from './session';
+import { Extension } from './extension';
+
+export function createComponentsView(componentsProvider: ComponentsProvider) {
+  return vscode.window.createTreeView('inspectionView', {
+    treeDataProvider: componentsProvider,
+    canSelectMany: false,
+    showCollapseAll: true,
+  });
+}
 
 type Value = boolean | number | string;
 
@@ -37,16 +45,12 @@ export class NamedValueElement {
 export type InspectionElement = ComponentElement | ValueElement | NamedValueElement;
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
-  private session: ProtocolSession;
   private focusedEntity: null | EntityId;
   private inspectionTree: ComponentElement[];
-  private treeIsChangedEmitter: vscode.EventEmitter<InspectionElement | undefined | void> = new vscode.EventEmitter<
-    InspectionElement | undefined | void
-  >();
-  readonly onDidChangeTreeData: vscode.Event<InspectionElement | undefined | void> = this.treeIsChangedEmitter.event;
+  private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
+  readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
-  constructor(session: ProtocolSession) {
-    this.session = session;
+  constructor() {
     this.focusedEntity = null;
     this.inspectionTree = [];
   }
@@ -96,13 +100,25 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     throw Error('unknown type of ComponentTreeElement');
   }
 
-  public async focusOnEntity(entity: EntityId) {
+  public update(entity: null | EntityId) {
+    const session = Extension.sessionManager.current();
+    if (!session) {
+      return;
+    }
     if (this.focusedEntity === entity) {
       return;
     }
-    this.focusedEntity = entity;
-    this.inspectionTree = await this.session.getComponentsTree(entity);
-    this.treeIsChangedEmitter.fire();
+    if (entity === null) {
+      this.focusedEntity = null;
+      this.inspectionTree = [];
+      this.treeIsChangedEmitter.fire();
+      return;
+    }
+    session.getComponentsTree(entity).then((tree) => {
+      this.focusedEntity = entity;
+      this.inspectionTree = tree;
+      this.treeIsChangedEmitter.fire();
+    });
   }
 }
 

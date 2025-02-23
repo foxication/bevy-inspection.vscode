@@ -1,24 +1,27 @@
+import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
-import { EntityNode } from './entitiesProvider';
-import { ComponentElement, NamedValueElement, ValueElement } from './componentsProvider';
+import { EntityElement } from './entities';
+import { ComponentElement, NamedValueElement, ValueElement } from './components';
+import { Extension } from './extension';
 
 export class ProtocolSession {
-  private onDeath: () => void;
+  private onDeath() {
+    vscode.window.showErrorMessage('Bevy instance is disconnected');
+  }
 
   private protocol: BevyRemoteProtocol;
-  public state: 'empty' | 'dead' | 'alive';
+  public state: 'dead' | 'alive';
   public registeredComponents: TypePath[] = [];
-  public allEntitiesNodes: EntityNode[] = [];
+  public allEntitiesNodes: EntityElement[] = [];
 
-  constructor(state: typeof this.state, url: URL, version: ServerVersion, onDeath: () => void) {
+  constructor(state: typeof this.state, url: URL, version: ServerVersion) {
     this.state = state;
     this.protocol = new BevyRemoteProtocol(url, version);
-    this.onDeath = onDeath;
   }
   getSessionInfo(): string {
     return 'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion;
   }
-  async postConstructor() {
+  async initializeData() {
     const response = await this.protocol.query({
       option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
     });
@@ -26,7 +29,7 @@ export class ProtocolSession {
       return;
     }
     this.allEntitiesNodes = response.result.map((value) => {
-      return new EntityNode(value.entity, {
+      return new EntityElement(value.entity, {
         name: value.components['bevy_ecs::name::Name'] as string,
         childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
         children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
@@ -129,5 +132,75 @@ export class ProtocolSession {
       componentTree.push(new ComponentElement(typePath, errorData));
     }
     return componentTree;
+  }
+}
+
+export class SessionManager {
+  private lastSession: null | ProtocolSession;
+
+  constructor() {
+    this.lastSession = null;
+  }
+
+  public async tryCreateSession() {
+    // Input URL
+    const url = await vscode.window.showInputBox({
+      title: 'Connection to Bevy Instance',
+      value: BevyRemoteProtocol.DEFAULT_URL.toString(),
+    });
+    if (!url) {
+      return;
+    }
+
+    // Input version
+    const versions = Object.keys(ServerVersion);
+    const versionString = await vscode.window.showQuickPick(versions, { canPickMany: false });
+    if (!versionString) {
+      return;
+    }
+    const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
+
+    // Create new session
+    const newSession = new ProtocolSession('alive', new URL(url), versionEnum);
+    if (this.lastSession) {
+      console.log('so');
+    }
+    newSession
+      .initializeData()
+      .then(() => {
+        if (this.lastSession) {
+          console.log('fuck');
+        }
+        // do not overwrite alive session
+        if (this.lastSession) {
+          if (this.lastSession.isAlive()) {
+            return;
+          }
+        }
+
+        // success
+        this.lastSession = newSession;
+
+        // Update views
+        Extension.componentsProvider.update(null);
+        Extension.entitiesView.message = this.lastSession.getSessionInfo();
+        Extension.entitiesProvider.update();
+
+        // Make views visible
+        vscode.commands.executeCommand('setContext', 'extension.areViewsVisible', true);
+      })
+      .catch((reason: Error) => {
+        switch (reason.message) {
+          case 'fetch failed':
+            vscode.window.showErrorMessage('Connection with Bevy instance is refused');
+            return;
+          default:
+            throw reason;
+        }
+      });
+  }
+
+  public current() {
+    return this.lastSession;
   }
 }
