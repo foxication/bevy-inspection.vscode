@@ -55,7 +55,7 @@ Extension was inspired by [splo/vscode-bevy-inspector](https://github.com/splo/v
 
 ## Support
 
-Donate to support maintenance of open source repository.
+Feel free to donate to support repository development/maintenance.
 
 |Bitcoin|USDT|TON|
 |---|---|---|
