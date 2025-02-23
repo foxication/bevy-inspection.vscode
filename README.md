@@ -30,7 +30,7 @@ You have to enable feature in your game project:
 bevy = { version = "0.15.1", features = ["bevy_remote"] }
 ```
 
-And run `RemotePlugin` with `RemoteHttpPlugin`:
+Run `RemotePlugin` and `RemoteHttpPlugin`:
 
 ```rust
 // main.rs
