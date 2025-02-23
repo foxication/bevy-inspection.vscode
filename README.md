@@ -4,6 +4,8 @@ Monitor and modify data of Bevy game in runtime.
 
 Communications based on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.html) on JSON-RPC 2.0 on HTTP.
 
+![Screenshot 2025-02-23 045438](https://github.com/user-attachments/assets/efa86754-9d9d-4f3a-a928-ef91d42f806b)
+
 ## Features
 
 - Monitor entities, components, values
@@ -55,4 +57,6 @@ Extension was inspired by [splo/vscode-bevy-inspector](https://github.com/splo/v
 
 Donate to support maintenance of open source repository.
 
-Some links to crypto wallets here...
+|Bitcoin|USDT|TON|
+|---|---|---|
+|![bitcoin-dark](https://github.com/user-attachments/assets/c0f3133a-fa21-4272-a761-d40e01ca99b0)|![usdt-dark](https://github.com/user-attachments/assets/91941c77-35b0-428c-bdb5-bca326fdd123)|![ton-dark](https://github.com/user-attachments/assets/06e48170-a5d8-4313-898c-2444126d1a8c)|
