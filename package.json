@@ -32,11 +32,11 @@
 		},
 		"viewsWelcome": [
 			{
-				"view": "hierarchyView",
+				"view": "entitiesView",
 				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.connect)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
 			},
 			{
-				"view": "inspectionView",
+				"view": "componentsView",
 				"contents": "To monitor components select any entity from hierarchy of entites."
 			},
 			{
@@ -59,12 +59,12 @@
 		"views": {
 			"bevy-inspection": [
 				{
-					"id": "hierarchyView",
-					"name": "Hierarchy of Entities"
+					"id": "entitiesView",
+					"name": "Entities"
 				},
 				{
-					"id": "inspectionView",
-					"name": "Inspector",
+					"id": "componentsView",
+					"name": "Components of Entity",
 					"when": "extension.areViewsVisible"
 				},
 				{

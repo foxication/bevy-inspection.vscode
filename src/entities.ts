@@ -3,7 +3,7 @@ import { EntityId } from 'bevy-remote-protocol';
 import { Extension } from './extension';
 
 export function createEntitiesView(entitiesProvider: EntitiesProvider) {
-  const view = vscode.window.createTreeView('hierarchyView', {
+  const view = vscode.window.createTreeView('entitiesView', {
     treeDataProvider: entitiesProvider,
     canSelectMany: false,
     showCollapseAll: true,

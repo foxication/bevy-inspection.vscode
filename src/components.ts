@@ -3,7 +3,7 @@ import { EntityId, TypePath } from 'bevy-remote-protocol';
 import { Extension } from './extension';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
-  return vscode.window.createTreeView('inspectionView', {
+  return vscode.window.createTreeView('componentsView', {
     treeDataProvider: componentsProvider,
     canSelectMany: false,
     showCollapseAll: true,
