@@ -4,29 +4,12 @@ import { ComponentsProvider, createComponentsView } from './components';
 import { createEntitiesView, EntitiesProvider, EntityElement } from './entities';
 import { ClientCollection } from './client-collection';
 
-class Extension {
-  // Clients
-  static clientCollection = new ClientCollection();
-
-  // Entities
-  static entitiesProvider = new EntitiesProvider();
-  static entitiesView = createEntitiesView(Extension.entitiesProvider);
-
-  // Components
-  static componentsProvider = new ComponentsProvider();
-  static componentsView = createComponentsView(Extension.componentsProvider);
-
-  // Context
-  static setIsSessionAlive(value: boolean) {
-    vscode.commands.executeCommand('setContext', 'extension.isSessionAlive', value);
-  }
-  static setAreViewsVisible(value: boolean) {
-    vscode.commands.executeCommand('setContext', 'extension.areViewsVisible', value);
-  }
+// Context
+function setIsSessionAlive(value: boolean) {
+  vscode.commands.executeCommand('setContext', 'extension.isSessionAlive', value);
 }
-
-export function getClientCollection() {
-  return Extension.clientCollection;
+function setAreViewsVisible(value: boolean) {
+  vscode.commands.executeCommand('setContext', 'extension.areViewsVisible', value);
 }
 
 async function debugLog() {
@@ -37,87 +20,94 @@ async function debugLog() {
 
 export function activate(context: vscode.ExtensionContext) {
   // Context
-  Extension.setAreViewsVisible(false);
-  Extension.setIsSessionAlive(false);
+  setAreViewsVisible(false);
+  setIsSessionAlive(false);
+
+  // Extension parts
+  // Clients
+  const clientCollection = new ClientCollection();
+
+  // Entities
+  const entitiesProvider = new EntitiesProvider(clientCollection);
+  const entitiesView = createEntitiesView(entitiesProvider);
+
+  // Components
+  const componentsProvider = new ComponentsProvider(clientCollection);
+  const componentsView = createComponentsView(componentsProvider);
 
   // Userspace commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
-    vscode.commands.registerCommand('extension.connect', () => Extension.clientCollection.tryCreateSession()),
-    vscode.commands.registerCommand('extension.reconnect', () => Extension.clientCollection.tryCreateSession('last')),
-    vscode.commands.registerCommand('extension.disconnect', () => Extension.clientCollection.current()?.death()),
-    vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null))
+    vscode.commands.registerCommand('extension.connect', () => clientCollection.tryCreateSession()),
+    vscode.commands.registerCommand('extension.reconnect', () => clientCollection.tryCreateSession('last')),
+    vscode.commands.registerCommand('extension.disconnect', () => clientCollection.current()?.death()),
+    vscode.commands.registerCommand('extension.refreshEntities', () => entitiesProvider.update(null))
   );
 
   // Extension only commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
-      Extension.clientCollection.current()?.destroyEntity(element)
+      clientCollection.current()?.destroyEntity(element)
     ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
-      Extension.clientCollection.current()?.renameEntity(element)
+      clientCollection.current()?.renameEntity(element)
     )
   );
 
   // Events
-  Extension.componentsProvider.onDidChangeTreeData(() => {
-    if (Extension.entitiesView.selection.length === 1) {
-      return;
+  componentsProvider.onDidChangeTreeData(() => {
+    if (entitiesView.selection.length === 1) {
+      const selectedEntity = entitiesView.selection[0];
+      componentsView.title = 'Components of ' + (selectedEntity.name ?? 'Entity');
+      componentsView.message = 'ID: ' + selectedEntity.id;
     }
-    const selectedEntity = Extension.entitiesView.selection[0];
-
-    // Update title
-    Extension.componentsView.title = 'Components of ' + (selectedEntity.name ?? 'Entity');
-
-    // Update message
-    if (selectedEntity instanceof EntityElement) {
-      Extension.componentsView.message = 'ID: ' + selectedEntity.id;
-    } else {
-      Extension.componentsView.message = undefined;
+    if (entitiesView.selection.length === 0) {
+      componentsView.title = 'Components';
+      componentsView.message = undefined;
     }
   });
 
-  Extension.entitiesProvider.onDidChangeTreeData(() => {
-    Extension.entitiesView.message = Extension.clientCollection.current()?.getSessionInfo();
+  entitiesProvider.onDidChangeTreeData(() => {
+    entitiesView.message = clientCollection.current()?.getSessionInfo();
   });
 
-  Extension.entitiesView.onDidChangeSelection((event) => {
+  entitiesView.onDidChangeSelection((event) => {
     if (event.selection.length === 0) {
-      Extension.componentsProvider.update(null);
+      componentsProvider.update(null);
     }
     if (event.selection.length === 1) {
-      Extension.componentsProvider.update(event.selection[0]);
+      componentsProvider.update(event.selection[0]);
     }
   });
 
-  Extension.clientCollection.onClientAdded((client) => {
+  clientCollection.onClientAdded((client) => {
     // Update views
-    Extension.entitiesView.description = undefined;
-    Extension.componentsView.description = undefined;
-    Extension.entitiesProvider.update(null);
-    Extension.componentsProvider.update(null);
+    entitiesView.description = undefined;
+    componentsView.description = undefined;
+    entitiesProvider.update(null);
+    componentsProvider.update(null);
 
     // Set context
-    Extension.setIsSessionAlive(true);
-    Extension.setAreViewsVisible(true);
+    setIsSessionAlive(true);
+    setAreViewsVisible(true);
 
     // Connect all events
     client.onUserAskedForReconnection(() => {
-      Extension.clientCollection.tryCreateSession('last');
+      clientCollection.tryCreateSession('last');
     });
 
     client.onEntityDestroyed((destroyed) => {
-      Extension.entitiesProvider.update({ parentId: destroyed.childOf, skipQuery: true });
+      entitiesProvider.update({ parentId: destroyed.childOf, skipQuery: true });
     });
 
     client.onEntityRenamed((renamed) => {
-      Extension.entitiesProvider.update({ parentId: renamed.childOf, skipQuery: true });
+      entitiesProvider.update({ parentId: renamed.childOf, skipQuery: true });
     });
 
     client.onDeath(() => {
-      Extension.setIsSessionAlive(false);
-      Extension.entitiesView.description = 'Disconnected';
-      Extension.componentsView.description = 'Disconnected';
+      setIsSessionAlive(false);
+      entitiesView.description = 'Disconnected';
+      componentsView.description = 'Disconnected';
     });
   });
 }

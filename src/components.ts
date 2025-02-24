@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
-import { getClientCollection } from './extension';
 import { EntityElement } from './entities';
+import { ClientCollection } from './client-collection';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
   return vscode.window.createTreeView('componentsView', {
@@ -56,16 +56,18 @@ export class NamedValueElement {
 export type InspectionElement = ComponentElement | ComponentErrorElement | ValueElement | NamedValueElement;
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
+  private clientCollection: ClientCollection;
   private focusedEntityId: null | EntityId;
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
-  constructor() {
+  constructor(clientCollection: ClientCollection) {
+    this.clientCollection = clientCollection;
     this.focusedEntityId = null;
   }
 
   async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
-    const session = getClientCollection().current();
+    const session = this.clientCollection.current();
     if (session === null) {
       return [];
     }
@@ -135,21 +137,21 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
 
   public update(entity: null | EntityElement) {
     // Check if update needed
-    const session = getClientCollection().current();
+    const session = this.clientCollection.current();
     if (!session || !session.isAlive()) {
       return;
     }
     if (this.focusedEntityId === (entity === null ? null : entity.id)) {
       return;
     }
-    
+
     // Make empty
     if (entity === null) {
       this.focusedEntityId = null;
       this.treeIsChangedEmitter.fire();
       return;
     }
-    
+
     // Or change to entity (notice - it is async)
     this.focusedEntityId = entity.id;
     this.treeIsChangedEmitter.fire();

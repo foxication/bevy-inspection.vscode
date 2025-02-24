@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId } from 'bevy-remote-protocol';
-import { getClientCollection } from './extension';
+import { ClientCollection } from './client-collection';
 
 export function createEntitiesView(entitiesProvider: EntitiesProvider) {
   return vscode.window.createTreeView('entitiesView', {
@@ -26,11 +26,16 @@ export class EntityElement {
 }
 
 export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> {
+  private clientCollection: ClientCollection;
   private treeIsChangedEmitter = new vscode.EventEmitter<EntityElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
+  constructor(clientCollection: ClientCollection) {
+    this.clientCollection = clientCollection;
+  }
+
   getChildren(element?: EntityElement | undefined): EntityElement[] {
-    const session = getClientCollection().current();
+    const session = this.clientCollection.current();
     if (!session) {
       return [];
     }
@@ -71,7 +76,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   }
 
   update(options: { parentId?: EntityId; skipQuery?: boolean } | null) {
-    const client = getClientCollection().current();
+    const client = this.clientCollection.current();
     if (client === null) {
       return;
     }
