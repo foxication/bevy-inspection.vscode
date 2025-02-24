@@ -204,6 +204,10 @@ export class ProtocolSession {
       Extension.entitiesProvider.update(null);
     });
   }
+
+  public cloneWithProtocol() {
+    return new ProtocolSession(this.protocol.url, this.protocol.serverVersion);
+  }
 }
 
 type SessionTemplate = 'prompt' | 'last';
@@ -218,9 +222,8 @@ export class SessionManager {
   public async tryCreateSession(template: SessionTemplate = 'prompt') {
     let newSession;
 
+    // Get session from user
     if (template === 'prompt' || this.lastSession === null) {
-      template = 'prompt';
-
       // Input URL
       const url = await vscode.window.showInputBox({
         title: 'Connection to Bevy Instance',
@@ -240,19 +243,18 @@ export class SessionManager {
 
       // Create new session
       newSession = new ProtocolSession(new URL(url), versionEnum);
-    } else {
-      template = 'last';
-      newSession = this.lastSession;
+    }
+    // Or clone last session
+    else {
+      newSession = this.lastSession.cloneWithProtocol();
     }
 
     newSession
       .initialize()
       .then(() => {
         // do not overwrite alive session
-        if (template === 'prompt' && this.lastSession) {
-          if (this.lastSession.isAlive()) {
-            return;
-          }
+        if (this.lastSession?.isAlive() === true) {
+          return;
         }
 
         // success
