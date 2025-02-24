@@ -143,6 +143,23 @@
 			}
 		],
 		"menus": {
+			"commandPalette": [
+				{
+					"command": "extension.debugLog"
+				},
+				{
+					"command": "extension.connect"
+				},
+				{
+					"command": "extension.reconnect"
+				},
+				{
+					"command": "extension.disconnect"
+				},
+				{
+					"command": "extension.refreshEntities"
+				}
+			],
 			"view/title": [
 				{
 					"command": "extension.connect",

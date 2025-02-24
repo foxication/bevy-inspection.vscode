@@ -36,17 +36,22 @@ export function activate(context: vscode.ExtensionContext) {
   Extension.setAreViewsVisible(false);
   Extension.setIsSessionAlive(false);
 
+  // Userspace commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
     vscode.commands.registerCommand('extension.connect', () => Extension.sessionManager.tryCreateSession()),
     vscode.commands.registerCommand('extension.reconnect', () => Extension.sessionManager.tryCreateSession('last')),
     vscode.commands.registerCommand('extension.disconnect', () => Extension.sessionManager.current()?.disconnect()),
-    vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null)),
-    vscode.commands.registerCommand('extension.destroyEntity', (ent: EntityElement) =>
-      Extension.sessionManager.current()?.destroyEntity(ent)
+    vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null))
+  );
+
+  // Extension only commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
+      Extension.sessionManager.current()?.destroyEntity(element)
     ),
-    vscode.commands.registerCommand('extension.renameEntity', (ent: EntityElement) =>
-      Extension.sessionManager.current()?.renameEntity(ent)
+    vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
+      Extension.sessionManager.current()?.renameEntity(element)
     )
   );
 }
