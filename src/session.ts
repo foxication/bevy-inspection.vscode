@@ -34,9 +34,20 @@ export class ProtocolSession {
   }
 
   public async updateEntitiesElements() {
-    const response = await this.protocol.query({
-      option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
-    });
+    let response;
+    try {
+      response = await this.protocol.query({
+        option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
+      });
+    } catch (reason) {
+      if (reason instanceof Error) {
+        if (isFetchFailed(reason)) {
+          this.disconnect();
+          return;
+        }
+      }
+      throw reason;
+    }
     if (!response.result) {
       return;
     }
@@ -242,17 +253,19 @@ export class SessionManager {
         Extension.setAreViewsVisible(true);
       })
       .catch((reason: Error) => {
-        switch (reason.message) {
-          case 'fetch failed':
-            vscode.window.showErrorMessage('Connection with Bevy instance is refused');
-            return;
-          default:
-            throw reason;
+        if (isFetchFailed(reason)) {
+          vscode.window.showErrorMessage('Connection with Bevy instance is refused');
+          return;
         }
+        throw reason;
       });
   }
 
   public current() {
     return this.lastSession;
   }
+}
+
+function isFetchFailed(error: Error) {
+  return error.message === 'fetch failed';
 }
