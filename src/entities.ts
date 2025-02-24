@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId } from 'bevy-remote-protocol';
-import { Extension } from './extension';
+import { ExtEvents, getClientCollection } from './extension';
 
 export function createEntitiesView(entitiesProvider: EntitiesProvider) {
   const view = vscode.window.createTreeView('entitiesView', {
@@ -14,7 +14,7 @@ export function createEntitiesView(entitiesProvider: EntitiesProvider) {
       return;
     }
     const selected = event.selection[0];
-    Extension.componentsProvider.update(selected);
+    ExtEvents.userSelectedAnotherEntity(selected);
   });
   return view;
 }
@@ -38,7 +38,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   getChildren(element?: EntityElement | undefined): EntityElement[] {
-    const session = Extension.clientCollection.current();
+    const session = getClientCollection().current();
     if (!session) {
       return [];
     }
@@ -79,15 +79,15 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   }
 
   update(options: { parentId?: EntityId; skipQuery?: boolean } | null) {
-    const client = Extension.clientCollection.current();
+    const client = getClientCollection().current();
     if (client === null) {
       return;
     }
-    Extension.entitiesView.message = client.getSessionInfo();
 
     (options?.skipQuery === true ? (async (): Promise<void> => {})() : client.updateEntitiesElements()).then(() => {
       const parentElement = client.getEntitiesElements().find((item) => item.id === options?.parentId);
       this.treeIsChangedEmitter.fire(parentElement ?? undefined);
+      ExtEvents.entityViewUpdated();
     });
   }
 }

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
-import { Extension } from './extension';
+import { ExtEvents, getClientCollection } from './extension';
 import { EntityElement } from './entities';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
@@ -65,7 +65,7 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
   }
 
   async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
-    const session = Extension.clientCollection.current();
+    const session = getClientCollection().current();
     if (session === null) {
       return [];
     }
@@ -135,29 +135,26 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
 
   public update(entity: null | EntityElement) {
     // Check if update needed
-    const session = Extension.clientCollection.current();
+    const session = getClientCollection().current();
     if (!session || !session.isAlive()) {
       return;
     }
     if (this.focusedEntityId === (entity === null ? null : entity.id)) {
       return;
     }
-
-    // Update title
-    Extension.componentsView.title = 'Components of ' + (entity?.name ?? 'Entity');
-
+    
     // Make empty
     if (entity === null) {
       this.focusedEntityId = null;
       this.treeIsChangedEmitter.fire();
-      Extension.componentsView.message = undefined;
+      ExtEvents.componentsViewUpdated(entity);
       return;
     }
-
+    
     // Or change to entity (notice - it is async)
     this.focusedEntityId = entity.id;
     this.treeIsChangedEmitter.fire();
-    Extension.componentsView.message = 'ID: ' + entity.id;
+    ExtEvents.componentsViewUpdated(entity);
   }
 }
 

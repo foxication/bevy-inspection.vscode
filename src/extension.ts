@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
+import { BevyRemoteProtocol, EntityId, ServerVersion } from 'bevy-remote-protocol';
 import { ComponentsProvider, createComponentsView } from './components';
 import { createEntitiesView, EntitiesProvider, EntityElement } from './entities';
 import { ClientCollection } from './client-collection';
+import { ConnectionState } from './client';
 
-export class Extension {
+class Extension {
+  // Clients
   static clientCollection = new ClientCollection();
 
   // Entities
@@ -24,7 +26,67 @@ export class Extension {
   }
 }
 
-export class Context {}
+export function getClientCollection() {
+  return Extension.clientCollection;
+}
+
+export class ExtEvents {
+  public static clientConnectionUpated(state: ConnectionState) {
+    switch (state) {
+      case 'alive':
+        break;
+
+      case 'dead':
+        Extension.setIsSessionAlive(false);
+        Extension.entitiesView.description = 'Disconnected';
+        Extension.componentsView.description = 'Disconnected';
+        return;
+    }
+  }
+
+  public static userAskedForReconnection() {
+    Extension.clientCollection.tryCreateSession('last');
+  }
+
+  public static entityIsDestroyed(parent: EntityId | undefined) {
+    Extension.entitiesProvider.update({ parentId: parent, skipQuery: true });
+  }
+
+  public static entityIsRenamed(parent: EntityId | undefined) {
+    Extension.entitiesProvider.update({ parentId: parent, skipQuery: true });
+  }
+
+  public static newClientAdded() {
+    // Update views
+    Extension.entitiesProvider.update(null);
+    Extension.entitiesView.description = undefined;
+    Extension.componentsProvider.update(null);
+    Extension.componentsView.description = undefined;
+
+    // Set context
+    Extension.setIsSessionAlive(true);
+    Extension.setAreViewsVisible(true);
+  }
+
+  public static userSelectedAnotherEntity(selected: EntityElement) {
+    Extension.componentsProvider.update(selected);
+  }
+
+  public static entityViewUpdated() {
+    Extension.entitiesView.message = Extension.clientCollection.current()?.getSessionInfo();
+  }
+
+  public static componentsViewUpdated(entity: EntityElement | null) {
+    // Update title
+    Extension.componentsView.title = 'Components of ' + (entity?.name ?? 'Entity');
+
+    if (entity instanceof EntityElement) {
+      Extension.componentsView.message = 'ID: ' + entity.id;
+    } else {
+      Extension.componentsView.message = undefined;
+    }
+  }
+}
 
 async function debugLog() {
   const protocol = new BevyRemoteProtocol(BevyRemoteProtocol.DEFAULT_URL, ServerVersion.V0_16);

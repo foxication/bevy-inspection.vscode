@@ -8,15 +8,16 @@ import {
   NamedValueElement,
   ValueElement,
 } from './components';
-import { Extension } from './extension';
+import { ExtEvents } from './extension';
 
 type StatusDisconnection = 'disconnection';
 type ProtocolStatus = 'success' | 'error' | StatusDisconnection;
 
+export type ConnectionState = 'dead' | 'alive';
 export class Client {
   // Session data
   private protocol: BevyRemoteProtocol;
-  private state: 'dead' | 'alive';
+  private state: ConnectionState;
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
@@ -32,14 +33,12 @@ export class Client {
   public death() {
     const wasAlive = this.state === 'alive';
     this.state = 'dead';
-    Extension.setIsSessionAlive(false);
-    Extension.entitiesView.description = 'Disconnected';
-    Extension.componentsView.description = 'Disconnected';
+    ExtEvents.clientConnectionUpated(this.state);
 
     if (wasAlive) {
       vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
         if (reaction === 'Reconnect') {
-          Extension.clientCollection.tryCreateSession('last');
+          ExtEvents.userAskedForReconnection();
         }
       });
     } else {
@@ -226,7 +225,7 @@ export class Client {
       .then((response) => {
         if (response.result === null) {
           this.entityElements = this.entityElements.filter((item) => item.id !== element.id);
-          Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true });
+          ExtEvents.entityIsDestroyed(element.childOf);
         }
       })
       .catch((e) => this.errorHandler(e))
@@ -251,7 +250,7 @@ export class Client {
     }
     if (response.result === null && response.error === undefined) {
       element.name = newName; // Optimization
-      Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true }); // Update view
+      ExtEvents.entityIsRenamed(element.childOf);
       return 'success';
     }
     return 'error';

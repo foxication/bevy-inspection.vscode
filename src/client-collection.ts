@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { Client } from './client';
-import { Extension } from './extension';
+import { ExtEvents } from './extension';
 
 type SessionTemplate = 'prompt' | 'last';
 
@@ -53,17 +53,7 @@ export class ClientCollection {
 
       // success
       this.lastSession = newSession;
-
-      // Update views
-      Extension.entitiesProvider.update(null);
-      Extension.entitiesView.description = undefined;
-
-      Extension.componentsProvider.update(null);
-      Extension.componentsView.description = undefined;
-
-      // Set context
-      Extension.setIsSessionAlive(true);
-      Extension.setAreViewsVisible(true);
+      ExtEvents.newClientAdded();
     });
   }
 
