@@ -10,7 +10,8 @@ import {
 } from './components';
 import { Extension } from './extension';
 
-type ProtocolStatus = 'success' | 'error' | 'disconnection';
+type StatusDisconnection = 'disconnection';
+type ProtocolStatus = 'success' | 'error' | StatusDisconnection;
 
 export class Client {
   // Session data
@@ -29,31 +30,41 @@ export class Client {
   }
 
   public death() {
+    const wasAlive = this.state === 'alive';
     this.state = 'dead';
     Extension.setIsSessionAlive(false);
     Extension.entitiesView.description = 'Disconnected';
     Extension.componentsView.description = 'Disconnected';
-    vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
-      if (reaction === 'Reconnect') {
-        Extension.clientCollection.tryCreateSession('last');
-      }
-    });
+
+    if (wasAlive) {
+      vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
+        if (reaction === 'Reconnect') {
+          Extension.clientCollection.tryCreateSession('last');
+        }
+      });
+    } else {
+      vscode.window.showInformationMessage('Bevy instance refused to connect');
+    }
+  }
+
+  private errorHandler(reason: Error): StatusDisconnection {
+    if (reason.message === 'fetch failed') {
+      this.death();
+      return 'disconnection';
+    }
+    throw reason;
   }
 
   public async updateEntitiesElements(): Promise<ProtocolStatus> {
-    let response;
-    try {
-      response = await this.protocol.query({
+    const response = await this.protocol
+      .query({
         option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
-      });
-    } catch (reason) {
-      if (isFetchFailed(reason as Error)) {
-        this.death();
-        return 'disconnection';
-      }
-      throw reason;
+      })
+      .catch((e) => this.errorHandler(e));
+    if (response === 'disconnection') {
+      return response;
     }
-    if (!response.result) {
+    if (response.result === undefined) {
       return 'error';
     }
     this.entityElements = response.result.map((value) => {
@@ -67,17 +78,10 @@ export class Client {
   }
 
   public async updateRegisteredComponents(): Promise<ProtocolStatus> {
-    let response;
-    try {
-      response = await this.protocol.list();
-    } catch (reason) {
-      if (isFetchFailed(reason as Error)) {
-        this.death();
-        return 'disconnection';
-      }
-      throw reason;
+    const response = await this.protocol.list().catch((e) => this.errorHandler(e));
+    if (response === 'disconnection') {
+      return response;
     }
-
     if (response.result === undefined) {
       return 'error';
     }
@@ -105,25 +109,27 @@ export class Client {
     return this.entityElements;
   }
 
-  private async updatedInspectionElements(entityId: EntityId): Promise<InspectionElement[]> {
-    if (!entityId) {
-      return [];
+  private async updateInspectionElements(): Promise<ProtocolStatus> {
+    if (this.inspectedEntityId === null) {
+      return 'error';
     }
 
-    const listResponse = await this.protocol.list(entityId);
-    if (!listResponse.result) {
-      if (listResponse.error) {
-        throw Error(listResponse.error.message);
-      }
-      throw Error();
+    const listResponse = await this.protocol.list(this.inspectedEntityId).catch((e) => this.errorHandler(e));
+    if (listResponse === 'disconnection') {
+      return 'disconnection';
+    }
+    if (listResponse.result === undefined) {
+      return 'error';
     }
 
-    const getResponse = await this.protocol.get(entityId, listResponse.result);
-    if (!getResponse.result) {
-      if (getResponse.error) {
-        throw Error(getResponse.error.message);
-      }
-      throw Error();
+    const getResponse = await this.protocol
+      .get(this.inspectedEntityId, listResponse.result)
+      .catch((e) => this.errorHandler(e));
+    if (getResponse === 'disconnection') {
+      return 'disconnection';
+    }
+    if (getResponse.result === undefined) {
+      return 'error';
     }
 
     // Parsing values
@@ -189,17 +195,19 @@ export class Client {
       }
       componentTree.push(new ComponentErrorElement(typePath, errorData));
     }
-    return componentTree;
+
+    // apply changes
+    this.inspectionElements = componentTree;
+    return 'success';
   }
 
   public async getInspectionElements(entityId: EntityId) {
     if (this.inspectedEntityId !== entityId) {
       this.inspectedEntityId = entityId;
-      this.inspectionElements = await this.updatedInspectionElements(entityId);
-      return this.inspectionElements;
+      await this.updateInspectionElements();
     }
     if (this.inspectionElements === null) {
-      this.inspectionElements = await this.updatedInspectionElements(entityId);
+      return [];
     }
     return this.inspectionElements;
   }
@@ -212,8 +220,8 @@ export class Client {
     return this.state === 'alive';
   }
 
-  public destroyEntity(element: EntityElement) {
-    this.protocol
+  public destroyEntity(element: EntityElement): Promise<ProtocolStatus> {
+    return this.protocol
       .destroy(element.id)
       .then((response) => {
         if (response.result === null) {
@@ -221,32 +229,35 @@ export class Client {
           Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true });
         }
       })
-      .catch((reason: Error) => {
-        if (isFetchFailed(reason)) {
-          this.death();
-          return;
+      .catch((e) => this.errorHandler(e))
+      .then((response) => {
+        if (response === 'disconnection') {
+          return 'disconnection';
         }
-        throw reason;
+        return 'success';
       });
   }
 
-  public async renameEntity(element: EntityElement) {
+  public async renameEntity(element: EntityElement): Promise<ProtocolStatus> {
     const newName = await vscode.window.showInputBox({}); // Prompt
     if (newName === undefined) {
-      return;
+      return 'error';
     }
-    const response = await this.protocol.insert(element.id, { 'bevy_ecs::name::Name': newName }); // Rename
+    const response = await this.protocol
+      .insert(element.id, { 'bevy_ecs::name::Name': newName })
+      .catch((e) => this.errorHandler(e));
+    if (response === 'disconnection') {
+      return 'disconnection';
+    }
     if (response.result === null && response.error === undefined) {
       element.name = newName; // Optimization
       Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true }); // Update view
+      return 'success';
     }
+    return 'error';
   }
 
   public cloneWithProtocol() {
     return new Client(this.protocol.url, this.protocol.serverVersion);
   }
-}
-
-function isFetchFailed(error: Error) {
-  return error.message === 'fetch failed';
 }
