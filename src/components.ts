@@ -47,28 +47,35 @@ export type InspectionElement = ComponentElement | ValueElement | NamedValueElem
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
   private focusedEntityId: null | EntityId;
-  private inspectionTree: ComponentElement[];
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   constructor() {
     this.focusedEntityId = null;
-    this.inspectionTree = [];
   }
 
   async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
+    const session = Extension.sessionManager.current();
+    if (session === null) {
+      return [];
+    }
+    if (this.focusedEntityId === null) {
+      return [];
+    }
     if (!parent) {
-      if (this.inspectionTree.length === 0) {
+      const tree = await session.getInspectionElements(this.focusedEntityId);
+      if (tree.length === 0) {
         return [new NamedValueElement('No components in this entity', [])];
       }
-      return this.inspectionTree;
+      return tree;
     }
     if (parent instanceof ComponentElement || parent instanceof NamedValueElement) {
       return parent.children;
     }
     return [];
   }
-  async getTreeItem(element: InspectionElement): Promise<vscode.TreeItem> {
+
+  getTreeItem(element: InspectionElement): vscode.TreeItem {
     if (element instanceof ComponentElement) {
       const shortPath = (/[^::]*$/.exec(element.typePath) ?? '???')[0];
       const treeItem = new vscode.TreeItem(shortPath);
@@ -104,7 +111,7 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
   public update(entity: null | EntityElement) {
     // Check if update needed
     const session = Extension.sessionManager.current();
-    if (!session) {
+    if (!session || !session.isAlive()) {
       return;
     }
     if (this.focusedEntityId === (entity === null ? null : entity.id)) {
@@ -117,19 +124,15 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     // Make empty
     if (entity === null) {
       this.focusedEntityId = null;
-      this.inspectionTree = [];
       this.treeIsChangedEmitter.fire();
       Extension.componentsView.description = undefined;
       return;
     }
 
-    // Or change to entity
-    session.getComponentsTree(entity.id).then((tree) => {
-      this.focusedEntityId = entity.id;
-      this.inspectionTree = tree;
-      this.treeIsChangedEmitter.fire();
-      Extension.componentsView.description = entity.id.toString();
-    });
+    // Or change to entity (notice - it is async)
+    this.focusedEntityId = entity.id;
+    this.treeIsChangedEmitter.fire();
+    Extension.componentsView.description = entity.id.toString();
   }
 }
 

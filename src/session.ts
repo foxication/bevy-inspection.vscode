@@ -1,58 +1,66 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
 import { EntityElement } from './entities';
-import { ComponentElement, NamedValueElement, ValueElement } from './components';
+import { ComponentElement, InspectionElement, NamedValueElement, ValueElement } from './components';
 import { Extension } from './extension';
 
 export class ProtocolSession {
-  private onDeath() {
-    vscode.window.showErrorMessage('Bevy instance is disconnected');
-  }
-
+  // Session data
   private protocol: BevyRemoteProtocol;
-  public state: 'dead' | 'alive';
-  public registeredComponents: TypePath[] = [];
-  public allEntitiesNodes: EntityElement[] = [];
+  private state: 'dead' | 'alive';
 
-  constructor(state: typeof this.state, url: URL, version: ServerVersion) {
-    this.state = state;
+  // Bevy data
+  private registeredComponents: TypePath[] = [];
+  private entityElements: EntityElement[] = [];
+  private inspectedEntityId: EntityId | null = null;
+  private inspectionElements: InspectionElement[] | null = null;
+
+  constructor(url: URL, version: ServerVersion) {
+    this.state = 'dead';
     this.protocol = new BevyRemoteProtocol(url, version);
   }
-  getSessionInfo(): string {
-    return 'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion;
+
+  private onDeath() {
+    Extension.entitiesView.description = 'Disconnected';
+    vscode.window.showInformationMessage('Bevy instance is disconnected');
   }
-  async initializeData() {
+
+  async updateEntitiesElements() {
     const response = await this.protocol.query({
       option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
     });
     if (!response.result) {
       return;
     }
-    this.allEntitiesNodes = response.result.map((value) => {
+    this.entityElements = response.result.map((value) => {
       return new EntityElement(value.entity, {
         name: value.components['bevy_ecs::name::Name'] as string,
         childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
         children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
       });
     });
+  }
+
+  async updateRegisteredComponents() {
     this.registeredComponents = (await this.protocol.list())?.result ?? [];
+  }
+
+  public async initialize() {
+    await this.updateEntitiesElements();
+    await this.updateRegisteredComponents();
     this.state = 'alive';
   }
-  isAlive() {
-    return this.state === 'alive';
+
+  public getEntitiesElements() {
+    return this.entityElements;
   }
 
-  async stop() {
-    this.state = 'dead';
-    this.onDeath();
-  }
-
-  async getComponentsTree(entity: EntityId): Promise<ComponentElement[]> {
-    if (!entity) {
+  private async updatedInspectionElements(entityId: EntityId): Promise<ComponentElement[]> {
+    if (!entityId) {
       return [];
     }
 
-    const listResponse = await this.protocol.list(entity);
+    const listResponse = await this.protocol.list(entityId);
     if (!listResponse.result) {
       if (listResponse.error) {
         throw Error(listResponse.error.message);
@@ -60,7 +68,7 @@ export class ProtocolSession {
       throw Error();
     }
 
-    const getResponse = await this.protocol.get(entity, listResponse.result);
+    const getResponse = await this.protocol.get(entityId, listResponse.result);
     if (!getResponse.result) {
       if (getResponse.error) {
         throw Error(getResponse.error.message);
@@ -133,6 +141,31 @@ export class ProtocolSession {
     }
     return componentTree;
   }
+
+  public async getInspectionElements(entityId: EntityId) {
+    if (this.inspectedEntityId !== entityId) {
+      this.inspectedEntityId = entityId;
+      this.inspectionElements = await this.updatedInspectionElements(entityId);
+      return this.inspectionElements;
+    }
+    if (this.inspectionElements === null) {
+      this.inspectionElements = await this.updatedInspectionElements(entityId);
+    }
+    return this.inspectionElements;
+  }
+
+  public getSessionInfo(): string {
+    return 'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion;
+  }
+
+  public isAlive() {
+    return this.state === 'alive';
+  }
+
+  public async disconnect() {
+    this.state = 'dead';
+    this.onDeath();
+  }
 }
 
 export class SessionManager {
@@ -161,16 +194,10 @@ export class SessionManager {
     const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
 
     // Create new session
-    const newSession = new ProtocolSession('alive', new URL(url), versionEnum);
-    if (this.lastSession) {
-      console.log('so');
-    }
+    const newSession = new ProtocolSession(new URL(url), versionEnum);
     newSession
-      .initializeData()
+      .initialize()
       .then(() => {
-        if (this.lastSession) {
-          console.log('fuck');
-        }
         // do not overwrite alive session
         if (this.lastSession) {
           if (this.lastSession.isAlive()) {
@@ -182,8 +209,8 @@ export class SessionManager {
         this.lastSession = newSession;
 
         // Update views
-        Extension.componentsProvider.update(null);
         Extension.entitiesProvider.update();
+        Extension.componentsProvider.update(null);
 
         // Make views visible
         vscode.commands.executeCommand('setContext', 'extension.areViewsVisible', true);

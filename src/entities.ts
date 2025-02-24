@@ -37,7 +37,6 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   private treeIsChangedEmitter = new vscode.EventEmitter<EntityElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
-  // core (entry, children)
   getChildren(element?: EntityElement | undefined): EntityElement[] {
     const session = Extension.sessionManager.current();
     if (!session) {
@@ -45,14 +44,14 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
     }
 
     if (!element) {
-      return session.allEntitiesNodes.filter((value) => {
+      return session.getEntitiesElements().filter((value) => {
         if (!value.childOf) {
           return value;
         }
       });
     }
     if (element instanceof EntityElement) {
-      return session.allEntitiesNodes.filter((value) => {
+      return session.getEntitiesElements().filter((value) => {
         if (value.childOf === element.id) {
           return value;
         }
@@ -62,8 +61,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
     return [];
   }
 
-  // core (visuals)
-  async getTreeItem(element: EntityElement): Promise<vscode.TreeItem> {
+  getTreeItem(element: EntityElement): vscode.TreeItem {
     const treeItem = new vscode.TreeItem(
       element.name ?? element.id.toString(),
       element.children ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
