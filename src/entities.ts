@@ -66,6 +66,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
       element.name ?? element.id.toString(),
       typeof element.children !== 'undefined' ? vscode.TreeItemCollapsibleState.Expanded : undefined
     );
+    treeItem.id = element.id.toString();
     if (!element.children) {
       treeItem.iconPath = new vscode.ThemeIcon('circle-outline');
     }
@@ -77,14 +78,16 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
     return treeItem;
   }
 
-  update(entityElement: null | EntityElement) {
+  update(options: { parentId?: EntityId; skipQuery?: boolean } | null) {
     const session = Extension.sessionManager.current();
     if (session === null) {
       return;
     }
     Extension.entitiesView.message = session.getSessionInfo();
-    session.updateEntitiesElements().then(() => {
-      this.treeIsChangedEmitter.fire(entityElement ?? undefined);
+
+    (options?.skipQuery === true ? new Promise(() => {}) : session.updateEntitiesElements()).then(() => {
+      const parentElement = session.getEntitiesElements().find((item) => item.id === options?.parentId);
+      this.treeIsChangedEmitter.fire(parentElement ?? undefined);
     });
   }
 }

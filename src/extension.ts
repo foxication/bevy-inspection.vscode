@@ -44,6 +44,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null)),
     vscode.commands.registerCommand('extension.destroyEntity', (ent: EntityElement) =>
       Extension.sessionManager.current()?.destroyEntity(ent)
+    ),
+    vscode.commands.registerCommand('extension.renameEntity', (ent: EntityElement) =>
+      Extension.sessionManager.current()?.renameEntity(ent)
     )
   );
 }

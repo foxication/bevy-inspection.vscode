@@ -129,9 +129,16 @@
 			},
 			{
 				"command": "extension.destroyEntity",
-				"title": "Destroy Entity from World",
+				"title": "Destroy Entity",
 				"category": "Bevy Inspection",
 				"icon": "$(trash)",
+				"enablement": "extension.isSessionAlive"
+			},
+			{
+				"command": "extension.renameEntity",
+				"title": "Rename Entity",
+				"category": "Bevy Inspection",
+				"icon": "$(pencil)",
 				"enablement": "extension.isSessionAlive"
 			}
 		],
@@ -155,6 +162,10 @@
 			"view/item/context": [
 				{
 					"command": "extension.destroyEntity",
+					"when": "viewItem == entityElement"
+				},
+				{
+					"command": "extension.renameEntity",
 					"when": "viewItem == entityElement",
 					"group": "inline@0"
 				}

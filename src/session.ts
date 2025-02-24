@@ -45,11 +45,9 @@ export class ProtocolSession {
         option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
       });
     } catch (reason) {
-      if (reason instanceof Error) {
-        if (isFetchFailed(reason)) {
-          this.disconnect();
-          return;
-        }
+      if (isFetchFailed(reason as Error)) {
+        this.disconnect();
+        return;
       }
       throw reason;
     }
@@ -190,19 +188,34 @@ export class ProtocolSession {
     this.onDeath();
   }
 
-  public destroyEntity(entityElement: EntityElement) {
-    this.protocol.destroy(entityElement.id).then(() => {
-      const parentId = entityElement.childOf;
-      if (parentId !== undefined) {
-        const parentElement = this.entityElements.find((element) => {
-          if (element.id === parentId) {
-            return element;
-          }
-        });
-        Extension.entitiesProvider.update(parentElement ?? null);
-      }
-      Extension.entitiesProvider.update(null);
-    });
+  public destroyEntity(element: EntityElement) {
+    this.protocol
+      .destroy(element.id)
+      .then((response) => {
+        if (response.result === null) {
+          this.entityElements = this.entityElements.filter((item) => item.id !== element.id);
+          Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true });
+        }
+      })
+      .catch((reason: Error) => {
+        if (isFetchFailed(reason)) {
+          this.disconnect();
+          return;
+        }
+        throw reason;
+      });
+  }
+
+  public async renameEntity(element: EntityElement) {
+    const newName = await vscode.window.showInputBox({}); // Prompt
+    if (newName === undefined) {
+      return;
+    }
+    const response = await this.protocol.insert(element.id, { 'bevy_ecs::name::Name': newName }); // Rename
+    if (response.result === null) {
+      element.name = newName; // Optimization
+      Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true }); // Update view
+    }
   }
 
   public cloneWithProtocol() {
