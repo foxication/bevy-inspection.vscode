@@ -28,7 +28,7 @@ export class Client {
     this.protocol = new BevyRemoteProtocol(url, version);
   }
 
-  private onDeath() {
+  public death() {
     this.state = 'dead';
     Extension.setIsSessionAlive(false);
     Extension.entitiesView.description = 'Disconnected';
@@ -48,7 +48,7 @@ export class Client {
       });
     } catch (reason) {
       if (isFetchFailed(reason as Error)) {
-        this.disconnect();
+        this.death();
         return 'disconnection';
       }
       throw reason;
@@ -72,7 +72,7 @@ export class Client {
       response = await this.protocol.list();
     } catch (reason) {
       if (isFetchFailed(reason as Error)) {
-        this.disconnect();
+        this.death();
         return 'disconnection';
       }
       throw reason;
@@ -212,10 +212,6 @@ export class Client {
     return this.state === 'alive';
   }
 
-  public disconnect() {
-    this.onDeath();
-  }
-
   public destroyEntity(element: EntityElement) {
     this.protocol
       .destroy(element.id)
@@ -227,7 +223,7 @@ export class Client {
       })
       .catch((reason: Error) => {
         if (isFetchFailed(reason)) {
-          this.disconnect();
+          this.death();
           return;
         }
         throw reason;
