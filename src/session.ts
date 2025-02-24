@@ -74,7 +74,7 @@ export class ProtocolSession {
     return this.entityElements;
   }
 
-  private async updatedInspectionElements(entityId: EntityId): Promise<(ComponentElement | ComponentErrorElement)[]> {
+  private async updatedInspectionElements(entityId: EntityId): Promise<InspectionElement[]> {
     if (!entityId) {
       return [];
     }
