@@ -103,15 +103,56 @@
 				"command": "extension.connect",
 				"title": "Connect to Bevy Instance",
 				"category": "Bevy Inspection",
+				"icon": "$(debug-start)",
 				"enablement": "!extension.isSessionAlive"
 			},
 			{
 				"command": "extension.disconnect",
 				"title": "Disconnect from Bevy Instance",
 				"category": "Bevy Inspection",
+				"icon": "$(debug-disconnect)",
+				"enablement": "extension.isSessionAlive"
+			},
+			{
+				"command": "extension.refreshEntities",
+				"title": "Refresh Hierarchy of Entities",
+				"category": "Bevy Inspection",
+				"icon": "$(debug-restart)",
+				"enablement": "extension.isSessionAlive"
+			},
+			{
+				"command": "extension.destroyEntity",
+				"title": "Destroy Entity from World",
+				"category": "Bevy Inspection",
+				"icon": "$(trash)",
 				"enablement": "extension.isSessionAlive"
 			}
-		]
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "extension.connect",
+					"when": "!extension.isSessionAlive && view == entitiesView",
+					"group": "navigation@0"
+				},
+				{
+					"command": "extension.disconnect",
+					"when": "extension.isSessionAlive && view == entitiesView"
+				},
+				{
+					"command": "extension.refreshEntities",
+					"when": "extension.isSessionAlive && view == entitiesView",
+					"group": "navigation@1"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "extension.destroyEntity",
+					"when": "viewItem == entityElement",
+					"group": "inline@0"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

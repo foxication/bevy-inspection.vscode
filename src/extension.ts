@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { ComponentsProvider, createComponentsView } from './components';
-import { createEntitiesView, EntitiesProvider } from './entities';
+import { createEntitiesView, EntitiesProvider, EntityElement } from './entities';
 import { SessionManager } from './session';
 
 export class Extension {
@@ -14,7 +14,7 @@ export class Extension {
   // Components
   static componentsProvider = new ComponentsProvider();
   static componentsView = createComponentsView(Extension.componentsProvider);
-  
+
   // Context
   static setIsSessionAlive(value: boolean) {
     vscode.commands.executeCommand('setContext', 'extension.isSessionAlive', value);
@@ -24,8 +24,7 @@ export class Extension {
   }
 }
 
-export class Context {
-}
+export class Context {}
 
 async function debugLog() {
   const protocol = new BevyRemoteProtocol(BevyRemoteProtocol.DEFAULT_URL, ServerVersion.V0_16);
@@ -40,6 +39,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
     vscode.commands.registerCommand('extension.connect', () => Extension.sessionManager.tryCreateSession()),
-    vscode.commands.registerCommand('extension.disconnect', () => Extension.sessionManager.current()?.disconnect())
+    vscode.commands.registerCommand('extension.disconnect', () => Extension.sessionManager.current()?.disconnect()),
+    vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null)),
+    vscode.commands.registerCommand('extension.destroyEntity', (ent: EntityElement) =>
+      Extension.sessionManager.current()?.destroyEntity(ent)
+    )
   );
 }

@@ -64,7 +64,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   getTreeItem(element: EntityElement): vscode.TreeItem {
     const treeItem = new vscode.TreeItem(
       element.name ?? element.id.toString(),
-      element.children ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
+      typeof element.children !== 'undefined' ? vscode.TreeItemCollapsibleState.Expanded : undefined
     );
     if (!element.children) {
       treeItem.iconPath = new vscode.ThemeIcon('circle-outline');
@@ -73,11 +73,18 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
       treeItem.description = element.id.toString();
     }
     treeItem.tooltip = element.id.toString();
+    treeItem.contextValue = 'entityElement';
     return treeItem;
   }
 
-  update() {
-    Extension.entitiesView.message = Extension.sessionManager.current()?.getSessionInfo();
-    this.treeIsChangedEmitter.fire();
+  update(entityElement: null | EntityElement) {
+    const session = Extension.sessionManager.current();
+    if (session === null) {
+      return;
+    }
+    Extension.entitiesView.message = session.getSessionInfo();
+    session.updateEntitiesElements().then(() => {
+      this.treeIsChangedEmitter.fire(entityElement ?? undefined);
+    });
   }
 }

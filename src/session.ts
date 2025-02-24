@@ -27,7 +27,7 @@ export class ProtocolSession {
     Extension.componentsView.description = 'Disconnected';
   }
 
-  async updateEntitiesElements() {
+  public async updateEntitiesElements() {
     const response = await this.protocol.query({
       option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
     });
@@ -43,7 +43,7 @@ export class ProtocolSession {
     });
   }
 
-  async updateRegisteredComponents() {
+  public async updateRegisteredComponents() {
     this.registeredComponents = (await this.protocol.list())?.result ?? [];
   }
 
@@ -164,8 +164,23 @@ export class ProtocolSession {
     return this.state === 'alive';
   }
 
-  public async disconnect() {
+  public disconnect() {
     this.onDeath();
+  }
+
+  public destroyEntity(entityElement: EntityElement) {
+    this.protocol.destroy(entityElement.id).then(() => {
+      const parentId = entityElement.childOf;
+      if (parentId !== undefined) {
+        const parentElement = this.entityElements.find((element) => {
+          if (element.id === parentId) {
+            return element;
+          }
+        });
+        Extension.entitiesProvider.update(parentElement ?? null);
+      }
+      Extension.entitiesProvider.update(null);
+    });
   }
 }
 
@@ -210,9 +225,9 @@ export class SessionManager {
         this.lastSession = newSession;
 
         // Update views
-        Extension.entitiesProvider.update();
+        Extension.entitiesProvider.update(null);
         Extension.entitiesView.description = undefined;
-        
+
         Extension.componentsProvider.update(null);
         Extension.componentsView.description = undefined;
 
