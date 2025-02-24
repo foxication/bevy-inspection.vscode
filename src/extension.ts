@@ -23,15 +23,10 @@ export function activate(context: vscode.ExtensionContext) {
   setAreViewsVisible(false);
   setIsSessionAlive(false);
 
-  // Extension parts
-  // Clients
+  // Extension
   const clientCollection = new ClientCollection();
-
-  // Entities
   const entitiesProvider = new EntitiesProvider(clientCollection);
   const entitiesView = createEntitiesView(entitiesProvider);
-
-  // Components
   const componentsProvider = new ComponentsProvider(clientCollection);
   const componentsView = createComponentsView(componentsProvider);
 
@@ -85,7 +80,6 @@ export function activate(context: vscode.ExtensionContext) {
     entitiesView.description = undefined;
     componentsView.description = undefined;
     entitiesProvider.update(null);
-    componentsProvider.update(null);
 
     // Set context
     setIsSessionAlive(true);
