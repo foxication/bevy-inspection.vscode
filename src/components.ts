@@ -65,7 +65,7 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
   }
 
   async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
-    const session = Extension.sessionManager.current();
+    const session = Extension.clientCollection.current();
     if (session === null) {
       return [];
     }
@@ -135,7 +135,7 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
 
   public update(entity: null | EntityElement) {
     // Check if update needed
-    const session = Extension.sessionManager.current();
+    const session = Extension.clientCollection.current();
     if (!session || !session.isAlive()) {
       return;
     }

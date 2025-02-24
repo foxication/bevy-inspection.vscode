@@ -38,7 +38,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   getChildren(element?: EntityElement | undefined): EntityElement[] {
-    const session = Extension.sessionManager.current();
+    const session = Extension.clientCollection.current();
     if (!session) {
       return [];
     }
@@ -79,14 +79,14 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   }
 
   update(options: { parentId?: EntityId; skipQuery?: boolean } | null) {
-    const session = Extension.sessionManager.current();
-    if (session === null) {
+    const client = Extension.clientCollection.current();
+    if (client === null) {
       return;
     }
-    Extension.entitiesView.message = session.getSessionInfo();
+    Extension.entitiesView.message = client.getSessionInfo();
 
-    (options?.skipQuery === true ? new Promise(() => {}) : session.updateEntitiesElements()).then(() => {
-      const parentElement = session.getEntitiesElements().find((item) => item.id === options?.parentId);
+    (options?.skipQuery === true ? (async (): Promise<void> => {})() : client.updateEntitiesElements()).then(() => {
+      const parentElement = client.getEntitiesElements().find((item) => item.id === options?.parentId);
       this.treeIsChangedEmitter.fire(parentElement ?? undefined);
     });
   }

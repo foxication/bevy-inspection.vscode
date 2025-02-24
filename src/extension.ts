@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { ComponentsProvider, createComponentsView } from './components';
 import { createEntitiesView, EntitiesProvider, EntityElement } from './entities';
-import { SessionManager } from './session';
+import { ClientCollection } from './client-collection';
 
 export class Extension {
-  static sessionManager = new SessionManager();
+  static clientCollection = new ClientCollection();
 
   // Entities
   static entitiesProvider = new EntitiesProvider();
@@ -39,19 +39,19 @@ export function activate(context: vscode.ExtensionContext) {
   // Userspace commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
-    vscode.commands.registerCommand('extension.connect', () => Extension.sessionManager.tryCreateSession()),
-    vscode.commands.registerCommand('extension.reconnect', () => Extension.sessionManager.tryCreateSession('last')),
-    vscode.commands.registerCommand('extension.disconnect', () => Extension.sessionManager.current()?.disconnect()),
+    vscode.commands.registerCommand('extension.connect', () => Extension.clientCollection.tryCreateSession()),
+    vscode.commands.registerCommand('extension.reconnect', () => Extension.clientCollection.tryCreateSession('last')),
+    vscode.commands.registerCommand('extension.disconnect', () => Extension.clientCollection.current()?.disconnect()),
     vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null))
   );
 
   // Extension only commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
-      Extension.sessionManager.current()?.destroyEntity(element)
+      Extension.clientCollection.current()?.destroyEntity(element)
     ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
-      Extension.sessionManager.current()?.renameEntity(element)
+      Extension.clientCollection.current()?.renameEntity(element)
     )
   );
 }

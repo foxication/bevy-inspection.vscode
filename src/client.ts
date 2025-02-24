@@ -10,7 +10,9 @@ import {
 } from './components';
 import { Extension } from './extension';
 
-export class ProtocolSession {
+type ProtocolStatus = 'success' | 'error' | 'disconnection';
+
+export class Client {
   // Session data
   private protocol: BevyRemoteProtocol;
   private state: 'dead' | 'alive';
@@ -33,12 +35,12 @@ export class ProtocolSession {
     Extension.componentsView.description = 'Disconnected';
     vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
       if (reaction === 'Reconnect') {
-        Extension.sessionManager.tryCreateSession('last');
+        Extension.clientCollection.tryCreateSession('last');
       }
     });
   }
 
-  public async updateEntitiesElements() {
+  public async updateEntitiesElements(): Promise<ProtocolStatus> {
     let response;
     try {
       response = await this.protocol.query({
@@ -47,12 +49,12 @@ export class ProtocolSession {
     } catch (reason) {
       if (isFetchFailed(reason as Error)) {
         this.disconnect();
-        return;
+        return 'disconnection';
       }
       throw reason;
     }
     if (!response.result) {
-      return;
+      return 'error';
     }
     this.entityElements = response.result.map((value) => {
       return new EntityElement(value.entity, {
@@ -61,16 +63,42 @@ export class ProtocolSession {
         children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
       });
     });
+    return 'success';
   }
 
-  public async updateRegisteredComponents() {
-    this.registeredComponents = (await this.protocol.list())?.result ?? [];
+  public async updateRegisteredComponents(): Promise<ProtocolStatus> {
+    let response;
+    try {
+      response = await this.protocol.list();
+    } catch (reason) {
+      if (isFetchFailed(reason as Error)) {
+        this.disconnect();
+        return 'disconnection';
+      }
+      throw reason;
+    }
+
+    if (response.result === undefined) {
+      return 'error';
+    }
+
+    this.registeredComponents = response.result;
+    return 'success';
   }
 
-  public async initialize() {
-    await this.updateEntitiesElements();
-    await this.updateRegisteredComponents();
+  public async initialize(): Promise<ProtocolStatus> {
+    const status1 = await this.updateEntitiesElements();
+    const status2 = await this.updateRegisteredComponents();
+
+    if (status1 === 'disconnection' || status2 === 'disconnection') {
+      return 'disconnection';
+    }
+    if (status1 === 'error' || status2 === 'error') {
+      return 'error';
+    }
+
     this.state = 'alive';
+    return 'success';
   }
 
   public getEntitiesElements() {
@@ -212,89 +240,14 @@ export class ProtocolSession {
       return;
     }
     const response = await this.protocol.insert(element.id, { 'bevy_ecs::name::Name': newName }); // Rename
-    if (response.result === null) {
+    if (response.result === null && response.error === undefined) {
       element.name = newName; // Optimization
       Extension.entitiesProvider.update({ parentId: element.childOf, skipQuery: true }); // Update view
     }
   }
 
   public cloneWithProtocol() {
-    return new ProtocolSession(this.protocol.url, this.protocol.serverVersion);
-  }
-}
-
-type SessionTemplate = 'prompt' | 'last';
-
-export class SessionManager {
-  private lastSession: null | ProtocolSession;
-
-  constructor() {
-    this.lastSession = null;
-  }
-
-  public async tryCreateSession(template: SessionTemplate = 'prompt') {
-    let newSession;
-
-    // Get session from user
-    if (template === 'prompt' || this.lastSession === null) {
-      // Input URL
-      const url = await vscode.window.showInputBox({
-        title: 'Connection to Bevy Instance',
-        value: BevyRemoteProtocol.DEFAULT_URL.toString(),
-      });
-      if (!url) {
-        return;
-      }
-
-      // Input version
-      const versions = Object.keys(ServerVersion);
-      const versionString = await vscode.window.showQuickPick(versions, { canPickMany: false });
-      if (!versionString) {
-        return;
-      }
-      const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
-
-      // Create new session
-      newSession = new ProtocolSession(new URL(url), versionEnum);
-    }
-    // Or clone last session
-    else {
-      newSession = this.lastSession.cloneWithProtocol();
-    }
-
-    newSession
-      .initialize()
-      .then(() => {
-        // do not overwrite alive session
-        if (this.lastSession?.isAlive() === true) {
-          return;
-        }
-
-        // success
-        this.lastSession = newSession;
-
-        // Update views
-        Extension.entitiesProvider.update(null);
-        Extension.entitiesView.description = undefined;
-
-        Extension.componentsProvider.update(null);
-        Extension.componentsView.description = undefined;
-
-        // Set context
-        Extension.setIsSessionAlive(true);
-        Extension.setAreViewsVisible(true);
-      })
-      .catch((reason: Error) => {
-        if (isFetchFailed(reason)) {
-          vscode.window.showErrorMessage('Connection with Bevy instance is refused');
-          return;
-        }
-        throw reason;
-      });
-  }
-
-  public current() {
-    return this.lastSession;
+    return new Client(this.protocol.url, this.protocol.serverVersion);
   }
 }
 
