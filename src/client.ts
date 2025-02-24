@@ -239,7 +239,7 @@ export class Client {
   }
 
   public async renameEntity(element: EntityElement): Promise<ProtocolStatus> {
-    const newName = await vscode.window.showInputBox({}); // Prompt
+    const newName = await vscode.window.showInputBox({ title: 'Rename Entity', value: element.name }); // Prompt
     if (newName === undefined) {
       return 'error';
     }
