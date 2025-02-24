@@ -77,7 +77,7 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
   }
 
   update() {
-    this.treeIsChangedEmitter.fire();
     Extension.entitiesView.message = Extension.sessionManager.current()?.getSessionInfo();
+    this.treeIsChangedEmitter.fire();
   }
 }

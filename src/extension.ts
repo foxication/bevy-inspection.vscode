@@ -14,6 +14,17 @@ export class Extension {
   // Components
   static componentsProvider = new ComponentsProvider();
   static componentsView = createComponentsView(Extension.componentsProvider);
+  
+  // Context
+  static setIsSessionAlive(value: boolean) {
+    vscode.commands.executeCommand('setContext', 'extension.isSessionAlive', value);
+  }
+  static setAreViewsVisible(value: boolean) {
+    vscode.commands.executeCommand('setContext', 'extension.areViewsVisible', value);
+  }
+}
+
+export class Context {
 }
 
 async function debugLog() {
@@ -23,9 +34,12 @@ async function debugLog() {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  // Register commands
+  Extension.setAreViewsVisible(false);
+  Extension.setIsSessionAlive(false);
+
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
-    vscode.commands.registerCommand('extension.connect', () => Extension.sessionManager.tryCreateSession())
+    vscode.commands.registerCommand('extension.connect', () => Extension.sessionManager.tryCreateSession()),
+    vscode.commands.registerCommand('extension.disconnect', () => Extension.sessionManager.current()?.disconnect())
   );
 }

@@ -125,14 +125,14 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     if (entity === null) {
       this.focusedEntityId = null;
       this.treeIsChangedEmitter.fire();
-      Extension.componentsView.description = undefined;
+      Extension.componentsView.message = undefined;
       return;
     }
 
     // Or change to entity (notice - it is async)
     this.focusedEntityId = entity.id;
     this.treeIsChangedEmitter.fire();
-    Extension.componentsView.description = entity.id.toString();
+    Extension.componentsView.message = 'ID: ' + entity.id;
   }
 }
 

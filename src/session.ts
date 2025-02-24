@@ -21,8 +21,10 @@ export class ProtocolSession {
   }
 
   private onDeath() {
+    this.state = 'dead';
+    Extension.setIsSessionAlive(false);
     Extension.entitiesView.description = 'Disconnected';
-    vscode.window.showInformationMessage('Bevy instance is disconnected');
+    Extension.componentsView.description = 'Disconnected';
   }
 
   async updateEntitiesElements() {
@@ -163,7 +165,6 @@ export class ProtocolSession {
   }
 
   public async disconnect() {
-    this.state = 'dead';
     this.onDeath();
   }
 }
@@ -210,10 +211,14 @@ export class SessionManager {
 
         // Update views
         Extension.entitiesProvider.update();
+        Extension.entitiesView.description = undefined;
+        
         Extension.componentsProvider.update(null);
+        Extension.componentsView.description = undefined;
 
-        // Make views visible
-        vscode.commands.executeCommand('setContext', 'extension.areViewsVisible', true);
+        // Set context
+        Extension.setIsSessionAlive(true);
+        Extension.setAreViewsVisible(true);
       })
       .catch((reason: Error) => {
         switch (reason.message) {

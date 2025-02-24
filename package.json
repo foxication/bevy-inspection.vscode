@@ -100,16 +100,16 @@
 				"category": "Bevy Inspection"
 			},
 			{
-				"command": "extension.inspectEntity",
-				"title": "Inspect Entity",
-				"category": "Bevy Inspection",
-				"enablement": "false"
-			},
-			{
 				"command": "extension.connect",
 				"title": "Connect to Bevy Instance",
 				"category": "Bevy Inspection",
-				"enablement": "false"
+				"enablement": "!extension.isSessionAlive"
+			},
+			{
+				"command": "extension.disconnect",
+				"title": "Disconnect from Bevy Instance",
+				"category": "Bevy Inspection",
+				"enablement": "extension.isSessionAlive"
 			}
 		]
 	},
