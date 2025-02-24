@@ -107,6 +107,13 @@
 				"enablement": "!extension.isSessionAlive"
 			},
 			{
+				"command": "extension.reconnect",
+				"title": "Reconnect to Bevy Instance",
+				"category": "Bevy Inspection",
+				"icon": "$(debug-start)",
+				"enablement": "!extension.isSessionAlive"
+			},
+			{
 				"command": "extension.disconnect",
 				"title": "Disconnect from Bevy Instance",
 				"category": "Bevy Inspection",

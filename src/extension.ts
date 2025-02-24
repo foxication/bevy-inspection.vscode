@@ -39,6 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
     vscode.commands.registerCommand('extension.connect', () => Extension.sessionManager.tryCreateSession()),
+    vscode.commands.registerCommand('extension.reconnect', () => Extension.sessionManager.tryCreateSession('last')),
     vscode.commands.registerCommand('extension.disconnect', () => Extension.sessionManager.current()?.disconnect()),
     vscode.commands.registerCommand('extension.refreshEntities', () => Extension.entitiesProvider.update(null)),
     vscode.commands.registerCommand('extension.destroyEntity', (ent: EntityElement) =>

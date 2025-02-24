@@ -31,6 +31,11 @@ export class ProtocolSession {
     Extension.setIsSessionAlive(false);
     Extension.entitiesView.description = 'Disconnected';
     Extension.componentsView.description = 'Disconnected';
+    vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
+      if (reaction === 'Reconnect') {
+        Extension.sessionManager.tryCreateSession('last');
+      }
+    });
   }
 
   public async updateEntitiesElements() {
@@ -201,6 +206,8 @@ export class ProtocolSession {
   }
 }
 
+type SessionTemplate = 'prompt' | 'last';
+
 export class SessionManager {
   private lastSession: null | ProtocolSession;
 
@@ -208,31 +215,41 @@ export class SessionManager {
     this.lastSession = null;
   }
 
-  public async tryCreateSession() {
-    // Input URL
-    const url = await vscode.window.showInputBox({
-      title: 'Connection to Bevy Instance',
-      value: BevyRemoteProtocol.DEFAULT_URL.toString(),
-    });
-    if (!url) {
-      return;
+  public async tryCreateSession(template: SessionTemplate = 'prompt') {
+    let newSession;
+
+    if (template === 'prompt' || this.lastSession === null) {
+      template = 'prompt';
+
+      // Input URL
+      const url = await vscode.window.showInputBox({
+        title: 'Connection to Bevy Instance',
+        value: BevyRemoteProtocol.DEFAULT_URL.toString(),
+      });
+      if (!url) {
+        return;
+      }
+
+      // Input version
+      const versions = Object.keys(ServerVersion);
+      const versionString = await vscode.window.showQuickPick(versions, { canPickMany: false });
+      if (!versionString) {
+        return;
+      }
+      const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
+
+      // Create new session
+      newSession = new ProtocolSession(new URL(url), versionEnum);
+    } else {
+      template = 'last';
+      newSession = this.lastSession;
     }
 
-    // Input version
-    const versions = Object.keys(ServerVersion);
-    const versionString = await vscode.window.showQuickPick(versions, { canPickMany: false });
-    if (!versionString) {
-      return;
-    }
-    const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
-
-    // Create new session
-    const newSession = new ProtocolSession(new URL(url), versionEnum);
     newSession
       .initialize()
       .then(() => {
         // do not overwrite alive session
-        if (this.lastSession) {
+        if (template === 'prompt' && this.lastSession) {
           if (this.lastSession.isAlive()) {
             return;
           }
