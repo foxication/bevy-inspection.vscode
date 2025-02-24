@@ -23,6 +23,16 @@ export class ComponentElement {
   }
 }
 
+export class ComponentErrorElement {
+  typePath: TypePath;
+  children: (NamedValueElement | ValueElement)[];
+
+  constructor(name: string, children: typeof this.children) {
+    this.typePath = name;
+    this.children = children;
+  }
+}
+
 export class ValueElement {
   value: Value;
 
@@ -43,7 +53,7 @@ export class NamedValueElement {
   }
 }
 
-export type InspectionElement = ComponentElement | ValueElement | NamedValueElement;
+export type InspectionElement = ComponentElement | ComponentErrorElement | ValueElement | NamedValueElement;
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
   private focusedEntityId: null | EntityId;
@@ -69,7 +79,11 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
       }
       return tree;
     }
-    if (parent instanceof ComponentElement || parent instanceof NamedValueElement) {
+    if (
+      parent instanceof ComponentElement ||
+      parent instanceof ComponentErrorElement ||
+      parent instanceof NamedValueElement
+    ) {
       return parent.children;
     }
     return [];
@@ -84,6 +98,17 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
       }
       treeItem.tooltip = element.typePath;
       treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log-unverified');
+      return treeItem;
+    }
+    if (element instanceof ComponentErrorElement) {
+      const shortPath = (/[^::]*$/.exec(element.typePath) ?? '???')[0];
+      const treeItem = new vscode.TreeItem(shortPath);
+      if (element.children.length > 0) {
+        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+      }
+      treeItem.tooltip = element.typePath;
+      treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log');
+      treeItem.description = 'error';
       return treeItem;
     }
     if (element instanceof ValueElement) {

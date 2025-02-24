@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
 import { EntityElement } from './entities';
-import { ComponentElement, InspectionElement, NamedValueElement, ValueElement } from './components';
+import {
+  ComponentElement,
+  ComponentErrorElement,
+  InspectionElement,
+  NamedValueElement,
+  ValueElement,
+} from './components';
 import { Extension } from './extension';
 
 export class ProtocolSession {
@@ -57,7 +63,7 @@ export class ProtocolSession {
     return this.entityElements;
   }
 
-  private async updatedInspectionElements(entityId: EntityId): Promise<ComponentElement[]> {
+  private async updatedInspectionElements(entityId: EntityId): Promise<(ComponentElement | ComponentErrorElement)[]> {
     if (!entityId) {
       return [];
     }
@@ -139,7 +145,7 @@ export class ProtocolSession {
       if (toParse.data !== undefined && typeof toParse.data !== 'object') {
         new NamedValueElement('message', [], toParse.data);
       }
-      componentTree.push(new ComponentElement(typePath, errorData));
+      componentTree.push(new ComponentErrorElement(typePath, errorData));
     }
     return componentTree;
   }
