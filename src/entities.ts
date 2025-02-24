@@ -1,22 +1,14 @@
 import * as vscode from 'vscode';
 import { EntityId } from 'bevy-remote-protocol';
-import { ExtEvents, getClientCollection } from './extension';
+import { getClientCollection } from './extension';
 
 export function createEntitiesView(entitiesProvider: EntitiesProvider) {
-  const view = vscode.window.createTreeView('entitiesView', {
+  return vscode.window.createTreeView('entitiesView', {
     treeDataProvider: entitiesProvider,
     canSelectMany: false,
     showCollapseAll: true,
     dragAndDropController: undefined, // TODO
   });
-  view.onDidChangeSelection((event) => {
-    if (event.selection.length > 1) {
-      return;
-    }
-    const selected = event.selection[0];
-    ExtEvents.userSelectedAnotherEntity(selected);
-  });
-  return view;
 }
 
 export class EntityElement {
@@ -87,7 +79,6 @@ export class EntitiesProvider implements vscode.TreeDataProvider<EntityElement> 
     (options?.skipQuery === true ? (async (): Promise<void> => {})() : client.updateEntitiesElements()).then(() => {
       const parentElement = client.getEntitiesElements().find((item) => item.id === options?.parentId);
       this.treeIsChangedEmitter.fire(parentElement ?? undefined);
-      ExtEvents.entityViewUpdated();
     });
   }
 }

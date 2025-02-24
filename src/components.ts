@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
-import { ExtEvents, getClientCollection } from './extension';
+import { getClientCollection } from './extension';
 import { EntityElement } from './entities';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
@@ -147,14 +147,12 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     if (entity === null) {
       this.focusedEntityId = null;
       this.treeIsChangedEmitter.fire();
-      ExtEvents.componentsViewUpdated(entity);
       return;
     }
     
     // Or change to entity (notice - it is async)
     this.focusedEntityId = entity.id;
     this.treeIsChangedEmitter.fire();
-    ExtEvents.componentsViewUpdated(entity);
   }
 }
 

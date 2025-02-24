@@ -8,7 +8,6 @@ import {
   NamedValueElement,
   ValueElement,
 } from './components';
-import { ExtEvents } from './extension';
 
 type StatusDisconnection = 'disconnection';
 type ProtocolStatus = 'success' | 'error' | StatusDisconnection;
@@ -25,6 +24,16 @@ export class Client {
   private inspectedEntityId: EntityId | null = null;
   private inspectionElements: InspectionElement[] | null = null;
 
+  // Events
+  private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
+  readonly onEntityRenamed = this.entityRenamedEmitter.event;
+  private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
+  readonly onEntityDestroyed = this.entityDestroyedEmitter.event;
+  private userAskedForReconnection = new vscode.EventEmitter<Client>();
+  readonly onUserAskedForReconnection = this.userAskedForReconnection.event;
+  private deathEmitter = new vscode.EventEmitter<Client>();
+  readonly onDeath = this.deathEmitter.event;
+
   constructor(url: URL, version: ServerVersion) {
     this.state = 'dead';
     this.protocol = new BevyRemoteProtocol(url, version);
@@ -33,12 +42,12 @@ export class Client {
   public death() {
     const wasAlive = this.state === 'alive';
     this.state = 'dead';
-    ExtEvents.clientConnectionUpated(this.state);
+    this.deathEmitter.fire(this);
 
     if (wasAlive) {
       vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
         if (reaction === 'Reconnect') {
-          ExtEvents.userAskedForReconnection();
+          this.userAskedForReconnection.fire(this);
         }
       });
     } else {
@@ -225,7 +234,7 @@ export class Client {
       .then((response) => {
         if (response.result === null) {
           this.entityElements = this.entityElements.filter((item) => item.id !== element.id);
-          ExtEvents.entityIsDestroyed(element.childOf);
+          this.entityDestroyedEmitter.fire(element);
         }
       })
       .catch((e) => this.errorHandler(e))
@@ -250,7 +259,7 @@ export class Client {
     }
     if (response.result === null && response.error === undefined) {
       element.name = newName; // Optimization
-      ExtEvents.entityIsRenamed(element.childOf);
+      this.entityRenamedEmitter.fire(element);
       return 'success';
     }
     return 'error';

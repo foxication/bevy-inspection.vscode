@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { Client } from './client';
-import { ExtEvents } from './extension';
 
 type SessionTemplate = 'prompt' | 'last';
 
 export class ClientCollection {
   private lastSession: null | Client;
+  private clientAddedEmitter = new vscode.EventEmitter<Client>();
+  readonly onClientAdded = this.clientAddedEmitter.event;
 
   constructor() {
     this.lastSession = null;
@@ -53,7 +54,7 @@ export class ClientCollection {
 
       // success
       this.lastSession = newSession;
-      ExtEvents.newClientAdded();
+      this.clientAddedEmitter.fire(this.lastSession);
     });
   }
 
