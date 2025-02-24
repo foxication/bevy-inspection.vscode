@@ -4,7 +4,7 @@
 //! You can toggle wireframes with the space bar except on wasm. Wasm does not support
 //! `POLYGON_MODE_LINE` on the gpu.
 
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
@@ -16,6 +16,7 @@ use bevy::{
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
     },
+    winit::WinitSettings,
 };
 
 fn main() {
@@ -27,6 +28,20 @@ fn main() {
             #[cfg(not(target_arch = "wasm32"))]
             WireframePlugin,
         ))
+        .insert_resource(WinitSettings {
+            focused_mode: bevy::winit::UpdateMode::Reactive {
+                wait: Duration::from_secs_f64(1.0 / 30.0),
+                react_to_device_events: false,
+                react_to_user_events: false,
+                react_to_window_events: false,
+            },
+            unfocused_mode: bevy::winit::UpdateMode::Reactive {
+                wait: Duration::from_secs_f64(1.0 / 30.0),
+                react_to_device_events: false,
+                react_to_user_events: false,
+                react_to_window_events: false,
+            },
+        })
         .add_systems(Startup, setup)
         .add_systems(
             Update,
@@ -87,7 +102,7 @@ fn setup(
                 meshes.add(Extrusion::new(RegularPolygon::default(), 1.)),
                 meshes.add(Extrusion::new(Triangle2d::default(), 1.)),
             ];
-            
+
             let num_shapes = shapes.len();
 
             for (i, shape) in shapes.into_iter().enumerate() {
