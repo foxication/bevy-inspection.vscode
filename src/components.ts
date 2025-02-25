@@ -101,9 +101,11 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
   }
 
   getTreeItem(element: InspectionElement): vscode.TreeItem {
+    const getShortPath = (path: string) => {
+      return (/[^::]*$/.exec(path.split('<')[0]) ?? '???')[0];
+    };
     if (element instanceof ComponentElement) {
-      const shortPath = (/[^::]*$/.exec(element.typePath) ?? '???')[0];
-      const treeItem = new vscode.TreeItem(shortPath);
+      const treeItem = new vscode.TreeItem(getShortPath(element.typePath));
       if (element.children.length > 0) {
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
       }
@@ -112,8 +114,7 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
       return treeItem;
     }
     if (element instanceof ComponentErrorElement) {
-      const shortPath = (/[^::]*$/.exec(element.typePath) ?? '???')[0];
-      const treeItem = new vscode.TreeItem(shortPath);
+      const treeItem = new vscode.TreeItem(getShortPath(element.typePath));
       if (element.children.length > 0) {
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
       }
