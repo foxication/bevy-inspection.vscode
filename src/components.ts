@@ -115,7 +115,7 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
       const shortPath = (/[^::]*$/.exec(element.typePath) ?? '???')[0];
       const treeItem = new vscode.TreeItem(shortPath);
       if (element.children.length > 0) {
-        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
       }
       treeItem.tooltip = element.typePath;
       treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log');
