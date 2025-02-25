@@ -72,22 +72,9 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
       return [];
     }
 
-    // render entities of client
-    if (element instanceof ClientElement) {
-      return client.getEntitiesElements().filter((element) => {
-        if (element.childOf === undefined) {
-          return element;
-        }
-      });
-    }
-
-    // render entities of parent entity
-    if (element instanceof EntityElement) {
-      return client.getEntitiesElements().filter((value) => {
-        if (value.childOf === element.id) {
-          return value;
-        }
-      });
+    // render entities of client | entity
+    if (element instanceof ClientElement || element instanceof EntityElement) {
+      return client.getChildren(element);
     }
 
     return [];
@@ -100,7 +87,7 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
         return new vscode.TreeItem('No such client');
       }
 
-      const hasEntities = client.getEntitiesElements().length > 0;
+      const hasEntities = client.getEntitiesElements().size > 0;
       const collapsible = hasEntities ? vscode.TreeItemCollapsibleState.Expanded : undefined;
       const treeItem = new vscode.TreeItem(element.host.toString(), collapsible);
 

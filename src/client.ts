@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
-import { EntityElement } from './hierarchy';
+import { ClientElement, EntityElement, HierarchyElement } from './hierarchy';
 import {
   ComponentElement,
   ComponentErrorElement,
@@ -20,7 +20,7 @@ export class Client {
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
-  private entityElements: EntityElement[] = [];
+  private entityElements = new Map<EntityId, EntityElement>();
   private inspectedEntityId: EntityId | null = null;
   private inspectionElements: InspectionElement[] | null = null;
 
@@ -46,10 +46,9 @@ export class Client {
   public death() {
     const wasAlive = this.state === 'alive';
     this.state = 'dead';
-    this.entityElements = this.entityElements.map((element) => {
+    for (const element of this.entityElements.values()) {
       element.state = 'dead';
-      return element;
-    });
+    }
     this.deathEmitter.fire(this);
 
     if (wasAlive) {
@@ -83,13 +82,18 @@ export class Client {
     if (response.result === undefined) {
       return 'error';
     }
-    this.entityElements = response.result.map((value) => {
-      return new EntityElement(this.getProtocol().url.host, this.getState(), value.entity, {
-        name: value.components['bevy_ecs::name::Name'] as string,
-        childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
-        children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
-      });
-    });
+    this.entityElements = new Map(
+      response.result.map((value) => {
+        return [
+          value.entity,
+          new EntityElement(this.getProtocol().url.host, this.getState(), value.entity, {
+            name: value.components['bevy_ecs::name::Name'] as string,
+            childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
+            children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
+          }),
+        ];
+      })
+    );
     this.entitiesUpdatedEmitter.fire(this);
     return 'success';
   }
@@ -242,7 +246,7 @@ export class Client {
       .destroy(element.id)
       .then((response) => {
         if (response.result === null) {
-          this.entityElements = this.entityElements.filter((item) => item.id !== element.id);
+          this.entityElements.delete(element.id);
           this.entityDestroyedEmitter.fire(element);
         }
       })
@@ -267,7 +271,7 @@ export class Client {
       return 'disconnection';
     }
     if (response.result === null && response.error === undefined) {
-      element.name = newName; // Optimization
+      element.name = newName;
       this.entityRenamedEmitter.fire(element);
       return 'success';
     }
@@ -290,9 +294,14 @@ export class Client {
     });
   }
 
-  public findElement(id: EntityId): EntityElement | undefined {
-    return this.entityElements.find((element) => {
-      return element.id === id;
-    });
+  public getElement(id: EntityId): EntityElement | undefined {
+    return this.entityElements.get(id);
+  }
+
+  public getChildren(parent: HierarchyElement): EntityElement[] {
+    if (parent instanceof ClientElement) {
+      return Array.from(this.entityElements.values()).filter((element) => element.childOf === undefined);
+    }
+    return parent.children?.map((id) => this.entityElements.get(id)).filter((element) => element !== undefined) ?? [];
   }
 }

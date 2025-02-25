@@ -50,13 +50,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
       clientCollection.get(element.host)?.destroyEntity(element)
     ),
-    vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) => {
-      const client = clientCollection.get(element.host);
-      if (client === undefined) {
-        return;
-      }
-      client.renameEntity(element);
-    })
+    vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
+      clientCollection.get(element.host)?.renameEntity(element)
+    )
   );
 
   // Events
@@ -115,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (destroyed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(destroyed.host)?.findElement(destroyed.childOf);
+      const scope = clientCollection.get(destroyed.host)?.getElement(destroyed.childOf);
       if (scope === undefined) {
         return;
       }
@@ -126,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (renamed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(renamed.host)?.findElement(renamed.childOf);
+      const scope = clientCollection.get(renamed.host)?.getElement(renamed.childOf);
       if (scope === undefined) {
         return;
       }
