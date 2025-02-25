@@ -35,6 +35,8 @@ export class Client {
   readonly onUserAskedForReconnection = this.userAskedForReconnection.event;
   private deathEmitter = new vscode.EventEmitter<Client>();
   readonly onDeath = this.deathEmitter.event;
+  private reviveEmitter = new vscode.EventEmitter<Client>();
+  readonly onRevive = this.reviveEmitter.event;
 
   constructor(url: URL, version: ServerVersion) {
     this.state = 'dead';
@@ -278,5 +280,13 @@ export class Client {
 
   public getProtocol() {
     return this.protocol;
+  }
+
+  public revive() {
+    this.initialize().then((status) => {
+      if (status === 'success') {
+        this.reviveEmitter.fire(this);
+      }
+    });
   }
 }

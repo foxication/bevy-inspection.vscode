@@ -30,27 +30,26 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
     vscode.commands.registerCommand('extension.addClient', () => clientCollection.tryCreateClient()),
-    vscode.commands.registerCommand('extension.addLastClient', () => clientCollection.tryCreateClient('last'))
+    vscode.commands.registerCommand('extension.reviveLastClient', () => clientCollection.tryCreateClient('last'))
   );
 
   // Extension only commands
   context.subscriptions.push(
+    vscode.commands.registerCommand('extension.reviveClient', (element: ClientElement) =>
+      clientCollection.get(element.host)?.revive()
+    ),
     vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement) =>
-      clientCollection.refreshWorld(element)
+      clientCollection.get(element.host)?.updateEntitiesElements()
     ),
     vscode.commands.registerCommand('extension.killClient', (element: ClientElement) =>
-      clientCollection.killClient(element)
+      clientCollection.get(element.host)?.death()
     ),
     vscode.commands.registerCommand('extension.forgotClient', (element: ClientElement) =>
-      clientCollection.removeClient(element)
+      clientCollection.removeClient(element.host)
     ),
-    vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) => {
-      const client = clientCollection.get(element.host);
-      if (client === undefined) {
-        return;
-      }
-      client.destroyEntity(element);
-    }),
+    vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
+      clientCollection.get(element.host)?.destroyEntity(element)
+    ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) => {
       const client = clientCollection.get(element.host);
       if (client === undefined) {
@@ -117,6 +116,10 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     client.onDeath(() => {
+      entitiesProvider.updateClients();
+    });
+
+    client.onRevive(() => {
       entitiesProvider.updateClients();
     });
   });

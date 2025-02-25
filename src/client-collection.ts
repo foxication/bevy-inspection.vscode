@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { Client } from './client';
-import { ClientElement } from './hierarchy';
 
 type AddBehavior = 'prompt' | 'last';
 
@@ -87,24 +86,8 @@ export class ClientCollection {
     });
   }
 
-  public refreshWorld(element: ClientElement) {
-    const client = this.get(element.host);
-    if (client === undefined) {
-      return;
-    }
-    client.updateEntitiesElements();
-  }
-
-  public killClient(element: ClientElement) {
-    const client = this.get(element.host);
-    if (client === undefined) {
-      return;
-    }
-    client.death();
-  }
-
-  public removeClient(element: ClientElement) {
-    const client = this.get(element.host);
+  public removeClient(host: string) {
+    const client = this.get(host);
     if (client === undefined || client.getState() === 'alive') {
       return;
     }

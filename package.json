@@ -101,22 +101,27 @@
 			},
 			{
 				"command": "extension.addClient",
-				"title": "Connect to Bevy Instance",
+				"title": "Create Connection",
 				"category": "Bevy Inspection",
 				"icon": "$(add)"
 			},
 			{
-				"command": "extension.addLastClient",
-				"title": "Reconnect to Bevy Instance",
+				"command": "extension.reviveLastClient",
+				"title": "Reconnect",
 				"category": "Bevy Inspection",
-				"icon": "$(add)",
 				"enablement": "extension.areThereClients"
 			},
 			{
 				"command": "extension.killClient",
-				"title": "Disconnect from Bevy Instance",
+				"title": "Disconnect",
 				"category": "Bevy Inspection",
 				"icon": "$(debug-disconnect)"
+			},
+			{
+				"command": "extension.reviveClient",
+				"title": "Restore connection",
+				"category": "Bevy Inspection",
+				"icon": "$(plug)"
 			},
 			{
 				"command": "extension.forgotClient",
@@ -152,9 +157,6 @@
 				},
 				{
 					"command": "extension.addClient"
-				},
-				{
-					"command": "extension.addLastClient"
 				}
 			],
 			"view/title": [
@@ -175,9 +177,14 @@
 					"group": "inline"
 				},
 				{
+					"command": "extension.reviveClient",
+					"when": "viewItem == clientElementDead",
+					"group": "inline@0"
+				},
+				{
 					"command": "extension.forgotClient",
 					"when": "viewItem == clientElementDead",
-					"group": "inline"
+					"group": "inline@1"
 				},
 				{
 					"command": "extension.destroyEntity",
