@@ -133,7 +133,8 @@
 				"command": "extension.refreshWorld",
 				"title": "Refresh Hierarchy of Entities",
 				"category": "Bevy Inspection",
-				"icon": "$(debug-restart)"
+				"icon": "$(debug-restart)",
+				"enablement": "viewItem == entityElementAlive || viewItem == clientElementAlive"
 			},
 			{
 				"command": "extension.destroyEntity",
@@ -193,14 +194,19 @@
 					"group": "inline@1"
 				},
 				{
-					"command": "extension.renameEntity",
+					"command": "extension.refreshWorld",
 					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
 					"group": "none@0"
 				},
 				{
-					"command": "extension.destroyEntity",
+					"command": "extension.renameEntity",
 					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
 					"group": "none@1"
+				},
+				{
+					"command": "extension.destroyEntity",
+					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
+					"group": "none@2"
 				},
 				{
 					"command": "extension.renameEntity",

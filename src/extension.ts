@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.reviveClient', (element: ClientElement) =>
       clientCollection.get(element.host)?.revive()
     ),
-    vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement) =>
+    vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement | EntityElement) =>
       clientCollection.get(element.host)?.updateEntitiesElements()
     ),
     vscode.commands.registerCommand('extension.killClient', (element: ClientElement) =>
