@@ -25,8 +25,8 @@ export class Client {
   private inspectionElements: InspectionElement[] | null = null;
 
   // Events
-  private worldUpdated = new vscode.EventEmitter<Client>();
-  readonly onWorldUpdated = this.worldUpdated.event;
+  private entitiesUpdatedEmitter = new vscode.EventEmitter<Client>();
+  readonly onEntitiesUpdated = this.entitiesUpdatedEmitter.event;
   private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
@@ -88,7 +88,7 @@ export class Client {
         children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
       });
     });
-    this.worldUpdated.fire(this);
+    this.entitiesUpdatedEmitter.fire(this);
     return 'success';
   }
 
