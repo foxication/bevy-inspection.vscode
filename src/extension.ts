@@ -78,7 +78,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // entitiesProvider.onDidChangeTreeData(() => {});
+  entitiesProvider.onDidChangeTreeData(() => console.log('entitiesProvider emmits: TREEDATACHANGED'));
 
   entitiesView.onDidChangeSelection((event) => {
     if (event.selection.length === 0) {
@@ -107,12 +107,30 @@ export function activate(context: vscode.ExtensionContext) {
       clientCollection.tryCreateClient('last');
     });
 
+    client.onEntitiesUpdated((client) => {
+      entitiesProvider.updateInClient(client.getProtocol().url.host);
+    });
+
     client.onEntityDestroyed((destroyed) => {
-      entitiesProvider.updateWorld(destroyed.host, { parentId: destroyed.childOf, skipQuery: true });
+      if (destroyed.childOf === undefined) {
+        return;
+      }
+      const scope = clientCollection.get(destroyed.host)?.findElement(destroyed.childOf);
+      if (scope === undefined) {
+        return;
+      }
+      entitiesProvider.updateInScope(scope);
     });
 
     client.onEntityRenamed((renamed) => {
-      entitiesProvider.updateWorld(renamed.host, { parentId: renamed.childOf, skipQuery: true });
+      if (renamed.childOf === undefined) {
+        return;
+      }
+      const scope = clientCollection.get(renamed.host)?.findElement(renamed.childOf);
+      if (scope === undefined) {
+        return;
+      }
+      entitiesProvider.updateInScope(scope);
     });
 
     client.onDeath(() => {

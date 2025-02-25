@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { Client } from './client';
+import { ClientElement } from './hierarchy';
 
 type AddBehavior = 'prompt' | 'last';
 
 export class ClientCollection {
   // Properties
-  private collection: Client[] = [];
+  private collection = new Map<string, Client>();
   private lastProtocol: null | BevyRemoteProtocol = null;
 
   // Events
@@ -43,19 +44,8 @@ export class ClientCollection {
     }
 
     // if such alive client already exists
-    if (
-      this.collection
-        .filter((client) => {
-          if (client.getState() === 'alive') {
-            return client;
-          }
-        })
-        .find((client) => {
-          if (client.getProtocol().url.host === newClient.getProtocol().url.host) {
-            return client;
-          }
-        }) instanceof Client
-    ) {
+    const existingClient = this.collection.get(newClient.getProtocol().url.host);
+    if (existingClient && existingClient.getState() === 'alive') {
       vscode.window.showInformationMessage('Specified connection already exists');
       return;
     }
@@ -67,19 +57,7 @@ export class ClientCollection {
 
       // Success
       this.lastProtocol = newClient.cloneProtocol();
-
-      // Remove previous clients
-      const toRemove = this.lastProtocol.url;
-      this.collection = this.collection.filter((value) => {
-        const protocol = value.getProtocol();
-        if (protocol.url !== toRemove) {
-          return true;
-        }
-        return false;
-      });
-
-      // Push
-      this.collection.push(newClient);
+      this.collection.set(this.lastProtocol.url.host, newClient);
 
       // Events
       this.clientAddedEmitter.fire(newClient);
@@ -91,15 +69,24 @@ export class ClientCollection {
     if (client === undefined || client.getState() === 'alive') {
       return;
     }
-    this.collection = this.collection.filter((item) => item.getProtocol().url !== client.getProtocol().url);
+    this.collection.delete(host);
     this.clientRemovedEmitter.fire(client);
   }
 
-  public all() {
-    return this.collection;
+  public all(): Client[] {
+    return Array.from(this.collection.values());
   }
 
-  public get(host: string) {
-    return this.collection.find((client) => client.getProtocol().url.host === host);
+  public get(host: string): Client | undefined {
+    return this.collection.get(host);
+  }
+
+  public getElement(host: string): ClientElement | undefined {
+    const client = this.get(host);
+    const protocol = client?.getProtocol();
+    if (client === undefined || protocol === undefined) {
+      return;
+    }
+    return new ClientElement(protocol.url.host, protocol.serverVersion, client.getState());
   }
 }

@@ -67,12 +67,13 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
       });
     }
 
+    const client = this.clientCollection.get(element.host);
+    if (client === undefined) {
+      return [];
+    }
+
     // render entities of client
     if (element instanceof ClientElement) {
-      const client = this.clientCollection.get(element.host);
-      if (client === undefined) {
-        return [];
-      }
       return client.getEntitiesElements().filter((element) => {
         if (element.childOf === undefined) {
           return element;
@@ -82,10 +83,6 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
 
     // render entities of parent entity
     if (element instanceof EntityElement) {
-      const client = this.clientCollection.get(element.host);
-      if (client === undefined) {
-        return [];
-      }
       return client.getEntitiesElements().filter((value) => {
         if (value.childOf === element.id) {
           return value;
@@ -150,21 +147,15 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
     return treeItem;
   }
 
-  updateWorld(host: string, options: { parentId?: EntityId; skipQuery?: boolean } | null) {
-    const client = this.clientCollection.get(host);
-    if (client === undefined) {
-      return;
-    }
-    const protocol = client.getProtocol();
-    const clientElement = new ClientElement(protocol.url.host, protocol.serverVersion, client.getState());
-
-    (options?.skipQuery === true ? (async (): Promise<void> => {})() : client.updateEntitiesElements()).then(() => {
-      const parentElement = client.getEntitiesElements().find((item) => item.id === options?.parentId);
-      this.treeIsChangedEmitter.fire(parentElement ?? clientElement);
-    });
-  }
-
   updateClients() {
     this.treeIsChangedEmitter.fire();
+  }
+
+  updateInClient(host: string) {
+    this.treeIsChangedEmitter.fire(this.clientCollection.getElement(host));
+  }
+
+  updateInScope(parent: EntityElement) {
+    this.treeIsChangedEmitter.fire(parent);
   }
 }

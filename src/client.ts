@@ -11,8 +11,8 @@ import {
 
 type StatusDisconnection = 'disconnection';
 type ProtocolStatus = 'success' | 'error' | StatusDisconnection;
-
 export type ConnectionState = 'dead' | 'alive';
+
 export class Client {
   // Session data
   private protocol: BevyRemoteProtocol;
@@ -287,6 +287,12 @@ export class Client {
       if (status === 'success') {
         this.reviveEmitter.fire(this);
       }
+    });
+  }
+
+  public findElement(id: EntityId): EntityElement | undefined {
+    return this.entityElements.find((element) => {
+      return element.id === id;
     });
   }
 }
