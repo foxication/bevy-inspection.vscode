@@ -168,8 +168,14 @@
 			],
 			"view/item/context": [
 				{
+					"command": "extension.refreshWorld",
+					"when": "viewItem == clientElementAlive",
+					"group": "none@0"
+				},
+				{
 					"command": "extension.killClient",
-					"when": "viewItem == clientElementAlive"
+					"when": "viewItem == clientElementAlive",
+					"group": "none@1"
 				},
 				{
 					"command": "extension.refreshWorld",

@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  entitiesProvider.onDidChangeTreeData(() => console.log('entitiesProvider emmits: TREEDATACHANGED'));
+  entitiesProvider.onDidChangeTreeData(() => {});
 
   entitiesView.onDidChangeSelection((event) => {
     if (event.selection.length === 0) {
