@@ -4,7 +4,7 @@
 //! You can toggle wireframes with the space bar except on wasm. Wasm does not support
 //! `POLYGON_MODE_LINE` on the gpu.
 
-use std::{f32::consts::PI, time::Duration};
+use std::{env, f32::consts::PI, time::Duration};
 
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
@@ -19,12 +19,25 @@ use bevy::{
     winit::WinitSettings,
 };
 
+const DEFAULT_PORT: u16 = 15702;
+
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    let port = if args.len() >= 3 {
+        if &args[1] == "port" {
+            args[2].parse::<u16>().unwrap()
+        } else {
+            DEFAULT_PORT
+        }
+    } else {
+        DEFAULT_PORT
+    };
+
     App::new()
         .add_plugins((
             DefaultPlugins.set(ImagePlugin::default_nearest()),
             RemotePlugin::default(),
-            RemoteHttpPlugin::default(),
+            RemoteHttpPlugin::default().with_port(port),
             #[cfg(not(target_arch = "wasm32"))]
             WireframePlugin,
         ))

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
-import { EntityElement } from './entities';
+import { EntityElement } from './hierarchy';
 import {
   ComponentElement,
   ComponentErrorElement,
@@ -25,6 +25,8 @@ export class Client {
   private inspectionElements: InspectionElement[] | null = null;
 
   // Events
+  private worldUpdated = new vscode.EventEmitter<Client>();
+  readonly onWorldUpdated = this.worldUpdated.event;
   private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
@@ -42,6 +44,10 @@ export class Client {
   public death() {
     const wasAlive = this.state === 'alive';
     this.state = 'dead';
+    this.entityElements = this.entityElements.map((element) => {
+      element.state = 'dead';
+      return element;
+    });
     this.deathEmitter.fire(this);
 
     if (wasAlive) {
@@ -76,12 +82,13 @@ export class Client {
       return 'error';
     }
     this.entityElements = response.result.map((value) => {
-      return new EntityElement(value.entity, {
+      return new EntityElement(this.getProtocol().url.host, this.getState(), value.entity, {
         name: value.components['bevy_ecs::name::Name'] as string,
         childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
         children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
       });
     });
+    this.worldUpdated.fire(this);
     return 'success';
   }
 
@@ -99,6 +106,8 @@ export class Client {
   }
 
   public async initialize(): Promise<ProtocolStatus> {
+    this.state = 'alive';
+
     const status1 = await this.updateEntitiesElements();
     const status2 = await this.updateRegisteredComponents();
 
@@ -108,8 +117,6 @@ export class Client {
     if (status1 === 'error' || status2 === 'error') {
       return 'error';
     }
-
-    this.state = 'alive';
     return 'success';
   }
 
@@ -224,8 +231,8 @@ export class Client {
     return 'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion;
   }
 
-  public isAlive() {
-    return this.state === 'alive';
+  public getState(): ConnectionState {
+    return this.state;
   }
 
   public destroyEntity(element: EntityElement): Promise<ProtocolStatus> {
@@ -265,7 +272,11 @@ export class Client {
     return 'error';
   }
 
-  public cloneWithProtocol() {
-    return new Client(this.protocol.url, this.protocol.serverVersion);
+  public cloneProtocol() {
+    return new BevyRemoteProtocol(this.protocol.url, this.protocol.serverVersion);
+  }
+
+  public getProtocol() {
+    return this.protocol;
   }
 }

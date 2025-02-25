@@ -33,7 +33,7 @@
 		"viewsWelcome": [
 			{
 				"view": "entitiesView",
-				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.connect)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
+				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.addClient)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
 			},
 			{
 				"view": "componentsView",
@@ -65,31 +65,31 @@
 				{
 					"id": "componentsView",
 					"name": "Components",
-					"when": "extension.areViewsVisible"
+					"when": "extension.areThereClients"
 				},
 				{
 					"id": "resourcesView",
 					"name": "Resources",
 					"visibility": "collapsed",
-					"when": "extension.areViewsVisible"
+					"when": "extension.areThereClients"
 				},
 				{
 					"id": "eventsView",
 					"name": "Events",
 					"visibility": "collapsed",
-					"when": "extension.areViewsVisible"
+					"when": "extension.areThereClients"
 				},
 				{
 					"id": "diagnosticsView",
 					"name": "Diagnostics",
 					"visibility": "collapsed",
-					"when": "extension.areViewsVisible"
+					"when": "extension.areThereClients"
 				},
 				{
 					"id": "schemaView",
 					"name": "Schema",
 					"visibility": "collapsed",
-					"when": "extension.areViewsVisible"
+					"when": "extension.areThereClients"
 				}
 			]
 		},
@@ -100,46 +100,49 @@
 				"category": "Bevy Inspection"
 			},
 			{
-				"command": "extension.connect",
+				"command": "extension.addClient",
 				"title": "Connect to Bevy Instance",
 				"category": "Bevy Inspection",
-				"icon": "$(debug-start)",
-				"enablement": "!extension.isSessionAlive"
+				"icon": "$(add)"
 			},
 			{
-				"command": "extension.reconnect",
+				"command": "extension.addLastClient",
 				"title": "Reconnect to Bevy Instance",
 				"category": "Bevy Inspection",
-				"icon": "$(debug-start)",
-				"enablement": "!extension.isSessionAlive"
+				"icon": "$(add)",
+				"enablement": "extension.areThereClients"
 			},
 			{
-				"command": "extension.disconnect",
+				"command": "extension.killClient",
 				"title": "Disconnect from Bevy Instance",
 				"category": "Bevy Inspection",
-				"icon": "$(debug-disconnect)",
-				"enablement": "extension.isSessionAlive"
+				"icon": "$(debug-disconnect)"
 			},
 			{
-				"command": "extension.refreshEntities",
+				"command": "extension.forgotClient",
+				"title": "Remove Connection from List",
+				"category": "Bevy Inspection",
+				"icon": "$(x)"
+			},
+			{
+				"command": "extension.refreshWorld",
 				"title": "Refresh Hierarchy of Entities",
 				"category": "Bevy Inspection",
-				"icon": "$(debug-restart)",
-				"enablement": "extension.isSessionAlive"
+				"icon": "$(debug-restart)"
 			},
 			{
 				"command": "extension.destroyEntity",
 				"title": "Destroy Entity",
 				"category": "Bevy Inspection",
 				"icon": "$(trash)",
-				"enablement": "extension.isSessionAlive"
+				"enablement": "viewItem == entityElementAlive"
 			},
 			{
 				"command": "extension.renameEntity",
 				"title": "Rename Entity",
 				"category": "Bevy Inspection",
 				"icon": "$(pencil)",
-				"enablement": "extension.isSessionAlive"
+				"enablement": "viewItem == entityElementAlive"
 			}
 		],
 		"menus": {
@@ -148,43 +151,42 @@
 					"command": "extension.debugLog"
 				},
 				{
-					"command": "extension.connect"
+					"command": "extension.addClient"
 				},
 				{
-					"command": "extension.reconnect"
-				},
-				{
-					"command": "extension.disconnect"
-				},
-				{
-					"command": "extension.refreshEntities"
+					"command": "extension.addLastClient"
 				}
 			],
 			"view/title": [
 				{
-					"command": "extension.connect",
-					"when": "!extension.isSessionAlive && view == entitiesView",
-					"group": "navigation@0"
-				},
-				{
-					"command": "extension.disconnect",
-					"when": "extension.isSessionAlive && view == entitiesView"
-				},
-				{
-					"command": "extension.refreshEntities",
-					"when": "extension.isSessionAlive && view == entitiesView",
-					"group": "navigation@1"
+					"command": "extension.addClient",
+					"when": "view == entitiesView",
+					"group": "navigation"
 				}
 			],
 			"view/item/context": [
 				{
+					"command": "extension.killClient",
+					"when": "viewItem == clientElementAlive"
+				},
+				{
+					"command": "extension.refreshWorld",
+					"when": "viewItem == clientElementAlive",
+					"group": "inline"
+				},
+				{
+					"command": "extension.forgotClient",
+					"when": "viewItem == clientElementDead",
+					"group": "inline"
+				},
+				{
 					"command": "extension.destroyEntity",
-					"when": "viewItem == entityElement"
+					"when": "viewItem == entityElementAlive || viewItem == entityElementDead"
 				},
 				{
 					"command": "extension.renameEntity",
-					"when": "viewItem == entityElement",
-					"group": "inline@0"
+					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
+					"group": "inline"
 				}
 			]
 		}

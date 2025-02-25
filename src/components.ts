@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
-import { EntityElement } from './entities';
 import { ClientCollection } from './client-collection';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
@@ -53,29 +52,39 @@ export class NamedValueElement {
   }
 }
 
+export class InspectionFocus {
+  host: string;
+  entityId: EntityId;
+
+  constructor(host: string, entityId: EntityId) {
+    this.host = host;
+    this.entityId = entityId;
+  }
+}
+
 export type InspectionElement = ComponentElement | ComponentErrorElement | ValueElement | NamedValueElement;
 
 export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
   private clientCollection: ClientCollection;
-  private focusedEntityId: null | EntityId;
+  private focus: null | InspectionFocus;
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   constructor(clientCollection: ClientCollection) {
     this.clientCollection = clientCollection;
-    this.focusedEntityId = null;
+    this.focus = null;
   }
 
   async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
-    const session = this.clientCollection.current();
-    if (session === null) {
+    if (this.focus === null) {
       return [];
     }
-    if (this.focusedEntityId === null) {
+    const client = this.clientCollection.get(this.focus.host);
+    if (client === undefined) {
       return [];
     }
     if (!parent) {
-      const tree = await session.getInspectionElements(this.focusedEntityId);
+      const tree = await client.getInspectionElements(this.focus.entityId);
       if (tree.length === 0) {
         return [new NamedValueElement('No components in this entity', [])];
       }
@@ -135,25 +144,27 @@ export class ComponentsProvider implements vscode.TreeDataProvider<InspectionEle
     throw Error('unknown type of ComponentTreeElement');
   }
 
-  public update(entity: null | EntityElement) {
-    // Check if update needed
-    const session = this.clientCollection.current();
-    if (!session || !session.isAlive()) {
-      return;
-    }
-    if (this.focusedEntityId === (entity === null ? null : entity.id)) {
+  public update(focused: InspectionFocus | null) {
+    // Check if focus changed
+    if (this.focus === focused) {
       return;
     }
 
-    // Make empty
-    if (entity === null) {
-      this.focusedEntityId = null;
+    // Scenario when focus is null
+    if (focused === null) {
+      this.focus = null;
       this.treeIsChangedEmitter.fire();
       return;
     }
 
-    // Or change to entity (notice - it is async)
-    this.focusedEntityId = entity.id;
+    // Check if client exists and is alive
+    const client = this.clientCollection.get(focused.host);
+    if (client === undefined || client.getState() === 'dead') {
+      return;
+    }
+
+    // Change focus of inspection and emmit (what is async?)
+    this.focus = new InspectionFocus(focused.host, focused.entityId);
     this.treeIsChangedEmitter.fire();
   }
 }

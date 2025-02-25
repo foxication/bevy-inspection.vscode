@@ -1,23 +1,27 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { Client } from './client';
+import { ClientElement } from './hierarchy';
 
-type SessionTemplate = 'prompt' | 'last';
+type AddBehavior = 'prompt' | 'last';
 
 export class ClientCollection {
-  private lastSession: null | Client;
+  // Properties
+  private collection: Client[] = [];
+  private lastProtocol: null | BevyRemoteProtocol = null;
+
+  // Events
   private clientAddedEmitter = new vscode.EventEmitter<Client>();
   readonly onClientAdded = this.clientAddedEmitter.event;
+  private clientRemovedEmitter = new vscode.EventEmitter<Client>();
+  readonly onClientRemoved = this.clientRemovedEmitter.event;
 
-  constructor() {
-    this.lastSession = null;
-  }
+  public async tryCreateClient(behavior: AddBehavior = 'prompt') {
+    let newClient;
 
-  public async tryCreateSession(template: SessionTemplate = 'prompt') {
-    let newSession;
-
-    // Get session from user
-    if (template === 'prompt' || this.lastSession === null) {
+    if (this.lastProtocol instanceof BevyRemoteProtocol && behavior === 'last') {
+      newClient = new Client(this.lastProtocol.url, this.lastProtocol.serverVersion);
+    } else {
       // Input URL
       const url = await vscode.window.showInputBox({
         title: 'Connection to Bevy Instance',
@@ -36,29 +40,83 @@ export class ClientCollection {
       const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
 
       // Create new session
-      newSession = new Client(new URL(url), versionEnum);
-    }
-    // Or clone last session
-    else {
-      newSession = this.lastSession.cloneWithProtocol();
+      newClient = new Client(new URL(url), versionEnum);
     }
 
-    newSession.initialize().then((status) => {
+    // if such alive client already exists
+    if (
+      this.collection
+        .filter((client) => {
+          if (client.getState() === 'alive') {
+            return client;
+          }
+        })
+        .find((client) => {
+          if (client.getProtocol().url.host === newClient.getProtocol().url.host) {
+            return client;
+          }
+        }) instanceof Client
+    ) {
+      vscode.window.showInformationMessage('Specified connection already exists');
+      return;
+    }
+
+    newClient.initialize().then((status) => {
       if (status !== 'success') {
         return;
       }
-      // do not overwrite alive session
-      if (this.lastSession?.isAlive() === true) {
-        return;
-      }
 
-      // success
-      this.lastSession = newSession;
-      this.clientAddedEmitter.fire(this.lastSession);
+      // Success
+      this.lastProtocol = newClient.cloneProtocol();
+
+      // Remove previous clients
+      const toRemove = this.lastProtocol.url;
+      this.collection = this.collection.filter((value) => {
+        const protocol = value.getProtocol();
+        if (protocol.url !== toRemove) {
+          return true;
+        }
+        return false;
+      });
+
+      // Push
+      this.collection.push(newClient);
+
+      // Events
+      this.clientAddedEmitter.fire(newClient);
     });
   }
 
-  public current() {
-    return this.lastSession;
+  public refreshWorld(element: ClientElement) {
+    const client = this.get(element.host);
+    if (client === undefined) {
+      return;
+    }
+    client.updateEntitiesElements();
+  }
+
+  public killClient(element: ClientElement) {
+    const client = this.get(element.host);
+    if (client === undefined) {
+      return;
+    }
+    client.death();
+  }
+
+  public removeClient(element: ClientElement) {
+    const client = this.get(element.host);
+    if (client === undefined || client.getState() === 'alive') {
+      return;
+    }
+    this.collection = this.collection.filter((item) => item.getProtocol().url !== client.getProtocol().url);
+    this.clientRemovedEmitter.fire(client);
+  }
+
+  public all() {
+    return this.collection;
+  }
+
+  public get(host: string) {
+    return this.collection.find((client) => client.getProtocol().url.host === host);
   }
 }
