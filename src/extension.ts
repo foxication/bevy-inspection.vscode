@@ -99,10 +99,6 @@ export function activate(context: vscode.ExtensionContext) {
     areThereClients(true);
 
     // Connect all events
-    client.onUserAskedForReconnection(() => {
-      clientCollection.tryCreateClient('last');
-    });
-
     client.onEntitiesUpdated((client) => {
       entitiesProvider.updateInClient(client.getProtocol().url.host);
     });
@@ -129,8 +125,18 @@ export function activate(context: vscode.ExtensionContext) {
       entitiesProvider.updateInScope(scope);
     });
 
-    client.onDeath(() => {
+    client.onDeath((client) => {
       entitiesProvider.updateClients();
+
+      if (client.isInitialized) {
+        vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
+          if (reaction === 'Reconnect') {
+            clientCollection.tryCreateClient('last');
+          }
+        });
+      } else {
+        vscode.window.showInformationMessage('Bevy instance refused to connect');
+      }
     });
 
     client.onRevive(() => {

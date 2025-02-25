@@ -17,6 +17,7 @@ export class Client {
   // Session data
   private protocol: BevyRemoteProtocol;
   private state: ConnectionState;
+  public isInitialized: boolean;
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
@@ -31,8 +32,6 @@ export class Client {
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityDestroyed = this.entityDestroyedEmitter.event;
-  private userAskedForReconnection = new vscode.EventEmitter<Client>();
-  readonly onUserAskedForReconnection = this.userAskedForReconnection.event;
   private deathEmitter = new vscode.EventEmitter<Client>();
   readonly onDeath = this.deathEmitter.event;
   private reviveEmitter = new vscode.EventEmitter<Client>();
@@ -40,26 +39,16 @@ export class Client {
 
   constructor(url: URL, version: ServerVersion) {
     this.state = 'dead';
+    this.isInitialized = false;
     this.protocol = new BevyRemoteProtocol(url, version);
   }
 
   public death() {
-    const wasAlive = this.state === 'alive';
     this.state = 'dead';
     for (const element of this.entityElements.values()) {
       element.state = 'dead';
     }
     this.deathEmitter.fire(this);
-
-    if (wasAlive) {
-      vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
-        if (reaction === 'Reconnect') {
-          this.userAskedForReconnection.fire(this);
-        }
-      });
-    } else {
-      vscode.window.showInformationMessage('Bevy instance refused to connect');
-    }
   }
 
   private errorHandler(reason: Error): StatusDisconnection {
@@ -114,16 +103,14 @@ export class Client {
   public async initialize(): Promise<ProtocolStatus> {
     this.state = 'alive';
 
-    const status1 = await this.updateEntitiesElements();
-    const status2 = await this.updateRegisteredComponents();
-
-    if (status1 === 'disconnection' || status2 === 'disconnection') {
-      return 'disconnection';
+    let status;
+    status = await this.updateEntitiesElements();
+    if (status !== 'success') {
+      return status;
     }
-    if (status1 === 'error' || status2 === 'error') {
-      return 'error';
-    }
-    return 'success';
+    status = await this.updateRegisteredComponents();
+    this.isInitialized = true;
+    return status;
   }
 
   public getEntitiesElements() {
