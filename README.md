@@ -6,7 +6,7 @@ Communications based on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/
 
 ![Screenshot 2025-02-23 045438](https://github.com/user-attachments/assets/efa86754-9d9d-4f3a-a928-ef91d42f806b)
 
-## Features
+## Features (IN DEVELOPMENT)
 
 - Monitor entities, components, values
 - Add/remove/modify entites, components
