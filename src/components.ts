@@ -66,6 +66,7 @@ export class ComponentsProvider implements vscode.WebviewViewProvider {
   private collection: ClientCollection;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
+  private focus?: InspectionFocus;
 
   constructor(extensionUri: vscode.Uri, collection: ClientCollection) {
     this.collection = collection;
@@ -115,9 +116,6 @@ export class ComponentsProvider implements vscode.WebviewViewProvider {
       .replace(new RegExp('%elements%', 'g'), elementsUri.toString())
       .replace(new RegExp('%codicons%', 'g'), codiconsUri.toString())
       .replace(new RegExp('%style%', 'g'), styleUri.toString())
-      // .replace(new RegExp('%vscode-tree-import%', 'g'), vscodeTreeImport.toString())
-      // .replace(new RegExp('%lit-import%', 'g'), litImport.toString())
-      // .replace(new RegExp('%lit-decarators-import%', 'g'), litImport.toString())
       .replace(new RegExp('%nonce-alt%', 'g'), getNonce())
       .replace(new RegExp('%nonce%', 'g'), getNonce());
 
@@ -129,20 +127,31 @@ export class ComponentsProvider implements vscode.WebviewViewProvider {
     if (this.view === undefined) {
       return;
     }
+
+    // Scenario: empty focus
     if (focused === null) {
       this.view.title = 'Components';
       // TODO: clear
       return;
     }
 
-    this.view.show(true);
-    // this.view.webview.postMessage({
-    //   type: 'update',
-    //   focus: focused === null ? null : { host: focused.host, id: focused.entityId },
-    // });
+    // Scenario: client is removed
+    const client = this.collection.get(focused.host);
+    if (client === undefined) {
+      // TODO: clear
+      return;
+    }
 
-    const entityName = this.collection.get(focused.host)?.getById(focused.entityId)?.name;
-    this.view.title = 'Components' + (entityName ? ' of ' + entityName : '');
+    // Error
+    const entity = client.getById(focused.entityId);
+    if (client.getState() === 'dead' || entity === undefined) {
+      return;
+    }
+
+    // Scenario: focus on entity
+    this.focus = structuredClone(focused);
+    this.view.show(true);
+    this.view.title = 'Components' + (entity.name ? ' of ' + entity.name : '');
   }
 
   public setDescription(description?: string) {
