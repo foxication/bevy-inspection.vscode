@@ -19,12 +19,12 @@ export function activate(context: vscode.ExtensionContext) {
   // Context
   areThereClients(false);
 
-  // Extension
+  // Views
   const clientCollection = new ClientCollection();
   const entitiesProvider = new HierarchyProvider(clientCollection);
   const entitiesView = createEntitiesView(entitiesProvider);
-  const componentsProvider = new ComponentsProvider(clientCollection);
-  const componentsView = createComponentsView(componentsProvider);
+  const componentsProvider = new ComponentsProvider(context.extensionUri, clientCollection);
+  context.subscriptions.push(createComponentsView(componentsProvider));
 
   // Userspace commands
   context.subscriptions.push(
@@ -55,25 +55,6 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  // Events
-  componentsProvider.onDidChangeTreeData(() => {
-    if (entitiesView.selection.length === 1) {
-      const selectedElement = entitiesView.selection[0];
-      if (selectedElement instanceof ClientElement) {
-        componentsView.title = 'Components';
-        componentsView.message = undefined;
-      }
-      if (selectedElement instanceof EntityElement) {
-        componentsView.title = 'Components of ' + (selectedElement.name ?? 'Entity');
-        componentsView.message = 'host:' + selectedElement.host + ' id: ' + selectedElement.id;
-      }
-    }
-    if (entitiesView.selection.length === 0) {
-      componentsView.title = 'Components';
-      componentsView.message = undefined;
-    }
-  });
-
   entitiesProvider.onDidChangeTreeData(() => {});
 
   entitiesView.onDidChangeSelection((event) => {
@@ -92,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
   clientCollection.onClientAdded((client) => {
     // Update views
     entitiesView.description = undefined;
-    componentsView.description = undefined;
+    componentsProvider.setDescription(undefined);
     entitiesProvider.updateClients();
 
     // Set context
@@ -107,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (destroyed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(destroyed.host)?.getElement(destroyed.childOf);
+      const scope = clientCollection.get(destroyed.host)?.getById(destroyed.childOf);
       if (scope === undefined) {
         return;
       }
@@ -118,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (renamed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(renamed.host)?.getElement(renamed.childOf);
+      const scope = clientCollection.get(renamed.host)?.getById(renamed.childOf);
       if (scope === undefined) {
         return;
       }

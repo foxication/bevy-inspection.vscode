@@ -81,7 +81,7 @@ export class ClientCollection {
     return this.collection.get(host);
   }
 
-  public getElement(host: string): ClientElement | undefined {
+  public getAsElement(host: string): ClientElement | undefined {
     const client = this.get(host);
     const protocol = client?.getProtocol();
     if (client === undefined || protocol === undefined) {

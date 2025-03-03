@@ -63,9 +63,9 @@
 					"name": "Entities"
 				},
 				{
+					"type": "webview",
 					"id": "componentsView",
-					"name": "Components",
-					"when": "extension.areThereClients"
+					"name": "Components"
 				},
 				{
 					"id": "resourcesView",
@@ -227,11 +227,14 @@
 		"@stylistic/eslint-plugin": "^4.0.0",
 		"@types/node": "^22.13.4",
 		"@types/vscode": "^1.73.0",
+		"@types/vscode-webview": "^1.57.5",
 		"eslint": "^9.13.0",
 		"typescript": "^5.7.2",
 		"typescript-eslint": "^8.16.0"
 	},
 	"dependencies": {
+		"@vscode-elements/elements": "^1.13.1",
+		"@vscode/codicons": "^0.0.36",
 		"bevy-remote-protocol": "^1.0.0"
 	}
 }

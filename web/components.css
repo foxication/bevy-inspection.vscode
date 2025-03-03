@@ -1,0 +1,16 @@
+body {
+  padding: 0;
+}
+
+vscode-scrollable {
+  height: 100vh;
+  width: 100vw;
+}
+
+vscode-scrollable vscode-tree:first-child {
+  margin-top: 0;
+}
+
+vscode-scrollable vscode-tree:last-child {
+  margin-bottom: 0;
+}

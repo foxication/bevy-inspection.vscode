@@ -3,10 +3,8 @@ import { EntityId, TypePath } from 'bevy-remote-protocol';
 import { ClientCollection } from './client-collection';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
-  return vscode.window.createTreeView('componentsView', {
-    treeDataProvider: componentsProvider,
-    canSelectMany: false,
-    showCollapseAll: true,
+  return vscode.window.registerWebviewViewProvider('componentsView', componentsProvider, {
+    webviewOptions: { retainContextWhenHidden: true },
   });
 }
 
@@ -64,126 +62,110 @@ export class InspectionFocus {
 
 export type InspectionElement = ComponentElement | ComponentErrorElement | ValueElement | NamedValueElement;
 
-export class ComponentsProvider implements vscode.TreeDataProvider<InspectionElement> {
-  private clientCollection: ClientCollection;
-  private focus: null | InspectionFocus;
-  private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
-  readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
+export class ComponentsProvider implements vscode.WebviewViewProvider {
+  private collection: ClientCollection;
+  private extensionUri: vscode.Uri;
+  private view?: vscode.WebviewView;
 
-  constructor(clientCollection: ClientCollection) {
-    this.clientCollection = clientCollection;
-    this.focus = null;
+  constructor(extensionUri: vscode.Uri, collection: ClientCollection) {
+    this.collection = collection;
+    this.extensionUri = extensionUri;
   }
 
-  async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
-    if (this.focus === null) {
-      return [];
-    }
-    const client = this.clientCollection.get(this.focus.host);
-    if (client === undefined) {
-      return [];
-    }
-    if (!parent) {
-      const tree = await client.getInspectionElements(this.focus.entityId);
-      if (tree.length === 0) {
-        return [new NamedValueElement('No components in this entity', [])];
-      }
-      return tree;
-    }
-    if (
-      parent instanceof ComponentElement ||
-      parent instanceof ComponentErrorElement ||
-      parent instanceof NamedValueElement
-    ) {
-      return parent.children;
-    }
-    return [];
-  }
-
-  getTreeItem(element: InspectionElement): vscode.TreeItem {
-    const getShortPath = (path: string) => {
-      return (/[^::]*$/.exec(path.split('<')[0]) ?? '???')[0];
+  public async resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    _context: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken
+  ) {
+    this.view = webviewView;
+    this.view.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this.extensionUri],
     };
-    if (element instanceof ComponentElement) {
-      const treeItem = new vscode.TreeItem(getShortPath(element.typePath));
-      if (element.children.length > 0) {
-        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+    this.view.webview.html = await this.getHtmlForWebview();
+    webviewView.webview.onDidReceiveMessage((data) => {
+      switch (data.type) {
+        case 'doNothing': {
+          console.log(data.log);
+          break;
+        }
       }
-      treeItem.tooltip = element.typePath;
-      treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log-unverified');
-      return treeItem;
+    });
+  }
+
+  private async getHtmlForWebview(): Promise<string> {
+    if (this.view === undefined) {
+      return '';
     }
-    if (element instanceof ComponentErrorElement) {
-      const treeItem = new vscode.TreeItem(getShortPath(element.typePath));
-      if (element.children.length > 0) {
-        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-      }
-      treeItem.tooltip = element.typePath;
-      treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log');
-      treeItem.description = 'error';
-      return treeItem;
-    }
-    if (element instanceof ValueElement) {
-      const treeItem = new vscode.TreeItem(element.value.toString());
-      treeItem.iconPath = getThemeIconOnType(element.value);
-      return treeItem;
-    }
-    if (element instanceof NamedValueElement) {
-      let treeItem;
-      if (element.value !== undefined) {
-        treeItem = new vscode.TreeItem(element.value.toString());
-        treeItem.description = element.name;
-        treeItem.iconPath = getThemeIconOnType(element.value);
-      } else {
-        treeItem = new vscode.TreeItem(element.name);
-      }
-      if (element.children.length > 0) {
-        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-      }
-      return treeItem;
-    }
-    throw Error('unknown type of ComponentTreeElement');
+    const webview = this.view.webview;
+    const htmlUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'web', 'components.html'));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'web', 'components.css'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'web', 'components.js'));
+    const elementsUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode-elements', 'elements', 'dist', 'bundled.js')
+    );
+    const codiconsUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css')
+    );
+
+    const result = (await vscode.workspace.openTextDocument(htmlUri.fsPath))
+      .getText()
+      .replace(new RegExp('%csp-source%', 'g'), webview.cspSource)
+      .replace(new RegExp('%script%', 'g'), scriptUri.toString())
+      .replace(new RegExp('%elements%', 'g'), elementsUri.toString())
+      .replace(new RegExp('%codicons%', 'g'), codiconsUri.toString())
+      .replace(new RegExp('%style%', 'g'), styleUri.toString())
+      // .replace(new RegExp('%vscode-tree-import%', 'g'), vscodeTreeImport.toString())
+      // .replace(new RegExp('%lit-import%', 'g'), litImport.toString())
+      // .replace(new RegExp('%lit-decarators-import%', 'g'), litImport.toString())
+      .replace(new RegExp('%nonce-alt%', 'g'), getNonce())
+      .replace(new RegExp('%nonce%', 'g'), getNonce());
+
+    console.log(result);
+    return result;
   }
 
   public update(focused: InspectionFocus | null) {
-    // Check if focus changed
-    if (this.focus === focused) {
+    if (this.view === undefined) {
       return;
     }
-
-    // Scenario when focus is null
     if (focused === null) {
-      this.focus = null;
-      this.treeIsChangedEmitter.fire();
+      this.view.title = 'Components';
+      // TODO: clear
       return;
     }
 
-    // Check if client exists and is alive
-    const client = this.clientCollection.get(focused.host);
-    if (client === undefined || client.getState() === 'dead') {
+    this.view.show(true);
+    // this.view.webview.postMessage({
+    //   type: 'update',
+    //   focus: focused === null ? null : { host: focused.host, id: focused.entityId },
+    // });
+
+    const entityName = this.collection.get(focused.host)?.getById(focused.entityId)?.name;
+    this.view.title = 'Components' + (entityName ? ' of ' + entityName : '');
+  }
+
+  public setDescription(description?: string) {
+    if (this.view !== undefined) {
+      this.view.description = description;
+    }
+  }
+
+  public updateEntityInfo(entity: { name: string; id: EntityId } | null) {
+    if (entity === null) {
       return;
     }
-
-    // Change focus of inspection and emmit (what is async?)
-    this.focus = new InspectionFocus(focused.host, focused.entityId);
-    this.treeIsChangedEmitter.fire();
+    if (this.view !== undefined) {
+      this.view.title = 'Components of ' + entity.name;
+    }
   }
 }
 
-function getThemeIconOnType(value: Value): vscode.ThemeIcon | undefined {
-  switch (typeof value) {
-    case 'string':
-      switch (value) {
-        case 'NULL':
-          return new vscode.ThemeIcon('error');
-        case 'ERROR':
-          return new vscode.ThemeIcon('error');
-        default:
-          return new vscode.ThemeIcon('symbol-text');
-      }
-    case 'number':
-      return new vscode.ThemeIcon('symbol-number');
-    case 'boolean':
-      return new vscode.ThemeIcon('symbol-boolean');
+function getNonce() {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
   }
+  return text;
 }

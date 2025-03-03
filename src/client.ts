@@ -113,10 +113,6 @@ export class Client {
     return status;
   }
 
-  public getEntitiesElements() {
-    return this.entityElements;
-  }
-
   private async updateInspectionElements(): Promise<ProtocolStatus> {
     if (this.inspectedEntityId === null) {
       return 'error';
@@ -281,11 +277,15 @@ export class Client {
     });
   }
 
-  public getElement(id: EntityId): EntityElement | undefined {
+  public get() {
+    return this.entityElements;
+  }
+
+  public getById(id: EntityId): EntityElement | undefined {
     return this.entityElements.get(id);
   }
 
-  public getChildren(parent: HierarchyElement): EntityElement[] {
+  public getChildrenOf(parent: HierarchyElement): EntityElement[] {
     if (parent instanceof ClientElement) {
       return Array.from(this.entityElements.values()).filter((element) => element.childOf === undefined);
     }
