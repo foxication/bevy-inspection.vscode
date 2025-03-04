@@ -83,13 +83,12 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
     const result = (await vscode.workspace.openTextDocument(htmlUri.fsPath))
       .getText()
-      .replace(new RegExp('%csp-source%', 'g'), webview.cspSource)
-      .replace(new RegExp('%script%', 'g'), scriptUri.toString())
-      .replace(new RegExp('%elements%', 'g'), elementsUri.toString())
-      .replace(new RegExp('%codicons%', 'g'), codiconsUri.toString())
-      .replace(new RegExp('%style%', 'g'), styleUri.toString())
-      .replace(new RegExp('%nonce-alt%', 'g'), getNonce())
-      .replace(new RegExp('%nonce%', 'g'), getNonce());
+      .replace(new RegExp('__csp_source__', 'g'), webview.cspSource)
+      .replace(new RegExp('__script__', 'g'), scriptUri.toString())
+      .replace(new RegExp('__elements__', 'g'), elementsUri.toString())
+      .replace(new RegExp('__codicons__', 'g'), codiconsUri.toString())
+      .replace(new RegExp('__style__', 'g'), styleUri.toString())
+      .replace(new RegExp('__nonce__', 'g'), getNonce());
 
     console.log(result);
     return result;
