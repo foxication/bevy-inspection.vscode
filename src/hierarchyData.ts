@@ -3,7 +3,7 @@ import { EntityId, ServerVersion } from 'bevy-remote-protocol';
 import { ClientCollection } from './client-collection';
 import { ConnectionState } from './client';
 
-export function createEntitiesView(entitiesProvider: HierarchyProvider) {
+export function createEntitiesView(entitiesProvider: HierarchyDataProvider) {
   return vscode.window.createTreeView('entitiesView', {
     treeDataProvider: entitiesProvider,
     canSelectMany: false,
@@ -49,7 +49,7 @@ export class EntityElement {
 
 export type HierarchyElement = EntityElement | ClientElement;
 
-export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyElement> {
+export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyElement> {
   private clientCollection: ClientCollection;
   private treeIsChangedEmitter = new vscode.EventEmitter<HierarchyElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
@@ -112,10 +112,10 @@ export class HierarchyProvider implements vscode.TreeDataProvider<HierarchyEleme
     if (collapsible === undefined) {
       switch (element.state) {
         case 'dead':
-          treeItem.iconPath = new vscode.ThemeIcon('circle-filled');
+          treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-unverified');
           break;
         case 'alive':
-          treeItem.iconPath = new vscode.ThemeIcon('circle-outline');
+          treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-disabled');
           break;
       }
     }

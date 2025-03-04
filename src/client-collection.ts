@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { Client } from './client';
-import { ClientElement } from './hierarchy';
+import { ClientElement } from './hierarchyData';
 
 type AddBehavior = 'prompt' | 'last';
 

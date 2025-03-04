@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
-import { ClientElement, EntityElement, HierarchyElement } from './hierarchy';
+import { ClientElement, EntityElement, HierarchyElement } from './hierarchyData';
 import {
   ComponentElement,
   ComponentErrorElement,
   InspectionElement,
   NamedValueElement,
   ValueElement,
-} from './components';
+} from './componentsData';
 
 type StatusDisconnection = 'disconnection';
 type ProtocolStatus = 'success' | 'error' | StatusDisconnection;
