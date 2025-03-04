@@ -1,26 +1,26 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
-import { Client } from './client';
-import { ClientElement } from './hierarchyData';
+import { Connection } from './client';
+import { ConnectionElement as ConnectionElement } from './hierarchyData';
 
 type AddBehavior = 'prompt' | 'last';
 
-export class ClientList {
+export class ConnectionList {
   // Properties
-  private clients = new Map<string, Client>();
+  private connections = new Map<string, Connection>();
   private lastProtocol: null | BevyRemoteProtocol = null;
 
   // Events
-  private clientAddedEmitter = new vscode.EventEmitter<Client>();
-  readonly onClientAdded = this.clientAddedEmitter.event;
-  private clientRemovedEmitter = new vscode.EventEmitter<Client>();
-  readonly onClientRemoved = this.clientRemovedEmitter.event;
+  private connectionAddedEmitter = new vscode.EventEmitter<Connection>();
+  readonly onConnectionAdded = this.connectionAddedEmitter.event;
+  private connectionRemovedEmitter = new vscode.EventEmitter<Connection>();
+  readonly onConnectionRemoved = this.connectionRemovedEmitter.event;
 
-  public async tryCreateClient(behavior: AddBehavior = 'prompt') {
-    let newClient;
+  public async tryCreateConnection(behavior: AddBehavior = 'prompt') {
+    let newConnection;
 
     if (this.lastProtocol instanceof BevyRemoteProtocol && behavior === 'last') {
-      newClient = new Client(this.lastProtocol.url, this.lastProtocol.serverVersion);
+      newConnection = new Connection(this.lastProtocol.url, this.lastProtocol.serverVersion);
     } else {
       // Input URL
       const url = await vscode.window.showInputBox({
@@ -40,53 +40,53 @@ export class ClientList {
       const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
 
       // Create new session
-      newClient = new Client(new URL(url), versionEnum);
+      newConnection = new Connection(new URL(url), versionEnum);
     }
 
-    // if such online client already exists
-    const existingClient = this.clients.get(newClient.getProtocol().url.host);
-    if (existingClient && existingClient.getNetworkStatus() === 'online') {
+    // if such online connection already exists
+    const existingConnection = this.connections.get(newConnection.getProtocol().url.host);
+    if (existingConnection && existingConnection.getNetworkStatus() === 'online') {
       vscode.window.showInformationMessage('Specified connection already exists');
       return;
     }
 
-    newClient.initialize().then((protocolStatus) => {
+    newConnection.initialize().then((protocolStatus) => {
       if (protocolStatus !== 'success') {
         return;
       }
 
       // Success
-      this.lastProtocol = newClient.cloneProtocol();
-      this.clients.set(this.lastProtocol.url.host, newClient);
+      this.lastProtocol = newConnection.cloneProtocol();
+      this.connections.set(this.lastProtocol.url.host, newConnection);
 
       // Events
-      this.clientAddedEmitter.fire(newClient);
+      this.connectionAddedEmitter.fire(newConnection);
     });
   }
 
-  public removeClient(host: string) {
-    const client = this.get(host);
-    if (client === undefined || client.getNetworkStatus() === 'online') {
+  public removeConnection(host: string) {
+    const connection = this.get(host);
+    if (connection === undefined || connection.getNetworkStatus() === 'online') {
       return;
     }
-    this.clients.delete(host);
-    this.clientRemovedEmitter.fire(client);
+    this.connections.delete(host);
+    this.connectionRemovedEmitter.fire(connection);
   }
 
-  public all(): Client[] {
-    return Array.from(this.clients.values());
+  public all(): Connection[] {
+    return Array.from(this.connections.values());
   }
 
-  public get(host: string): Client | undefined {
-    return this.clients.get(host);
+  public get(host: string): Connection | undefined {
+    return this.connections.get(host);
   }
 
-  public getAsElement(host: string): ClientElement | undefined {
-    const client = this.get(host);
-    const protocol = client?.getProtocol();
-    if (client === undefined || protocol === undefined) {
+  public getAsElement(host: string): ConnectionElement | undefined {
+    const connection = this.get(host);
+    const protocol = connection?.getProtocol();
+    if (connection === undefined || protocol === undefined) {
       return;
     }
-    return new ClientElement(protocol.url.host, protocol.serverVersion, client.getNetworkStatus());
+    return new ConnectionElement(protocol.url.host, protocol.serverVersion, connection.getNetworkStatus());
   }
 }

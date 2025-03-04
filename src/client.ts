@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
-import { ClientElement, EntityElement, HierarchyElement } from './hierarchyData';
+import { ConnectionElement as ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import {
   ComponentElement,
   ComponentErrorElement,
@@ -13,7 +13,7 @@ type ProtocolDisconnection = 'disconnection';
 type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
 export type NetworkStatus = 'offline' | 'online';
 
-export class Client {
+export class Connection {
   // Session data
   private protocol: BevyRemoteProtocol;
   private network: NetworkStatus;
@@ -26,16 +26,16 @@ export class Client {
   private inspectionElements: InspectionElement[] | null = null;
 
   // Events
-  private hierarchyUpdatedEmitter = new vscode.EventEmitter<Client>();
+  private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
   readonly onHierarchyUpdated = this.hierarchyUpdatedEmitter.event;
   private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityDestroyed = this.entityDestroyedEmitter.event;
-  private deathEmitter = new vscode.EventEmitter<Client>();
-  readonly onDeath = this.deathEmitter.event;
-  private reviveEmitter = new vscode.EventEmitter<Client>();
-  readonly onRevive = this.reviveEmitter.event;
+  private disconnectionEmitter = new vscode.EventEmitter<Connection>();
+  readonly onDisconnection = this.disconnectionEmitter.event;
+  private reconnectionEmitter = new vscode.EventEmitter<Connection>();
+  readonly onReconnection = this.reconnectionEmitter.event;
 
   constructor(url: URL, version: ServerVersion) {
     this.network = 'offline';
@@ -43,17 +43,17 @@ export class Client {
     this.protocol = new BevyRemoteProtocol(url, version);
   }
 
-  public death() {
+  public disconnection() {
     this.network = 'offline';
     for (const element of this.entityElements.values()) {
       element.network = 'offline';
     }
-    this.deathEmitter.fire(this);
+    this.disconnectionEmitter.fire(this);
   }
 
   private errorHandler(reason: Error): ProtocolDisconnection {
     if (reason.message === 'fetch failed') {
-      this.death();
+      this.disconnection();
       return 'disconnection';
     }
     throw reason;
@@ -272,7 +272,7 @@ export class Client {
   public revive() {
     this.initialize().then((status) => {
       if (status === 'success') {
-        this.reviveEmitter.fire(this);
+        this.reconnectionEmitter.fire(this);
       }
     });
   }
@@ -286,7 +286,7 @@ export class Client {
   }
 
   public getChildrenOf(parent: HierarchyElement): EntityElement[] {
-    if (parent instanceof ClientElement) {
+    if (parent instanceof ConnectionElement) {
       return Array.from(this.entityElements.values()).filter((element) => element.childOf === undefined);
     }
     return parent.children?.map((id) => this.entityElements.get(id)).filter((element) => element !== undefined) ?? [];

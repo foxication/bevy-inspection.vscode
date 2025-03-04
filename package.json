@@ -33,7 +33,7 @@
 		"viewsWelcome": [
 			{
 				"view": "hierarchyView",
-				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.addClient)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
+				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.addConnection)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
 			},
 			{
 				"view": "componentsView",
@@ -71,61 +71,61 @@
 					"id": "resourcesView",
 					"name": "Resources",
 					"visibility": "collapsed",
-					"when": "extension.areThereClients"
+					"when": "extension.areThereConnections"
 				},
 				{
 					"id": "eventsView",
 					"name": "Events",
 					"visibility": "collapsed",
-					"when": "extension.areThereClients"
+					"when": "extension.areThereConnections"
 				},
 				{
 					"id": "diagnosticsView",
 					"name": "Diagnostics",
 					"visibility": "collapsed",
-					"when": "extension.areThereClients"
+					"when": "extension.areThereConnections"
 				},
 				{
 					"id": "schemaView",
 					"name": "Schema",
 					"visibility": "collapsed",
-					"when": "extension.areThereClients"
+					"when": "extension.areThereConnections"
 				}
 			]
 		},
 		"commands": [
 			{
 				"command": "extension.debugLog",
-				"title": "Log debugging data",
+				"title": "Log Debugging Data",
 				"category": "Bevy Inspection"
 			},
 			{
-				"command": "extension.addClient",
+				"command": "extension.addConnection",
 				"title": "Create Connection",
 				"category": "Bevy Inspection",
 				"icon": "$(add)"
 			},
 			{
-				"command": "extension.reviveLastClient",
+				"command": "extension.reconnectLast",
 				"title": "Reconnect",
 				"category": "Bevy Inspection",
-				"enablement": "extension.areThereClients"
+				"enablement": "extension.areThereConnections"
 			},
 			{
-				"command": "extension.stopClient",
+				"command": "extension.disonnect",
 				"title": "Disconnect",
 				"category": "Bevy Inspection",
 				"icon": "$(debug-disconnect)"
 			},
 			{
-				"command": "extension.reviveClient",
-				"title": "Restore connection",
+				"command": "extension.reconnect",
+				"title": "Restore Last Connection",
 				"category": "Bevy Inspection",
 				"icon": "$(plug)"
 			},
 			{
-				"command": "extension.forgotClient",
-				"title": "Remove Connection from List",
+				"command": "extension.removeConnection",
+				"title": "Forget Connection",
 				"category": "Bevy Inspection",
 				"icon": "$(x)"
 			},
@@ -134,7 +134,7 @@
 				"title": "Refresh Hierarchy of Entities",
 				"category": "Bevy Inspection",
 				"icon": "$(debug-restart)",
-				"enablement": "viewItem == entityElementOnline || viewItem == clientElementOnline"
+				"enablement": "viewItem == entityElementOnline || viewItem == connectionElementOnline"
 			},
 			{
 				"command": "extension.destroyEntity",
@@ -154,15 +154,45 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "extension.debugLog"
+					"command": "extension.debugLog",
+					"when": "true"
 				},
 				{
-					"command": "extension.addClient"
+					"command": "extension.addConnection",
+					"when": "true"
+				},
+				{
+					"command": "extension.reconnectLast",
+					"when": "true"
+				},
+				{
+					"command": "extension.reconnect",
+					"when": "never"
+				},
+				{
+					"command": "extension.updateEntities",
+					"when": "never"
+				},
+				{
+					"command": "extension.disonnect",
+					"when": "never"
+				},
+				{
+					"command": "extension.removeConnection",
+					"when": "never"
+				},
+				{
+					"command": "extension.destroyEntity",
+					"when": "never"
+				},
+				{
+					"command": "extension.renameEntity",
+					"when": "never"
 				}
 			],
 			"view/title": [
 				{
-					"command": "extension.addClient",
+					"command": "extension.addConnection",
 					"when": "view == hierarchyView",
 					"group": "navigation"
 				}
@@ -170,27 +200,27 @@
 			"view/item/context": [
 				{
 					"command": "extension.updateEntities",
-					"when": "viewItem == clientElementOnline",
+					"when": "viewItem == connectionElementOnline",
 					"group": "none@0"
 				},
 				{
-					"command": "extension.stopClient",
-					"when": "viewItem == clientElementOnline",
+					"command": "extension.disonnect",
+					"when": "viewItem == connectionElementOnline",
 					"group": "none@1"
 				},
 				{
 					"command": "extension.updateEntities",
-					"when": "viewItem == clientElementOnline",
+					"when": "viewItem == connectionElementConnection",
 					"group": "inline"
 				},
 				{
-					"command": "extension.reviveClient",
-					"when": "viewItem == clientElementOffline",
+					"command": "extension.reconnect",
+					"when": "viewItem == connectionElementOffline",
 					"group": "inline@0"
 				},
 				{
-					"command": "extension.forgotClient",
-					"when": "viewItem == clientElementOffline",
+					"command": "extension.removeConnection",
+					"when": "viewItem == connectionElementOffline",
 					"group": "inline@1"
 				},
 				{

@@ -2,17 +2,17 @@ import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { createComponentsView } from './componentsView';
 import {
-  ClientElement,
+  ConnectionElement,
   createHierarchyView as createHierarchyView,
   HierarchyDataProvider,
   EntityElement,
 } from './hierarchyData';
-import { ClientList } from './client-list';
+import { ConnectionList } from './client-list';
 import { ComponentsDataProvider, CurrentEntityFocus as EntityFocus } from './componentsData';
 
 // Context
-function areThereClients(value: boolean) {
-  vscode.commands.executeCommand('setContext', 'extension.areThereClients', value);
+function areThereConnections(value: boolean) {
+  vscode.commands.executeCommand('setContext', 'extension.areThereConnections', value);
 }
 
 async function debugLog() {
@@ -23,41 +23,41 @@ async function debugLog() {
 
 export function activate(context: vscode.ExtensionContext) {
   // Context
-  areThereClients(false);
+  areThereConnections(false);
 
   // Views
-  const clients = new ClientList();
-  const hierarchyData = new HierarchyDataProvider(clients);
+  const connections = new ConnectionList();
+  const hierarchyData = new HierarchyDataProvider(connections);
   const hierarchyView = createHierarchyView(hierarchyData);
-  const componentsData = new ComponentsDataProvider(clients);
+  const componentsData = new ComponentsDataProvider(connections);
   const componentsView = createComponentsView(context, componentsData);
 
   // Userspace commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
-    vscode.commands.registerCommand('extension.addClient', () => clients.tryCreateClient()),
-    vscode.commands.registerCommand('extension.reviveLastClient', () => clients.tryCreateClient('last'))
+    vscode.commands.registerCommand('extension.addConnection', () => connections.tryCreateConnection()),
+    vscode.commands.registerCommand('extension.reconnectLast', () => connections.tryCreateConnection('last'))
   );
 
   // Extension only commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('extension.reviveClient', (element: ClientElement) =>
-      clients.get(element.host)?.revive()
+    vscode.commands.registerCommand('extension.reconnect', (element: ConnectionElement) =>
+      connections.get(element.host)?.revive()
     ),
-    vscode.commands.registerCommand('extension.updateEntities', (element: ClientElement | EntityElement) =>
-      clients.get(element.host)?.updateEntityElements()
+    vscode.commands.registerCommand('extension.updateEntities', (element: ConnectionElement | EntityElement) =>
+      connections.get(element.host)?.updateEntityElements()
     ),
-    vscode.commands.registerCommand('extension.stopClient', (element: ClientElement) =>
-      clients.get(element.host)?.death()
+    vscode.commands.registerCommand('extension.disonnect', (element: ConnectionElement) =>
+      connections.get(element.host)?.disconnection()
     ),
-    vscode.commands.registerCommand('extension.forgotClient', (element: ClientElement) =>
-      clients.removeClient(element.host)
+    vscode.commands.registerCommand('extension.removeConnection', (element: ConnectionElement) =>
+      connections.removeConnection(element.host)
     ),
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
-      clients.get(element.host)?.destroyEntity(element)
+      connections.get(element.host)?.destroyEntity(element)
     ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
-      clients.get(element.host)?.renameEntity(element)
+      connections.get(element.host)?.renameEntity(element)
     )
   );
 
@@ -75,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!(selection instanceof EntityElement)) {
           break;
         }
-        if (clients.get(selection.host)?.getNetworkStatus() !== 'online') {
+        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') {
           break;
         }
         componentsData.update(new EntityFocus(selection.host, selection.id));
@@ -86,51 +86,51 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  clients.onClientAdded((client) => {
+  connections.onConnectionAdded((connection) => {
     // Update views
     hierarchyView.description = undefined;
-    hierarchyData.updateClients();
+    hierarchyData.updateConnections();
 
     // Set context
-    areThereClients(true);
+    areThereConnections(true);
 
     // Connect all events
-    client.onHierarchyUpdated((client) => {
-      hierarchyData.updateInClient(client.getProtocol().url.host);
+    connection.onHierarchyUpdated((connection) => {
+      hierarchyData.updateInConnection(connection.getProtocol().url.host);
     });
 
-    client.onEntityDestroyed((destroyed) => {
+    connection.onEntityDestroyed((destroyed) => {
       if (destroyed.childOf === undefined) {
         return;
       }
-      const scope = clients.get(destroyed.host)?.getById(destroyed.childOf);
+      const scope = connections.get(destroyed.host)?.getById(destroyed.childOf);
       if (scope === undefined) {
         return;
       }
       hierarchyData.updateInScope(scope);
     });
 
-    client.onEntityRenamed((renamed) => {
+    connection.onEntityRenamed((renamed) => {
       if (renamed.childOf === undefined) {
         return;
       }
-      const scope = clients.get(renamed.host)?.getById(renamed.childOf);
+      const scope = connections.get(renamed.host)?.getById(renamed.childOf);
       if (scope === undefined) {
         return;
       }
       hierarchyData.updateInScope(scope);
     });
 
-    client.onDeath((client) => {
-      hierarchyData.updateClients();
+    connection.onDisconnection((connection) => {
+      hierarchyData.updateConnections();
 
-      if (client.isInitialized) {
+      if (connection.isInitialized) {
         vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
           if (reaction === 'Reconnect') {
-            clients.tryCreateClient('last');
+            connections.tryCreateConnection('last');
           }
         });
-        if (componentsData.focus?.host === client.getProtocol().url.host) {
+        if (componentsData.focus?.host === connection.getProtocol().url.host) {
           componentsView.description = 'Disconnected';
         }
       } else {
@@ -138,16 +138,16 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
 
-    client.onRevive(() => {
-      hierarchyData.updateClients();
-      if (componentsData.focus?.host === client.getProtocol().url.host) {
+    connection.onReconnection(() => {
+      hierarchyData.updateConnections();
+      if (componentsData.focus?.host === connection.getProtocol().url.host) {
         componentsView.description = undefined;
       }
     });
   });
 
-  clients.onClientRemoved(() => {
-    areThereClients(clients.all().length > 0);
-    hierarchyData.updateClients();
+  connections.onConnectionRemoved(() => {
+    areThereConnections(connections.all().length > 0);
+    hierarchyData.updateConnections();
   });
 }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ClientList } from './client-list';
+import { ConnectionList } from './client-list';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
 
 type Value = boolean | number | string;
@@ -65,13 +65,13 @@ export class CurrentEntityFocus {
 }
 
 export class ComponentsDataProvider implements vscode.TreeDataProvider<InspectionElement> {
-  private clients: ClientList;
+  private connections: ConnectionList;
   private _focus: null | CurrentEntityFocus;
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
-  constructor(clients: ClientList) {
-    this.clients = clients;
+  constructor(connections: ConnectionList) {
+    this.connections = connections;
     this._focus = null;
   }
 
@@ -83,12 +83,12 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
     if (this._focus === null) {
       return [];
     }
-    const client = this.clients.get(this._focus.host);
-    if (client === undefined) {
+    const connection = this.connections.get(this._focus.host);
+    if (connection === undefined) {
       return [];
     }
     if (!parent) {
-      const tree = await client.getInspectionElements(this._focus.entityId);
+      const tree = await connection.getInspectionElements(this._focus.entityId);
       if (tree.length === 0) {
         return [new NamedValueElement('No components in this entity', [])];
       }
@@ -162,9 +162,9 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       return;
     }
 
-    // Check if client exists and is online
-    const client = this.clients.get(newFocus.host);
-    if (client === undefined || client.getNetworkStatus() === 'offline') {
+    // Check if connection exists and is online
+    const connection = this.connections.get(newFocus.host);
+    if (connection === undefined || connection.getNetworkStatus() === 'offline') {
       return;
     }
 
