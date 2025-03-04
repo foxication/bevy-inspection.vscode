@@ -125,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
             clientCollection.tryCreateClient('last');
           }
         });
-        if (componentsData.currentFocus?.host === client.getProtocol().url.host) {
+        if (componentsData.focus?.host === client.getProtocol().url.host) {
           componentsView.description = 'Disconnected';
         }
       } else {
@@ -135,7 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     client.onRevive(() => {
       entitiesData.updateClients();
-      if (componentsData.currentFocus?.host === client.getProtocol().url.host) {
+      if (componentsData.focus?.host === client.getProtocol().url.host) {
         componentsView.description = undefined;
       }
     });
