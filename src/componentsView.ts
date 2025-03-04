@@ -15,7 +15,6 @@ export function createComponentsView(context: vscode.ExtensionContext, component
 }
 
 export class ComponentsViewProvider implements vscode.WebviewViewProvider {
-  // private collection: ClientCollection;
   private data: ComponentsDataProvider;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
@@ -108,7 +107,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   //   }
 
   //   // Scenario: client is removed
-  //   const client = this.collection.get(focused.host);
+  //   const client = this.clients.get(focused.host);
   //   if (client === undefined) {
   //     this.updateToEmpty();
   //     return;

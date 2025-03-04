@@ -138,7 +138,7 @@ export class Client {
 
     // Parsing values
     const parseValues = (obj: object, isParentArray = false): (NamedValueElement | ValueElement)[] => {
-      const collection: (NamedValueElement | ValueElement)[] = [];
+      const elements: (NamedValueElement | ValueElement)[] = [];
 
       for (const entry of Object.entries(obj) as [string, BrpValue][]) {
         const name = entry[0];
@@ -146,23 +146,23 @@ export class Client {
 
         if (typeof toParse === 'object') {
           if (toParse === null) {
-            collection.push(new NamedValueElement(name, [], 'NULL')); // null
+            elements.push(new NamedValueElement(name, [], 'NULL')); // null
             continue;
           }
           if (Array.isArray(toParse)) {
-            collection.push(new NamedValueElement(name, parseValues(toParse, true))); // array...
+            elements.push(new NamedValueElement(name, parseValues(toParse, true))); // array...
             continue;
           }
-          collection.push(new NamedValueElement(name, parseValues(toParse))); // object...
+          elements.push(new NamedValueElement(name, parseValues(toParse))); // object...
           continue;
         }
         if (isParentArray) {
-          collection.push(new ValueElement(toParse)); // array value
+          elements.push(new ValueElement(toParse)); // array value
           continue;
         }
-        collection.push(new NamedValueElement(name, [], toParse)); // value
+        elements.push(new NamedValueElement(name, [], toParse)); // value
       }
-      return collection;
+      return elements;
     };
 
     // Parsing components

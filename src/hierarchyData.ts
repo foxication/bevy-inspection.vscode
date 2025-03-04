@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, ServerVersion } from 'bevy-remote-protocol';
-import { ClientCollection } from './client-collection';
+import { ClientList } from './client-list';
 import { ConnectionState } from './client';
 
 export function createEntitiesView(entitiesProvider: HierarchyDataProvider) {
@@ -50,24 +50,24 @@ export class EntityElement {
 export type HierarchyElement = EntityElement | ClientElement;
 
 export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyElement> {
-  private clientCollection: ClientCollection;
+  private clients: ClientList;
   private treeIsChangedEmitter = new vscode.EventEmitter<HierarchyElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
-  constructor(clientCollection: ClientCollection) {
-    this.clientCollection = clientCollection;
+  constructor(clients: ClientList) {
+    this.clients = clients;
   }
 
   getChildren(element?: HierarchyElement | undefined): HierarchyElement[] {
     // render all clients and entities
     if (!element) {
-      return this.clientCollection.all().map((client) => {
+      return this.clients.all().map((client) => {
         const protocol = client.getProtocol();
         return new ClientElement(protocol.url.host, protocol.serverVersion, client.getState());
       });
     }
 
-    const client = this.clientCollection.get(element.host);
+    const client = this.clients.get(element.host);
     if (client === undefined) {
       return [];
     }
@@ -82,7 +82,7 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
 
   getTreeItem(element: HierarchyElement): vscode.TreeItem {
     if (element instanceof ClientElement) {
-      const client = this.clientCollection.get(element.host);
+      const client = this.clients.get(element.host);
       if (client === undefined) {
         return new vscode.TreeItem('No such client');
       }
@@ -139,7 +139,7 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
   }
 
   updateInClient(host: string) {
-    this.treeIsChangedEmitter.fire(this.clientCollection.getAsElement(host));
+    this.treeIsChangedEmitter.fire(this.clients.getAsElement(host));
   }
 
   updateInScope(parent: EntityElement) {

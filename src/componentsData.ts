@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ClientCollection } from './client-collection';
+import { ClientList } from './client-list';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
 
 type Value = boolean | number | string;
@@ -65,13 +65,13 @@ export class CurrentEntityFocus {
 }
 
 export class ComponentsDataProvider implements vscode.TreeDataProvider<InspectionElement> {
-  private clientCollection: ClientCollection;
+  private clients: ClientList;
   private _focus: null | CurrentEntityFocus;
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
-  constructor(clientCollection: ClientCollection) {
-    this.clientCollection = clientCollection;
+  constructor(clients: ClientList) {
+    this.clients = clients;
     this._focus = null;
   }
 
@@ -83,7 +83,7 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
     if (this._focus === null) {
       return [];
     }
-    const client = this.clientCollection.get(this._focus.host);
+    const client = this.clients.get(this._focus.host);
     if (client === undefined) {
       return [];
     }
@@ -149,27 +149,27 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
     throw Error('unknown type of ComponentTreeElement');
   }
 
-  public update(focused: CurrentEntityFocus | null) {
+  public update(newFocus: CurrentEntityFocus | null) {
     // Check if focus changed
-    if (this._focus === focused) {
+    if (this._focus === newFocus) {
       return;
     }
 
     // Scenario when focus is null
-    if (focused === null) {
+    if (newFocus === null) {
       this._focus = null;
       this.treeIsChangedEmitter.fire();
       return;
     }
 
     // Check if client exists and is alive
-    const client = this.clientCollection.get(focused.host);
+    const client = this.clients.get(newFocus.host);
     if (client === undefined || client.getState() === 'dead') {
       return;
     }
 
     // Change focus of inspection and emmit (what is async?)
-    this._focus = new CurrentEntityFocus(focused.host, focused.entityId);
+    this._focus = new CurrentEntityFocus(newFocus.host, newFocus.entityId);
     this.treeIsChangedEmitter.fire();
   }
 }

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { createComponentsView } from './componentsView';
 import { ClientElement, createEntitiesView, HierarchyDataProvider, EntityElement } from './hierarchyData';
-import { ClientCollection } from './client-collection';
+import { ClientList } from './client-list';
 import { ComponentsDataProvider, CurrentEntityFocus } from './componentsData';
 
 // Context
@@ -21,38 +21,38 @@ export function activate(context: vscode.ExtensionContext) {
   areThereClients(false);
 
   // Views
-  const clientCollection = new ClientCollection();
-  const entitiesData = new HierarchyDataProvider(clientCollection);
+  const clients = new ClientList();
+  const entitiesData = new HierarchyDataProvider(clients);
   const entitiesView = createEntitiesView(entitiesData);
-  const componentsData = new ComponentsDataProvider(clientCollection);
+  const componentsData = new ComponentsDataProvider(clients);
   const componentsView = createComponentsView(context, componentsData);
 
   // Userspace commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
-    vscode.commands.registerCommand('extension.addClient', () => clientCollection.tryCreateClient()),
-    vscode.commands.registerCommand('extension.reviveLastClient', () => clientCollection.tryCreateClient('last'))
+    vscode.commands.registerCommand('extension.addClient', () => clients.tryCreateClient()),
+    vscode.commands.registerCommand('extension.reviveLastClient', () => clients.tryCreateClient('last'))
   );
 
   // Extension only commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.reviveClient', (element: ClientElement) =>
-      clientCollection.get(element.host)?.revive()
+      clients.get(element.host)?.revive()
     ),
     vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement | EntityElement) =>
-      clientCollection.get(element.host)?.updateEntitiesElements()
+      clients.get(element.host)?.updateEntitiesElements()
     ),
     vscode.commands.registerCommand('extension.killClient', (element: ClientElement) =>
-      clientCollection.get(element.host)?.death()
+      clients.get(element.host)?.death()
     ),
     vscode.commands.registerCommand('extension.forgotClient', (element: ClientElement) =>
-      clientCollection.removeClient(element.host)
+      clients.removeClient(element.host)
     ),
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
-      clientCollection.get(element.host)?.destroyEntity(element)
+      clients.get(element.host)?.destroyEntity(element)
     ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
-      clientCollection.get(element.host)?.renameEntity(element)
+      clients.get(element.host)?.renameEntity(element)
     )
   );
 
@@ -70,7 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!(selection instanceof EntityElement)) {
           break;
         }
-        if (clientCollection.get(selection.host)?.getState() !== 'alive') {
+        if (clients.get(selection.host)?.getState() !== 'alive') {
           break;
         }
         componentsData.update(new CurrentEntityFocus(selection.host, selection.id));
@@ -81,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  clientCollection.onClientAdded((client) => {
+  clients.onClientAdded((client) => {
     // Update views
     entitiesView.description = undefined;
     entitiesData.updateClients();
@@ -98,7 +98,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (destroyed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(destroyed.host)?.getById(destroyed.childOf);
+      const scope = clients.get(destroyed.host)?.getById(destroyed.childOf);
       if (scope === undefined) {
         return;
       }
@@ -109,7 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (renamed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(renamed.host)?.getById(renamed.childOf);
+      const scope = clients.get(renamed.host)?.getById(renamed.childOf);
       if (scope === undefined) {
         return;
       }
@@ -122,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (client.isInitialized) {
         vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
           if (reaction === 'Reconnect') {
-            clientCollection.tryCreateClient('last');
+            clients.tryCreateClient('last');
           }
         });
         if (componentsData.focus?.host === client.getProtocol().url.host) {
@@ -141,8 +141,8 @@ export function activate(context: vscode.ExtensionContext) {
     });
   });
 
-  clientCollection.onClientRemoved(() => {
-    areThereClients(clientCollection.all().length > 0);
+  clients.onClientRemoved(() => {
+    areThereClients(clients.all().length > 0);
     entitiesData.updateClients();
   });
 }

@@ -5,9 +5,9 @@ import { ClientElement } from './hierarchyData';
 
 type AddBehavior = 'prompt' | 'last';
 
-export class ClientCollection {
+export class ClientList {
   // Properties
-  private collection = new Map<string, Client>();
+  private clients = new Map<string, Client>();
   private lastProtocol: null | BevyRemoteProtocol = null;
 
   // Events
@@ -44,7 +44,7 @@ export class ClientCollection {
     }
 
     // if such alive client already exists
-    const existingClient = this.collection.get(newClient.getProtocol().url.host);
+    const existingClient = this.clients.get(newClient.getProtocol().url.host);
     if (existingClient && existingClient.getState() === 'alive') {
       vscode.window.showInformationMessage('Specified connection already exists');
       return;
@@ -57,7 +57,7 @@ export class ClientCollection {
 
       // Success
       this.lastProtocol = newClient.cloneProtocol();
-      this.collection.set(this.lastProtocol.url.host, newClient);
+      this.clients.set(this.lastProtocol.url.host, newClient);
 
       // Events
       this.clientAddedEmitter.fire(newClient);
@@ -69,16 +69,16 @@ export class ClientCollection {
     if (client === undefined || client.getState() === 'alive') {
       return;
     }
-    this.collection.delete(host);
+    this.clients.delete(host);
     this.clientRemovedEmitter.fire(client);
   }
 
   public all(): Client[] {
-    return Array.from(this.collection.values());
+    return Array.from(this.clients.values());
   }
 
   public get(host: string): Client | undefined {
-    return this.collection.get(host);
+    return this.clients.get(host);
   }
 
   public getAsElement(host: string): ClientElement | undefined {
