@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
 import { ClientCollection } from './client-collection';
+import { ConnectionState } from './client';
 
 export function createComponentsView(componentsProvider: ComponentsProvider) {
   return vscode.window.registerWebviewViewProvider('componentsView', componentsProvider, {
@@ -50,7 +51,7 @@ export class NamedValueElement {
   }
 }
 
-export class InspectionFocus {
+export class FocusOnEntity {
   host: string;
   entityId: EntityId;
 
@@ -66,7 +67,7 @@ export class ComponentsProvider implements vscode.WebviewViewProvider {
   private collection: ClientCollection;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
-  private focus?: InspectionFocus;
+  private focus?: FocusOnEntity;
 
   constructor(extensionUri: vscode.Uri, collection: ClientCollection) {
     this.collection = collection;
@@ -123,50 +124,74 @@ export class ComponentsProvider implements vscode.WebviewViewProvider {
     return result;
   }
 
-  public update(focused: InspectionFocus | null) {
+  public updateToEmpty() {
     if (this.view === undefined) {
       return;
     }
-
     // Scenario: empty focus
-    if (focused === null) {
-      this.view.title = 'Components';
-      // TODO: clear
+    this.view.title = 'Components';
+  }
+
+  public updateOnFocus(focused: FocusOnEntity) {
+    if (this.view === undefined) {
       return;
     }
 
     // Scenario: client is removed
     const client = this.collection.get(focused.host);
     if (client === undefined) {
-      // TODO: clear
+      this.updateToEmpty();
+      return;
+    }
+
+    // Scenario: client is dead
+    if (client.getState() === 'dead') {
+      this.setState(client.getState());
       return;
     }
 
     // Error
     const entity = client.getById(focused.entityId);
-    if (client.getState() === 'dead' || entity === undefined) {
+    if (entity === undefined) {
       return;
     }
 
     // Scenario: focus on entity
-    this.focus = structuredClone(focused);
+    this.setFocus(structuredClone(focused));
     this.view.show(true);
-    this.view.title = 'Components' + (entity.name ? ' of ' + entity.name : '');
+    this.view.title = 'Components of ' + (entity.name ? entity.name : entity.id);
+
+    // fire update here
   }
 
-  public setDescription(description?: string) {
-    if (this.view !== undefined) {
-      this.view.description = description;
+  private setFocus(focus?: FocusOnEntity) {
+    this.focus = focus;
+    if (focus !== undefined) {
+      this.setState('alive');
     }
   }
 
-  public updateEntityInfo(entity: { name: string; id: EntityId } | null) {
-    if (entity === null) {
+  private setState(state: ConnectionState) {
+    if (this.view === undefined) {
       return;
     }
-    if (this.view !== undefined) {
-      this.view.title = 'Components of ' + entity.name;
+    switch (state) {
+      case 'dead':
+        this.view.description = 'Disconnected';
+        break;
+      case 'alive':
+        this.view.description = undefined;
+        break;
     }
+  }
+
+  public setStateForHost(state: ConnectionState, host: string) {
+    if (typeof host === 'string') {
+      if (host !== this.focus?.host) {
+        return;
+      }
+    }
+    this.setState(state);
   }
 }
 

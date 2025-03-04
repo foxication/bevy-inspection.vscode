@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
-import { ComponentsProvider, createComponentsView, InspectionFocus } from './components';
+import { ComponentsProvider, createComponentsView, FocusOnEntity } from './components';
 import { ClientElement, createEntitiesView, HierarchyProvider, EntityElement } from './hierarchy';
 import { ClientCollection } from './client-collection';
 
@@ -59,13 +59,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   entitiesView.onDidChangeSelection((event) => {
     if (event.selection.length === 0) {
-      componentsProvider.update(null);
+      componentsProvider.updateToEmpty();
     }
     if (event.selection.length === 1) {
       const selection = event.selection[0];
       // ClientElement is skipped!
       if (selection instanceof EntityElement) {
-        componentsProvider.update(new InspectionFocus(selection.host, selection.id));
+        componentsProvider.updateOnFocus(new FocusOnEntity(selection.host, selection.id));
       }
     }
   });
@@ -73,7 +73,6 @@ export function activate(context: vscode.ExtensionContext) {
   clientCollection.onClientAdded((client) => {
     // Update views
     entitiesView.description = undefined;
-    componentsProvider.setDescription(undefined);
     entitiesProvider.updateClients();
 
     // Set context
@@ -93,6 +92,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       entitiesProvider.updateInScope(scope);
+      componentsProvider.setStateForHost('dead', destroyed.host);
     });
 
     client.onEntityRenamed((renamed) => {
@@ -108,6 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     client.onDeath((client) => {
       entitiesProvider.updateClients();
+      componentsProvider.setStateForHost('dead', client.getProtocol().url.host);
 
       if (client.isInitialized) {
         vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
@@ -120,8 +121,10 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
 
-    client.onRevive(() => {
+    client.onRevive((client) => {
       entitiesProvider.updateClients();
+      componentsProvider.updateToEmpty();
+      componentsProvider.setStateForHost('alive', client.getProtocol().url.host);
     });
   });
 
