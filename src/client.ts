@@ -9,14 +9,14 @@ import {
   ValueElement,
 } from './componentsData';
 
-type StatusDisconnection = 'disconnection';
-type ProtocolStatus = 'success' | 'error' | StatusDisconnection;
-export type ConnectionState = 'dead' | 'alive';
+type ProtocolDisconnection = 'disconnection';
+type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
+export type NetworkStatus = 'offline' | 'online';
 
 export class Client {
   // Session data
   private protocol: BevyRemoteProtocol;
-  private state: ConnectionState;
+  private network: NetworkStatus;
   public isInitialized: boolean;
 
   // Bevy data
@@ -38,20 +38,20 @@ export class Client {
   readonly onRevive = this.reviveEmitter.event;
 
   constructor(url: URL, version: ServerVersion) {
-    this.state = 'dead';
+    this.network = 'offline';
     this.isInitialized = false;
     this.protocol = new BevyRemoteProtocol(url, version);
   }
 
   public death() {
-    this.state = 'dead';
+    this.network = 'offline';
     for (const element of this.entityElements.values()) {
-      element.state = 'dead';
+      element.network = 'offline';
     }
     this.deathEmitter.fire(this);
   }
 
-  private errorHandler(reason: Error): StatusDisconnection {
+  private errorHandler(reason: Error): ProtocolDisconnection {
     if (reason.message === 'fetch failed') {
       this.death();
       return 'disconnection';
@@ -59,7 +59,7 @@ export class Client {
     throw reason;
   }
 
-  public async updateEntityElements(): Promise<ProtocolStatus> {
+  public async updateEntityElements(): Promise<ProtocolResult> {
     const response = await this.protocol
       .query({
         option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
@@ -75,7 +75,7 @@ export class Client {
       response.result.map((value) => {
         return [
           value.entity,
-          new EntityElement(this.getProtocol().url.host, this.getState(), value.entity, {
+          new EntityElement(this.getProtocol().url.host, this.getNetworkStatus(), value.entity, {
             name: value.components['bevy_ecs::name::Name'] as string,
             childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
             children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
@@ -87,7 +87,7 @@ export class Client {
     return 'success';
   }
 
-  public async updateRegisteredComponents(): Promise<ProtocolStatus> {
+  public async updateRegisteredComponents(): Promise<ProtocolResult> {
     const response = await this.protocol.list().catch((e) => this.errorHandler(e));
     if (response === 'disconnection') {
       return response;
@@ -100,8 +100,8 @@ export class Client {
     return 'success';
   }
 
-  public async initialize(): Promise<ProtocolStatus> {
-    this.state = 'alive';
+  public async initialize(): Promise<ProtocolResult> {
+    this.network = 'online';
 
     let status;
     status = await this.updateEntityElements();
@@ -113,7 +113,7 @@ export class Client {
     return status;
   }
 
-  private async updateInspectionElements(): Promise<ProtocolStatus> {
+  private async updateInspectionElements(): Promise<ProtocolResult> {
     if (this.inspectedEntityId === null) {
       return 'error';
     }
@@ -220,11 +220,11 @@ export class Client {
     return 'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion;
   }
 
-  public getState(): ConnectionState {
-    return this.state;
+  public getNetworkStatus(): NetworkStatus {
+    return this.network;
   }
 
-  public destroyEntity(element: EntityElement): Promise<ProtocolStatus> {
+  public destroyEntity(element: EntityElement): Promise<ProtocolResult> {
     return this.protocol
       .destroy(element.id)
       .then((response) => {
@@ -242,7 +242,7 @@ export class Client {
       });
   }
 
-  public async renameEntity(element: EntityElement): Promise<ProtocolStatus> {
+  public async renameEntity(element: EntityElement): Promise<ProtocolResult> {
     const newName = await vscode.window.showInputBox({ title: 'Rename Entity', value: element.name }); // Prompt
     if (newName === undefined) {
       return 'error';

@@ -43,15 +43,15 @@ export class ClientList {
       newClient = new Client(new URL(url), versionEnum);
     }
 
-    // if such alive client already exists
+    // if such online client already exists
     const existingClient = this.clients.get(newClient.getProtocol().url.host);
-    if (existingClient && existingClient.getState() === 'alive') {
+    if (existingClient && existingClient.getNetworkStatus() === 'online') {
       vscode.window.showInformationMessage('Specified connection already exists');
       return;
     }
 
-    newClient.initialize().then((status) => {
-      if (status !== 'success') {
+    newClient.initialize().then((protocolStatus) => {
+      if (protocolStatus !== 'success') {
         return;
       }
 
@@ -66,7 +66,7 @@ export class ClientList {
 
   public removeClient(host: string) {
     const client = this.get(host);
-    if (client === undefined || client.getState() === 'alive') {
+    if (client === undefined || client.getNetworkStatus() === 'online') {
       return;
     }
     this.clients.delete(host);
@@ -87,6 +87,6 @@ export class ClientList {
     if (client === undefined || protocol === undefined) {
       return;
     }
-    return new ClientElement(protocol.url.host, protocol.serverVersion, client.getState());
+    return new ClientElement(protocol.url.host, protocol.serverVersion, client.getNetworkStatus());
   }
 }

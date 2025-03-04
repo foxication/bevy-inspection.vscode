@@ -1,7 +1,12 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { createComponentsView } from './componentsView';
-import { ClientElement, createHierarchyView as createHierarchyView, HierarchyDataProvider, EntityElement } from './hierarchyData';
+import {
+  ClientElement,
+  createHierarchyView as createHierarchyView,
+  HierarchyDataProvider,
+  EntityElement,
+} from './hierarchyData';
 import { ClientList } from './client-list';
 import { ComponentsDataProvider, CurrentEntityFocus as EntityFocus } from './componentsData';
 
@@ -39,10 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.reviveClient', (element: ClientElement) =>
       clients.get(element.host)?.revive()
     ),
-    vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement | EntityElement) =>
+    vscode.commands.registerCommand('extension.updateEntities', (element: ClientElement | EntityElement) =>
       clients.get(element.host)?.updateEntityElements()
     ),
-    vscode.commands.registerCommand('extension.killClient', (element: ClientElement) =>
+    vscode.commands.registerCommand('extension.stopClient', (element: ClientElement) =>
       clients.get(element.host)?.death()
     ),
     vscode.commands.registerCommand('extension.forgotClient', (element: ClientElement) =>
@@ -70,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!(selection instanceof EntityElement)) {
           break;
         }
-        if (clients.get(selection.host)?.getState() !== 'alive') {
+        if (clients.get(selection.host)?.getNetworkStatus() !== 'online') {
           break;
         }
         componentsData.update(new EntityFocus(selection.host, selection.id));

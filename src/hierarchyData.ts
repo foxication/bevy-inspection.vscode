@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { EntityId, ServerVersion } from 'bevy-remote-protocol';
 import { ClientList } from './client-list';
-import { ConnectionState } from './client';
+import { NetworkStatus } from './client';
 
 export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
   return vscode.window.createTreeView('hierarchyView', {
@@ -15,18 +15,18 @@ export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
 export class ClientElement {
   host: string;
   version: ServerVersion;
-  state: ConnectionState;
+  network: NetworkStatus;
 
-  constructor(host: string, version: ServerVersion, state: ConnectionState) {
+  constructor(host: string, version: ServerVersion, network: NetworkStatus) {
     this.host = host;
     this.version = version;
-    this.state = state;
+    this.network = network;
   }
 }
 
 export class EntityElement {
   host: string;
-  state: ConnectionState;
+  network: NetworkStatus;
   id: EntityId;
   name?: string;
   childOf?: EntityId;
@@ -34,12 +34,12 @@ export class EntityElement {
 
   constructor(
     clientHost: string,
-    state: ConnectionState,
+    network: NetworkStatus,
     id: EntityId,
     options?: { name?: string; childOf?: EntityId; children?: EntityId[] }
   ) {
     this.host = clientHost;
-    this.state = state;
+    this.network = network;
     this.id = id;
     this.name = options?.name;
     this.childOf = options?.childOf;
@@ -63,7 +63,7 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
     if (!element) {
       return this.clients.all().map((client) => {
         const protocol = client.getProtocol();
-        return new ClientElement(protocol.url.host, protocol.serverVersion, client.getState());
+        return new ClientElement(protocol.url.host, protocol.serverVersion, client.getNetworkStatus());
       });
     }
 
@@ -92,11 +92,11 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
       const treeItem = new vscode.TreeItem(element.host.toString(), collapsible);
 
       // Context + description
-      if (client.getState() === 'alive') {
-        treeItem.contextValue = 'clientElementAlive';
+      if (client.getNetworkStatus() === 'online') {
+        treeItem.contextValue = 'clientElementOnline';
         treeItem.description = 'Version: ' + element.version;
       } else {
-        treeItem.contextValue = 'clientElementDead';
+        treeItem.contextValue = 'clientElementOffline';
         treeItem.description = 'Disconnected';
       }
       return treeItem;
@@ -110,11 +110,11 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
     const treeItem = new vscode.TreeItem(element.name ?? element.id.toString(), collapsible);
     treeItem.id = element.host + '/' + element.id.toString();
     if (collapsible === undefined) {
-      switch (element.state) {
-        case 'dead':
+      switch (element.network) {
+        case 'offline':
           treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-unverified');
           break;
-        case 'alive':
+        case 'online':
           treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-disabled');
           break;
       }
@@ -123,12 +123,12 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
       treeItem.description = element.id.toString();
     }
     treeItem.tooltip = treeItem.id;
-    switch (element.state) {
-      case 'dead':
-        treeItem.contextValue = 'entityElementDead';
+    switch (element.network) {
+      case 'offline':
+        treeItem.contextValue = 'entityElementOffline';
         break;
-      case 'alive':
-        treeItem.contextValue = 'entityElementAlive';
+      case 'online':
+        treeItem.contextValue = 'entityElementOnline';
         break;
     }
     return treeItem;

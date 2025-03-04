@@ -162,9 +162,9 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       return;
     }
 
-    // Check if client exists and is alive
+    // Check if client exists and is online
     const client = this.clients.get(newFocus.host);
-    if (client === undefined || client.getState() === 'dead') {
+    if (client === undefined || client.getNetworkStatus() === 'offline') {
       return;
     }
 

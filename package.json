@@ -112,7 +112,7 @@
 				"enablement": "extension.areThereClients"
 			},
 			{
-				"command": "extension.killClient",
+				"command": "extension.stopClient",
 				"title": "Disconnect",
 				"category": "Bevy Inspection",
 				"icon": "$(debug-disconnect)"
@@ -130,25 +130,25 @@
 				"icon": "$(x)"
 			},
 			{
-				"command": "extension.refreshWorld",
+				"command": "extension.updateEntities",
 				"title": "Refresh Hierarchy of Entities",
 				"category": "Bevy Inspection",
 				"icon": "$(debug-restart)",
-				"enablement": "viewItem == entityElementAlive || viewItem == clientElementAlive"
+				"enablement": "viewItem == entityElementOnline || viewItem == clientElementOnline"
 			},
 			{
 				"command": "extension.destroyEntity",
 				"title": "Destroy Entity",
 				"category": "Bevy Inspection",
 				"icon": "$(trash)",
-				"enablement": "viewItem == entityElementAlive"
+				"enablement": "viewItem == entityElementOnline"
 			},
 			{
 				"command": "extension.renameEntity",
 				"title": "Rename Entity",
 				"category": "Bevy Inspection",
 				"icon": "$(pencil)",
-				"enablement": "viewItem == entityElementAlive"
+				"enablement": "viewItem == entityElementOnline"
 			}
 		],
 		"menus": {
@@ -169,48 +169,48 @@
 			],
 			"view/item/context": [
 				{
-					"command": "extension.refreshWorld",
-					"when": "viewItem == clientElementAlive",
+					"command": "extension.updateEntities",
+					"when": "viewItem == clientElementOnline",
 					"group": "none@0"
 				},
 				{
-					"command": "extension.killClient",
-					"when": "viewItem == clientElementAlive",
+					"command": "extension.stopClient",
+					"when": "viewItem == clientElementOnline",
 					"group": "none@1"
 				},
 				{
-					"command": "extension.refreshWorld",
-					"when": "viewItem == clientElementAlive",
+					"command": "extension.updateEntities",
+					"when": "viewItem == clientElementOnline",
 					"group": "inline"
 				},
 				{
 					"command": "extension.reviveClient",
-					"when": "viewItem == clientElementDead",
+					"when": "viewItem == clientElementOffline",
 					"group": "inline@0"
 				},
 				{
 					"command": "extension.forgotClient",
-					"when": "viewItem == clientElementDead",
+					"when": "viewItem == clientElementOffline",
 					"group": "inline@1"
 				},
 				{
 					"command": "extension.renameEntity",
-					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
+					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
 					"group": "groupA@0"
 				},
 				{
 					"command": "extension.destroyEntity",
-					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
+					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
 					"group": "groupA@1"
 				},
 				{
-					"command": "extension.refreshWorld",
-					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
+					"command": "extension.updateEntities",
+					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
 					"group": "groupB@0"
 				},
 				{
 					"command": "extension.renameEntity",
-					"when": "viewItem == entityElementAlive || viewItem == entityElementDead",
+					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
 					"group": "inline"
 				}
 			]
