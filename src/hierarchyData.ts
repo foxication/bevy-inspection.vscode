@@ -3,9 +3,9 @@ import { EntityId, ServerVersion } from 'bevy-remote-protocol';
 import { ClientList } from './client-list';
 import { ConnectionState } from './client';
 
-export function createEntitiesView(entitiesProvider: HierarchyDataProvider) {
-  return vscode.window.createTreeView('entitiesView', {
-    treeDataProvider: entitiesProvider,
+export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
+  return vscode.window.createTreeView('hierarchyView', {
+    treeDataProvider: hierarchyData,
     canSelectMany: false,
     showCollapseAll: true,
     dragAndDropController: undefined, // TODO

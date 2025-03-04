@@ -32,7 +32,7 @@
 		},
 		"viewsWelcome": [
 			{
-				"view": "entitiesView",
+				"view": "hierarchyView",
 				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.addClient)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
 			},
 			{
@@ -59,7 +59,7 @@
 		"views": {
 			"bevy-inspection": [
 				{
-					"id": "entitiesView",
+					"id": "hierarchyView",
 					"name": "Entities"
 				},
 				{
@@ -163,7 +163,7 @@
 			"view/title": [
 				{
 					"command": "extension.addClient",
-					"when": "view == entitiesView",
+					"when": "view == hierarchyView",
 					"group": "navigation"
 				}
 			],

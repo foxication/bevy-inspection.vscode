@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
 import { createComponentsView } from './componentsView';
-import { ClientElement, createEntitiesView, HierarchyDataProvider, EntityElement } from './hierarchyData';
+import { ClientElement, createHierarchyView as createHierarchyView, HierarchyDataProvider, EntityElement } from './hierarchyData';
 import { ClientList } from './client-list';
-import { ComponentsDataProvider, CurrentEntityFocus } from './componentsData';
+import { ComponentsDataProvider, CurrentEntityFocus as EntityFocus } from './componentsData';
 
 // Context
 function areThereClients(value: boolean) {
@@ -22,8 +22,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Views
   const clients = new ClientList();
-  const entitiesData = new HierarchyDataProvider(clients);
-  const entitiesView = createEntitiesView(entitiesData);
+  const hierarchyData = new HierarchyDataProvider(clients);
+  const hierarchyView = createHierarchyView(hierarchyData);
   const componentsData = new ComponentsDataProvider(clients);
   const componentsView = createComponentsView(context, componentsData);
 
@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
       clients.get(element.host)?.revive()
     ),
     vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement | EntityElement) =>
-      clients.get(element.host)?.updateEntitiesElements()
+      clients.get(element.host)?.updateEntityElements()
     ),
     vscode.commands.registerCommand('extension.killClient', (element: ClientElement) =>
       clients.get(element.host)?.death()
@@ -56,9 +56,9 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  entitiesData.onDidChangeTreeData(() => {});
+  hierarchyData.onDidChangeTreeData(() => {});
 
-  entitiesView.onDidChangeSelection((event) => {
+  hierarchyView.onDidChangeSelection((event) => {
     switch (event.selection.length) {
       case 0: {
         componentsData.update(null);
@@ -73,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (clients.get(selection.host)?.getState() !== 'alive') {
           break;
         }
-        componentsData.update(new CurrentEntityFocus(selection.host, selection.id));
+        componentsData.update(new EntityFocus(selection.host, selection.id));
         componentsView.title = 'Components of ' + (selection.name ?? selection.id);
         componentsView.description = undefined;
         break;
@@ -83,15 +83,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   clients.onClientAdded((client) => {
     // Update views
-    entitiesView.description = undefined;
-    entitiesData.updateClients();
+    hierarchyView.description = undefined;
+    hierarchyData.updateClients();
 
     // Set context
     areThereClients(true);
 
     // Connect all events
-    client.onEntitiesUpdated((client) => {
-      entitiesData.updateInClient(client.getProtocol().url.host);
+    client.onHierarchyUpdated((client) => {
+      hierarchyData.updateInClient(client.getProtocol().url.host);
     });
 
     client.onEntityDestroyed((destroyed) => {
@@ -102,7 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (scope === undefined) {
         return;
       }
-      entitiesData.updateInScope(scope);
+      hierarchyData.updateInScope(scope);
     });
 
     client.onEntityRenamed((renamed) => {
@@ -113,11 +113,11 @@ export function activate(context: vscode.ExtensionContext) {
       if (scope === undefined) {
         return;
       }
-      entitiesData.updateInScope(scope);
+      hierarchyData.updateInScope(scope);
     });
 
     client.onDeath((client) => {
-      entitiesData.updateClients();
+      hierarchyData.updateClients();
 
       if (client.isInitialized) {
         vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
@@ -134,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     client.onRevive(() => {
-      entitiesData.updateClients();
+      hierarchyData.updateClients();
       if (componentsData.focus?.host === client.getProtocol().url.host) {
         componentsView.description = undefined;
       }
@@ -143,6 +143,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   clients.onClientRemoved(() => {
     areThereClients(clients.all().length > 0);
-    entitiesData.updateClients();
+    hierarchyData.updateClients();
   });
 }

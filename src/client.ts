@@ -26,8 +26,8 @@ export class Client {
   private inspectionElements: InspectionElement[] | null = null;
 
   // Events
-  private entitiesUpdatedEmitter = new vscode.EventEmitter<Client>();
-  readonly onEntitiesUpdated = this.entitiesUpdatedEmitter.event;
+  private hierarchyUpdatedEmitter = new vscode.EventEmitter<Client>();
+  readonly onHierarchyUpdated = this.hierarchyUpdatedEmitter.event;
   private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
@@ -59,7 +59,7 @@ export class Client {
     throw reason;
   }
 
-  public async updateEntitiesElements(): Promise<ProtocolStatus> {
+  public async updateEntityElements(): Promise<ProtocolStatus> {
     const response = await this.protocol
       .query({
         option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
@@ -83,7 +83,7 @@ export class Client {
         ];
       })
     );
-    this.entitiesUpdatedEmitter.fire(this);
+    this.hierarchyUpdatedEmitter.fire(this);
     return 'success';
   }
 
@@ -104,7 +104,7 @@ export class Client {
     this.state = 'alive';
 
     let status;
-    status = await this.updateEntitiesElements();
+    status = await this.updateEntityElements();
     if (status !== 'success') {
       return status;
     }
