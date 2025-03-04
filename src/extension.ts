@@ -7,7 +7,7 @@ import {
   HierarchyDataProvider,
   EntityElement,
 } from './hierarchyData';
-import { ConnectionList } from './client-list';
+import { ConnectionList } from './connection-list';
 import { ComponentsDataProvider, CurrentEntityFocus as EntityFocus } from './componentsData';
 
 // Context
@@ -42,13 +42,13 @@ export function activate(context: vscode.ExtensionContext) {
   // Extension only commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.reconnect', (element: ConnectionElement) =>
-      connections.get(element.host)?.revive()
+      connections.get(element.host)?.reconnect()
     ),
     vscode.commands.registerCommand('extension.updateEntities', (element: ConnectionElement | EntityElement) =>
       connections.get(element.host)?.updateEntityElements()
     ),
     vscode.commands.registerCommand('extension.disonnect', (element: ConnectionElement) =>
-      connections.get(element.host)?.disconnection()
+      connections.get(element.host)?.disconnect()
     ),
     vscode.commands.registerCommand('extension.removeConnection', (element: ConnectionElement) =>
       connections.removeConnection(element.host)

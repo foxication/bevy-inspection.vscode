@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { EntityId, ServerVersion } from 'bevy-remote-protocol';
-import { ConnectionList } from './client-list';
-import { NetworkStatus } from './client';
+import { ConnectionList } from './connection-list';
+import { NetworkStatus } from './connection';
 
 export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
   return vscode.window.createTreeView('hierarchyView', {

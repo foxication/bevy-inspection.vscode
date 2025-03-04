@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
-import { ConnectionElement as ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
+import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import {
   ComponentElement,
   ComponentErrorElement,
@@ -43,7 +43,7 @@ export class Connection {
     this.protocol = new BevyRemoteProtocol(url, version);
   }
 
-  public disconnection() {
+  public disconnect() {
     this.network = 'offline';
     for (const element of this.entityElements.values()) {
       element.network = 'offline';
@@ -53,7 +53,7 @@ export class Connection {
 
   private errorHandler(reason: Error): ProtocolDisconnection {
     if (reason.message === 'fetch failed') {
-      this.disconnection();
+      this.disconnect();
       return 'disconnection';
     }
     throw reason;
@@ -269,7 +269,7 @@ export class Connection {
     return this.protocol;
   }
 
-  public revive() {
+  public reconnect() {
     this.initialize().then((status) => {
       if (status === 'success') {
         this.reconnectionEmitter.fire(this);

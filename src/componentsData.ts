@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ConnectionList } from './client-list';
+import { ConnectionList } from './connection-list';
 import { EntityId, TypePath } from 'bevy-remote-protocol';
 
 type Value = boolean | number | string;
