@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { EntityId, TypePath } from 'bevy-remote-protocol';
+import { TypePath } from 'bevy-remote-protocol';
 
 type Value = boolean | number | string;
 
@@ -46,49 +46,25 @@ export class NamedValueElement {
 
 export type InspectionElement = ComponentElement | ComponentErrorElement | ValueElement | NamedValueElement;
 
-export class CurrentEntityFocus {
-  private _host: string;
-  private _entityId: EntityId;
-
-  constructor(host: string, entityId: EntityId) {
-    this._host = host;
-    this._entityId = entityId;
-  }
-
-  get host() {
-    return this._host;
-  }
-
-  get entityId() {
-    return this._entityId;
-  }
-}
-
 export class ComponentsDataProvider implements vscode.TreeDataProvider<InspectionElement> {
   private connections: ConnectionList;
-  private _focus: null | CurrentEntityFocus;
   private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   constructor(connections: ConnectionList) {
     this.connections = connections;
-    this._focus = null;
   }
 
-  get focus() {
-    return this._focus;
-  }
-
-  async getChildren(parent?: InspectionElement | undefined): Promise<InspectionElement[]> {
-    if (this._focus === null) {
+  getChildren(parent?: InspectionElement | undefined): InspectionElement[] {
+    if (this.connections.focus === null) {
       return [];
     }
-    const connection = this.connections.get(this._focus.host);
+    const connection = this.connections.get(this.connections.focus.host);
     if (connection === undefined) {
       return [];
     }
     if (!parent) {
-      const tree = await connection.getInspectionElements(this._focus.entityId);
+      const tree = connection.getInspectionElements();
       if (tree.length === 0) {
         return [new NamedValueElement('No components in this entity', [])];
       }
@@ -147,30 +123,6 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       return treeItem;
     }
     throw Error('unknown type of ComponentTreeElement');
-  }
-
-  public update(newFocus: CurrentEntityFocus | null) {
-    // Check if focus changed
-    if (this._focus === newFocus) {
-      return;
-    }
-
-    // Scenario when focus is null
-    if (newFocus === null) {
-      this._focus = null;
-      this.treeIsChangedEmitter.fire();
-      return;
-    }
-
-    // Check if connection exists and is online
-    const connection = this.connections.get(newFocus.host);
-    if (connection === undefined || connection.getNetworkStatus() === 'offline') {
-      return;
-    }
-
-    // Change focus of inspection and emmit (what is async?)
-    this._focus = new CurrentEntityFocus(newFocus.host, newFocus.entityId);
-    this.treeIsChangedEmitter.fire();
   }
 }
 

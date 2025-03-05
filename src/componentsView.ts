@@ -1,16 +1,13 @@
 import * as vscode from 'vscode';
-import { ComponentElement, ComponentsDataProvider } from './componentsData';
+import { ComponentsDataProvider } from './componentsData';
 
-export function createComponentsView(context: vscode.ExtensionContext, componentsProvider: ComponentsDataProvider) {
-  const componentsView = new ComponentsViewProvider(context.extensionUri, componentsProvider);
-  componentsProvider.onDidChangeTreeData((event) => componentsView.update(event));
-
+export function createComponentsView(context: vscode.ExtensionContext, componentsData: ComponentsDataProvider) {
+  const componentsView = new ComponentsViewProvider(context.extensionUri, componentsData);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('componentsView', componentsView, {
       webviewOptions: { retainContextWhenHidden: true },
     })
   );
-
   return componentsView;
 }
 
@@ -20,8 +17,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
 
   constructor(extensionUri: vscode.Uri, data: ComponentsDataProvider) {
-    data.onDidChangeTreeData(() => this.update());
-
     this.data = data;
     this.extensionUri = extensionUri;
   }
@@ -38,10 +33,17 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  public update(event: void | ComponentElement | undefined) {
-    if (event instanceof ComponentElement) {
-      return;
-    }
+  // Called on componentsData.treeIsChangedEmitter
+  public async update() {
+    // Root
+    // if (typeof event === 'undefined') {
+    //   // const children = await this.data.getChildren(event);
+    //   return;
+    // }
+    // // Children
+    // if (event instanceof ComponentElement) {
+    //   return;
+    // }
   }
 
   public async resolveWebviewView(

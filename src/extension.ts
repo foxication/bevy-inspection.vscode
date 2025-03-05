@@ -7,8 +7,8 @@ import {
   HierarchyDataProvider,
   EntityElement,
 } from './hierarchyData';
-import { ConnectionList } from './connection-list';
-import { ComponentsDataProvider, CurrentEntityFocus as EntityFocus } from './componentsData';
+import { ConnectionList, EntityFocus } from './connection-list';
+import { ComponentsDataProvider } from './componentsData';
 
 // Context
 function areThereConnections(value: boolean) {
@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
       connections.get(element.host)?.reconnect()
     ),
     vscode.commands.registerCommand('extension.updateEntities', (element: ConnectionElement | EntityElement) =>
-      connections.get(element.host)?.updateEntityElements()
+      connections.get(element.host)?.requestEntityElements()
     ),
     vscode.commands.registerCommand('extension.disonnect', (element: ConnectionElement) =>
       connections.get(element.host)?.disconnect()
@@ -54,10 +54,10 @@ export function activate(context: vscode.ExtensionContext) {
       connections.removeConnection(element.host)
     ),
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
-      connections.get(element.host)?.destroyEntity(element)
+      connections.get(element.host)?.requestDestroyOfEntity(element)
     ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
-      connections.get(element.host)?.renameEntity(element)
+      connections.get(element.host)?.requestRenameOfEntity(element)
     )
   );
 
@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext) {
   hierarchyView.onDidChangeSelection((event) => {
     switch (event.selection.length) {
       case 0: {
-        componentsData.update(null);
+        connections.updateFocus(null);
         componentsView.title = undefined;
         break;
       }
@@ -78,12 +78,16 @@ export function activate(context: vscode.ExtensionContext) {
         if (connections.get(selection.host)?.getNetworkStatus() !== 'online') {
           break;
         }
-        componentsData.update(new EntityFocus(selection.host, selection.id));
+        connections.updateFocus(new EntityFocus(selection.host, selection.id));
         componentsView.title = 'Components of ' + (selection.name ?? selection.id);
         componentsView.description = undefined;
         break;
       }
     }
+  });
+
+  connections.onFocusChanged(() => {
+    componentsView.update();
   });
 
   connections.onConnectionAdded((connection) => {
@@ -130,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
             connections.tryCreateConnection('last');
           }
         });
-        if (componentsData.focus?.host === connection.getProtocol().url.host) {
+        if (connections.focus?.host === connection.getProtocol().url.host) {
           componentsView.description = 'Disconnected';
         }
       } else {
@@ -140,7 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     connection.onReconnection(() => {
       hierarchyData.updateConnections();
-      if (componentsData.focus?.host === connection.getProtocol().url.host) {
+      if (connections.focus?.host === connection.getProtocol().url.host) {
         componentsView.description = undefined;
       }
     });

@@ -8,6 +8,7 @@ import {
   NamedValueElement,
   ValueElement,
 } from './componentsData';
+import { EntityFocus } from './connection-list';
 
 type ProtocolDisconnection = 'disconnection';
 type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
@@ -25,8 +26,7 @@ export class Connection {
   // Bevy data
   private registeredComponents: TypePath[] = [];
   private entityElements = new Map<EntityId, EntityElement>();
-  private inspectedEntityId: EntityId | null = null;
-  private inspectionElements: InspectionElement[] | null = null;
+  private inspectionElements: InspectionElement[] = [];
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -62,7 +62,7 @@ export class Connection {
     throw reason;
   }
 
-  public async updateEntityElements(): Promise<ProtocolResult> {
+  public async requestEntityElements(): Promise<ProtocolResult> {
     const response = await this.protocol
       .query({
         option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
@@ -90,7 +90,7 @@ export class Connection {
     return 'success';
   }
 
-  public async updateRegisteredComponents(): Promise<ProtocolResult> {
+  public async requestRegisteredComponents(): Promise<ProtocolResult> {
     const response = await this.protocol.list().catch((e) => this.errorHandler(e));
     if (response === 'disconnection') {
       return response;
@@ -107,21 +107,22 @@ export class Connection {
     this.network = 'online';
 
     let status;
-    status = await this.updateEntityElements();
+    status = await this.requestEntityElements();
     if (status !== 'success') {
       return status;
     }
-    status = await this.updateRegisteredComponents();
+    status = await this.requestRegisteredComponents();
     this._isInitialized = true;
     return status;
   }
 
-  private async updateInspectionElements(): Promise<ProtocolResult> {
-    if (this.inspectedEntityId === null) {
-      return 'error';
+  public async requestInspectionElements(focus: EntityFocus | null): Promise<ProtocolResult> {
+    if (focus === null) {
+      this.entityElements.clear();
+      return 'success';
     }
 
-    const listResponse = await this.protocol.list(this.inspectedEntityId).catch((e) => this.errorHandler(e));
+    const listResponse = await this.protocol.list(focus.entityId).catch((e) => this.errorHandler(e));
     if (listResponse === 'disconnection') {
       return 'disconnection';
     }
@@ -129,9 +130,7 @@ export class Connection {
       return 'error';
     }
 
-    const getResponse = await this.protocol
-      .get(this.inspectedEntityId, listResponse.result)
-      .catch((e) => this.errorHandler(e));
+    const getResponse = await this.protocol.get(focus.entityId, listResponse.result).catch((e) => this.errorHandler(e));
     if (getResponse === 'disconnection') {
       return 'disconnection';
     }
@@ -208,14 +207,7 @@ export class Connection {
     return 'success';
   }
 
-  public async getInspectionElements(entityId: EntityId) {
-    if (this.inspectedEntityId !== entityId) {
-      this.inspectedEntityId = entityId;
-      await this.updateInspectionElements();
-    }
-    if (this.inspectionElements === null) {
-      return [];
-    }
+  public getInspectionElements() {
     return this.inspectionElements;
   }
 
@@ -227,25 +219,19 @@ export class Connection {
     return this.network;
   }
 
-  public destroyEntity(element: EntityElement): Promise<ProtocolResult> {
-    return this.protocol
-      .destroy(element.id)
-      .then((response) => {
-        if (response.result === null) {
-          this.entityElements.delete(element.id);
-          this.entityDestroyedEmitter.fire(element);
-        }
-      })
-      .catch((e) => this.errorHandler(e))
-      .then((response) => {
-        if (response === 'disconnection') {
-          return 'disconnection';
-        }
-        return 'success';
-      });
+  public async requestDestroyOfEntity(element: EntityElement): Promise<ProtocolResult> {
+    const response = await this.protocol.destroy(element.id).catch((e) => this.errorHandler(e));
+    if (response === 'disconnection') {
+      return 'disconnection';
+    }
+    if (response.result === null) {
+      this.entityElements.delete(element.id);
+      this.entityDestroyedEmitter.fire(element);
+    }
+    return 'success';
   }
 
-  public async renameEntity(element: EntityElement): Promise<ProtocolResult> {
+  public async requestRenameOfEntity(element: EntityElement): Promise<ProtocolResult> {
     const newName = await vscode.window.showInputBox({ title: 'Rename Entity', value: element.name }); // Prompt
     if (newName === undefined) {
       return 'error';

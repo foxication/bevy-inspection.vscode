@@ -1,20 +1,45 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
+import { BevyRemoteProtocol, EntityId, ServerVersion } from 'bevy-remote-protocol';
 import { Connection } from './connection';
 import { ConnectionElement } from './hierarchyData';
 
 type AddBehavior = 'prompt' | 'last';
 
+export class EntityFocus {
+  private _host: string;
+  private _entityId: EntityId;
+
+  constructor(host: string, entityId: EntityId) {
+    this._host = host;
+    this._entityId = entityId;
+  }
+
+  get host() {
+    return this._host;
+  }
+
+  get entityId() {
+    return this._entityId;
+  }
+}
+
 export class ConnectionList {
   // Properties
   private connections = new Map<string, Connection>();
-  private lastProtocol: null | BevyRemoteProtocol = null;
+  private lastProtocol: BevyRemoteProtocol | null = null;
+  private _focus: EntityFocus | null = null;
+
+  get focus() {
+    return this._focus;
+  }
 
   // Events
   private connectionAddedEmitter = new vscode.EventEmitter<Connection>();
   readonly onConnectionAdded = this.connectionAddedEmitter.event;
   private connectionRemovedEmitter = new vscode.EventEmitter<Connection>();
   readonly onConnectionRemoved = this.connectionRemovedEmitter.event;
+  private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
+  readonly onFocusChanged = this.focusChangedEmitter.event;
 
   public async tryCreateConnection(behavior: AddBehavior = 'prompt') {
     let newConnection;
@@ -62,6 +87,33 @@ export class ConnectionList {
       // Events
       this.connectionAddedEmitter.fire(newConnection);
     });
+  }
+
+  public async updateFocus(newFocus: EntityFocus | null) {
+    // Check if focus changed
+    if (this.focus === newFocus) {
+      return;
+    }
+
+    // Scenario when focus is null
+    if (newFocus === null) {
+      this._focus = null;
+      this.focusChangedEmitter.fire(null);
+      return;
+    }
+
+    // Check if connection exists and is online
+    const connection = this.connections.get(newFocus.host);
+    if (connection === undefined || connection.getNetworkStatus() === 'offline') {
+      return;
+    }
+
+    // Change focus of inspection
+    this._focus = new EntityFocus(newFocus.host, newFocus.entityId);
+
+    // before emitting change, request data
+    this.get(newFocus.host)?.requestInspectionElements(newFocus);
+    this.focusChangedEmitter.fire(newFocus);
   }
 
   public removeConnection(host: string) {
