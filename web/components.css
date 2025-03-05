@@ -14,3 +14,50 @@ vscode-scrollable vscode-tree:first-child {
 vscode-scrollable vscode-tree:last-child {
   margin-bottom: 0;
 }
+
+#component-list {
+  padding: 16px;
+}
+
+ul {
+  padding: 0 20px;
+  margin-top: 16px;
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+li {
+  /* padding-left: 20px; */
+  display: table-row;
+}
+
+li:not(:first-child) {
+  padding-top: 10px;
+}
+
+li label {
+  display: table-cell;
+}
+
+li label:not(:first-child) {
+  padding-left: 40px;
+}
+
+.component {
+  background-color: blue;
+}
+
+.info-label {
+  color: var(--vscode-foreground);
+}
+
+.component-values {
+  padding-left: 24px;
+  background-color: blueviolet;
+}
+
+#colored-dev {
+  background-color: chocolate;
+  min-height: 40px;
+  padding-right: 20px;
+}

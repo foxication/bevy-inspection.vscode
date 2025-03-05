@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
   const hierarchyData = new HierarchyDataProvider(connections);
   const hierarchyView = createHierarchyView(hierarchyData);
   const componentsData = new ComponentsDataProvider(connections);
-  const componentsView = createComponentsView(context, componentsData);
+  const componentsView = createComponentsView(context, componentsData, connections);
 
   // Userspace commands
   context.subscriptions.push(

@@ -1,8 +1,13 @@
 import * as vscode from 'vscode';
 import { ComponentsDataProvider } from './componentsData';
+import { ConnectionList } from './connection-list';
 
-export function createComponentsView(context: vscode.ExtensionContext, componentsData: ComponentsDataProvider) {
-  const componentsView = new ComponentsViewProvider(context.extensionUri, componentsData);
+export function createComponentsView(
+  context: vscode.ExtensionContext,
+  componentsData: ComponentsDataProvider,
+  connections: ConnectionList
+) {
+  const componentsView = new ComponentsViewProvider(context.extensionUri, componentsData, connections);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('componentsView', componentsView, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -13,11 +18,13 @@ export function createComponentsView(context: vscode.ExtensionContext, component
 
 export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private data: ComponentsDataProvider;
+  private connections: ConnectionList;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
 
-  constructor(extensionUri: vscode.Uri, data: ComponentsDataProvider) {
+  constructor(extensionUri: vscode.Uri, data: ComponentsDataProvider, connections: ConnectionList) {
     this.data = data;
+    this.connections = connections;
     this.extensionUri = extensionUri;
   }
 
@@ -33,16 +40,26 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  // Called on componentsData.treeIsChangedEmitter
+  // Called on componentsData.onDidChangeTreeData
   public async update() {
-    // Root
-    // if (typeof event === 'undefined') {
-    //   // const children = await this.data.getChildren(event);
-    //   return;
-    // }
-    // // Children
-    // if (event instanceof ComponentElement) {
-    //   return;
+    if (this.view === undefined) {
+      return;
+    }
+    // this.view.webview.postMessage({ cmd: 'clear' });
+    this.view.webview.postMessage({
+      cmd: 'set_entity_info',
+      host: this.connections.focus?.host ?? 'unknown',
+      entityId: this.connections.focus?.entityId ?? 'unknown',
+    });
+
+    // const children = this.data.getChildren();
+    // for (const child of children) {
+    //   if (child instanceof ComponentElement) {
+    //     this.view.webview.postMessage({ cmd: 'add_component' });
+    //     // child.
+    //     continue;
+    //   }
+    //   // other types of elements
     // }
   }
 
@@ -94,76 +111,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     console.log(result);
     return result;
   }
-
-  // public updateToEmpty() {
-  //   if (this.view === undefined) {
-  //     return;
-  //   }
-  //   // Scenario: empty focus
-  //   this.view.title = 'Components';
-  // }
-
-  // public updateOnFocus(focused: FocusOnEntity) {
-  //   if (this.view === undefined) {
-  //     return;
-  //   }
-
-  //   // Scenario: client is removed
-  //   const client = this.clients.get(focused.host);
-  //   if (client === undefined) {
-  //     this.updateToEmpty();
-  //     return;
-  //   }
-
-  //   // Scenario: client is dead
-  //   if (client.getState() === 'dead') {
-  //     this.setState(client.getState());
-  //     return;
-  //   }
-
-  //   // Error
-  //   const entity = client.getById(focused.entityId);
-  //   if (entity === undefined) {
-  //     return;
-  //   }
-
-  //   // Scenario: focus on entity
-  //   this.setFocus(structuredClone(focused));
-  //   this.view.show(true);
-  //   this.view.title = 'Components of ' + (entity.name ? entity.name : entity.id);
-
-  //   // fire update here
-  // }
-
-  // private setFocus(focus?: FocusOnEntity) {
-  //   this._focus = focus;
-  //   if (focus !== undefined) {
-  //     this.setState('alive');
-  //   }
-  // }
-
-  // private setState(state: ConnectionState) {
-  //   if (this.view === undefined) {
-  //     return;
-  //   }
-  //   switch (state) {
-  //     case 'dead':
-  //       this.view.description = 'Disconnected';
-  //       break;
-  //     case 'alive':
-  //       this.view.description = undefined;
-  //       break;
-  //   }
-  // }
-
-  // public setStateForHost(state: ConnectionState, host: string) {
-  //   if (typeof host === 'string') {
-  //     if (host !== this.focus?.host) {
-  //       return;
-  //     }
-  //   }
-  //   this.setState(state);
-  // }
 }
 
 function getNonce() {
