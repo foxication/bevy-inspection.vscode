@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { TypePath } from 'bevy-remote-protocol';
+import { short, TypePath } from 'bevy-remote-protocol';
 
 type Value = boolean | number | string;
 
@@ -81,11 +81,8 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
   }
 
   getTreeItem(element: InspectionElement): vscode.TreeItem {
-    const getShortPath = (path: string) => {
-      return (/[^::]*$/.exec(path.split('<')[0]) ?? '???')[0];
-    };
     if (element instanceof ComponentElement) {
-      const treeItem = new vscode.TreeItem(getShortPath(element.typePath));
+      const treeItem = new vscode.TreeItem(short(element.typePath));
       if (element.children.length > 0) {
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
       }
@@ -94,7 +91,7 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       return treeItem;
     }
     if (element instanceof ComponentErrorElement) {
-      const treeItem = new vscode.TreeItem(getShortPath(element.typePath));
+      const treeItem = new vscode.TreeItem(short(element.typePath));
       if (element.children.length > 0) {
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
       }
