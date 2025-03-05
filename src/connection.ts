@@ -14,10 +14,13 @@ type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
 export type NetworkStatus = 'offline' | 'online';
 
 export class Connection {
-  // Session data
   private protocol: BevyRemoteProtocol;
   private network: NetworkStatus;
-  public isInitialized: boolean;
+  private _isInitialized: boolean;
+
+  get isInitialized() {
+    return this._isInitialized;
+  }
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
@@ -39,7 +42,7 @@ export class Connection {
 
   constructor(url: URL, version: ServerVersion) {
     this.network = 'offline';
-    this.isInitialized = false;
+    this._isInitialized = false;
     this.protocol = new BevyRemoteProtocol(url, version);
   }
 
@@ -109,7 +112,7 @@ export class Connection {
       return status;
     }
     status = await this.updateRegisteredComponents();
-    this.isInitialized = true;
+    this._isInitialized = true;
     return status;
   }
 
