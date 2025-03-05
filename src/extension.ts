@@ -100,17 +100,13 @@ export function activate(context: vscode.ExtensionContext) {
     connection.onDisconnection((connection) => {
       hierarchyData.updateConnections();
 
-      if (connection.isInitialized) {
-        vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
-          if (reaction === 'Reconnect') {
-            connections.tryCreateConnection('last');
-          }
-        });
-        if (connections.focus?.host === connection.getProtocol().url.host) {
-          componentsView.description = 'Disconnected';
+      vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
+        if (reaction === 'Reconnect') {
+          connections.tryCreateConnection('last');
         }
-      } else {
-        vscode.window.showInformationMessage('Bevy instance refused to connect');
+      });
+      if (connections.focus?.host === connection.getProtocol().url.host) {
+        componentsView.description = 'Disconnected';
       }
     });
 
@@ -120,6 +116,9 @@ export function activate(context: vscode.ExtensionContext) {
         componentsView.description = undefined;
       }
     });
+  });
+  connections.onAddError(() => {
+    vscode.window.showErrorMessage('Bevy instance refused to connect');
   });
   connections.onConnectionRemoved(() => {
     areThereConnections(connections.all().length > 0);

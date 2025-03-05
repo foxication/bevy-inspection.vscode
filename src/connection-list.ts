@@ -36,6 +36,8 @@ export class ConnectionList {
   // Events
   private connectionAddedEmitter = new vscode.EventEmitter<Connection>();
   readonly onConnectionAdded = this.connectionAddedEmitter.event;
+  private addErrorEmitter = new vscode.EventEmitter<void>();
+  readonly onAddError = this.addErrorEmitter.event;
   private connectionRemovedEmitter = new vscode.EventEmitter<Connection>();
   readonly onConnectionRemoved = this.connectionRemovedEmitter.event;
   private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
@@ -77,6 +79,7 @@ export class ConnectionList {
 
     newConnection.initialize().then((protocolStatus) => {
       if (protocolStatus !== 'success') {
+        this.addErrorEmitter.fire();
         return;
       }
 
