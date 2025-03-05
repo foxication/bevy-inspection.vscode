@@ -1,13 +1,7 @@
 import * as vscode from 'vscode';
+import * as Elements from './elements';
 import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
-import {
-  ComponentElement,
-  ComponentErrorElement,
-  InspectionElement,
-  NamedValueElement,
-  ValueElement,
-} from './componentsData';
 import { EntityFocus } from './connection-list';
 
 type ProtocolDisconnection = 'disconnection';
@@ -21,7 +15,7 @@ export class Connection {
   // Bevy data
   private registeredComponents: TypePath[] = [];
   private entityElements = new Map<EntityId, EntityElement>();
-  private inspectionElements: InspectionElement[] = [];
+  private inspectionElements: Elements.InspectionElement[] = [];
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -132,8 +126,8 @@ export class Connection {
     }
 
     // Parsing values
-    const parseValues = (obj: object, isParentArray = false): (NamedValueElement | ValueElement)[] => {
-      const elements: (NamedValueElement | ValueElement)[] = [];
+    const parseValues = (obj: object, isParentArray = false): (Elements.NamedValueElement | Elements.AnyValue)[] => {
+      const elements: (Elements.NamedValueElement | Elements.AnyValue)[] = [];
 
       for (const entry of Object.entries(obj) as [string, BrpValue][]) {
         const name = entry[0];
@@ -141,21 +135,21 @@ export class Connection {
 
         if (typeof toParse === 'object') {
           if (toParse === null) {
-            elements.push(new NamedValueElement(name, [], 'NULL')); // null
+            elements.push(new Elements.NamedValueElement(name, [], 'NULL')); // null
             continue;
           }
           if (Array.isArray(toParse)) {
-            elements.push(new NamedValueElement(name, parseValues(toParse, true))); // array...
+            elements.push(new Elements.NamedValueElement(name, parseValues(toParse, true))); // array...
             continue;
           }
-          elements.push(new NamedValueElement(name, parseValues(toParse))); // object...
+          elements.push(new Elements.NamedValueElement(name, parseValues(toParse))); // object...
           continue;
         }
         if (isParentArray) {
-          elements.push(new ValueElement(toParse)); // array value
+          elements.push(new Elements.AnyValue(toParse)); // array value
           continue;
         }
-        elements.push(new NamedValueElement(name, [], toParse)); // value
+        elements.push(new Elements.NamedValueElement(name, [], toParse)); // value
       }
       return elements;
     };
@@ -168,17 +162,17 @@ export class Connection {
 
       if (typeof toParse === 'object') {
         if (toParse === null) {
-          componentTree.push(new ComponentElement(typePath, [new ValueElement('NULL')])); // null
+          componentTree.push(new Elements.ComponentAndChildren(typePath, [new Elements.AnyValue('NULL')])); // null
           continue;
         }
         if (Array.isArray(toParse)) {
-          componentTree.push(new ComponentElement(typePath, parseValues(toParse, true))); // array...
+          componentTree.push(new Elements.ComponentAndChildren(typePath, parseValues(toParse, true))); // array...
           continue;
         }
-        componentTree.push(new ComponentElement(typePath, parseValues(toParse))); // object...
+        componentTree.push(new Elements.ComponentAndChildren(typePath, parseValues(toParse))); // object...
         continue;
       }
-      componentTree.push(new ComponentElement(typePath, [new ValueElement(toParse)])); // value
+      componentTree.push(new Elements.ComponentAndChildren(typePath, [new Elements.AnyValue(toParse)])); // value
     }
 
     // Parsing components (errors)
@@ -186,13 +180,13 @@ export class Connection {
       const typePath = entry[0];
       const toParse = entry[1];
       const errorData = [
-        new NamedValueElement('code', [], toParse.code),
-        new NamedValueElement('message', [], toParse.message),
+        new Elements.NamedValueElement('code', [], toParse.code),
+        new Elements.NamedValueElement('message', [], toParse.message),
       ];
       if (toParse.data !== undefined && typeof toParse.data !== 'object') {
-        new NamedValueElement('message', [], toParse.data);
+        new Elements.NamedValueElement('message', [], toParse.data);
       }
-      componentTree.push(new ComponentErrorElement(typePath, errorData));
+      componentTree.push(new Elements.ComponentError(typePath, errorData));
     }
 
     // apply changes

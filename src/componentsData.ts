@@ -1,61 +1,18 @@
 import * as vscode from 'vscode';
+import * as Elements from './elements';
 import { ConnectionList } from './connection-list';
-import { short, TypePath } from 'bevy-remote-protocol';
+import { short } from 'bevy-remote-protocol';
 
-type Value = boolean | number | string;
-
-export class ComponentElement {
-  typePath: TypePath;
-  children: (NamedValueElement | ValueElement)[];
-
-  constructor(name: string, children: typeof this.children) {
-    this.typePath = name;
-    this.children = children;
-  }
-}
-
-export class ComponentErrorElement {
-  typePath: TypePath;
-  children: (NamedValueElement | ValueElement)[];
-
-  constructor(name: string, children: typeof this.children) {
-    this.typePath = name;
-    this.children = children;
-  }
-}
-
-export class ValueElement {
-  value: Value;
-
-  constructor(value: Value) {
-    this.value = value;
-  }
-}
-
-export class NamedValueElement {
-  name: string;
-  children: (NamedValueElement | ValueElement)[];
-  value?: Value;
-
-  constructor(name: string, children: typeof this.children, value?: Value) {
-    this.name = name;
-    this.children = children;
-    this.value = value;
-  }
-}
-
-export type InspectionElement = ComponentElement | ComponentErrorElement | ValueElement | NamedValueElement;
-
-export class ComponentsDataProvider implements vscode.TreeDataProvider<InspectionElement> {
+export class ComponentsDataProvider implements vscode.TreeDataProvider<Elements.InspectionElement> {
   private connections: ConnectionList;
-  private treeIsChangedEmitter = new vscode.EventEmitter<ComponentElement | undefined | void>();
+  private treeIsChangedEmitter = new vscode.EventEmitter<Elements.ComponentAndChildren | undefined | void>();
   readonly onDidChangeTreeData = this.treeIsChangedEmitter.event;
 
   constructor(connections: ConnectionList) {
     this.connections = connections;
   }
 
-  getChildren(parent?: InspectionElement | undefined): InspectionElement[] {
+  getChildren(parent?: Elements.InspectionElement | undefined): Elements.InspectionElement[] {
     if (this.connections.focus === null) {
       return [];
     }
@@ -66,22 +23,22 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
     if (!parent) {
       const tree = connection.getInspectionElements();
       if (tree.length === 0) {
-        return [new NamedValueElement('No components in this entity', [])];
+        return [new Elements.NamedValueElement('No components in this entity', [])];
       }
       return tree;
     }
     if (
-      parent instanceof ComponentElement ||
-      parent instanceof ComponentErrorElement ||
-      parent instanceof NamedValueElement
+      parent instanceof Elements.ComponentAndChildren ||
+      parent instanceof Elements.ComponentError ||
+      parent instanceof Elements.NamedValueElement
     ) {
       return parent.children;
     }
     return [];
   }
 
-  getTreeItem(element: InspectionElement): vscode.TreeItem {
-    if (element instanceof ComponentElement) {
+  getTreeItem(element: Elements.InspectionElement): vscode.TreeItem {
+    if (element instanceof Elements.ComponentAndChildren) {
       const treeItem = new vscode.TreeItem(short(element.typePath));
       if (element.children.length > 0) {
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
@@ -90,7 +47,7 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-log-unverified');
       return treeItem;
     }
-    if (element instanceof ComponentErrorElement) {
+    if (element instanceof Elements.ComponentError) {
       const treeItem = new vscode.TreeItem(short(element.typePath));
       if (element.children.length > 0) {
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
@@ -100,12 +57,12 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
       treeItem.description = 'error';
       return treeItem;
     }
-    if (element instanceof ValueElement) {
+    if (element instanceof Elements.AnyValue) {
       const treeItem = new vscode.TreeItem(element.value.toString());
       treeItem.iconPath = getThemeIconOnType(element.value);
       return treeItem;
     }
-    if (element instanceof NamedValueElement) {
+    if (element instanceof Elements.NamedValueElement) {
       let treeItem;
       if (element.value !== undefined) {
         treeItem = new vscode.TreeItem(element.value.toString());
@@ -127,7 +84,7 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
   }
 }
 
-function getThemeIconOnType(value: Value): vscode.ThemeIcon | undefined {
+function getThemeIconOnType(value: Elements.ValueType): vscode.ThemeIcon | undefined {
   switch (typeof value) {
     case 'string':
       switch (value) {
