@@ -124,6 +124,10 @@ export class ComponentsDataProvider implements vscode.TreeDataProvider<Inspectio
     }
     throw Error('unknown type of ComponentTreeElement');
   }
+
+  update() {
+    this.treeIsChangedEmitter.fire();
+  }
 }
 
 function getThemeIconOnType(value: Value): vscode.ThemeIcon | undefined {

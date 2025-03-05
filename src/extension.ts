@@ -61,35 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  hierarchyData.onDidChangeTreeData(() => {});
-
-  hierarchyView.onDidChangeSelection((event) => {
-    switch (event.selection.length) {
-      case 0: {
-        connections.updateFocus(null);
-        componentsView.title = undefined;
-        break;
-      }
-      case 1: {
-        const selection = event.selection[0];
-        if (!(selection instanceof EntityElement)) {
-          break;
-        }
-        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') {
-          break;
-        }
-        connections.updateFocus(new EntityFocus(selection.host, selection.id));
-        componentsView.title = 'Components of ' + (selection.name ?? selection.id);
-        componentsView.description = undefined;
-        break;
-      }
-    }
-  });
-
-  connections.onFocusChanged(() => {
-    componentsView.update();
-  });
-
+  // Events sorted by call order
   connections.onConnectionAdded((connection) => {
     // Update views
     hierarchyView.description = undefined;
@@ -149,9 +121,35 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
   });
-
   connections.onConnectionRemoved(() => {
     areThereConnections(connections.all().length > 0);
     hierarchyData.updateConnections();
   });
+
+  hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
+  hierarchyView.onDidChangeSelection((event) => {
+    switch (event.selection.length) {
+      case 0: {
+        connections.updateFocus(null);
+        componentsView.title = undefined;
+        break;
+      }
+      case 1: {
+        const selection = event.selection[0];
+        if (!(selection instanceof EntityElement)) {
+          break;
+        }
+        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') {
+          break;
+        }
+        connections.updateFocus(new EntityFocus(selection.host, selection.id));
+        componentsView.title = 'Components of ' + (selection.name ?? selection.id);
+        componentsView.description = undefined;
+        break;
+      }
+    }
+  });
+
+  connections.onFocusChanged(() => componentsData.update());
+  componentsData.onDidChangeTreeData(() => componentsView.update());
 }
