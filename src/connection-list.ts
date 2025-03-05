@@ -34,12 +34,15 @@ export class ConnectionList {
   }
 
   // Events
-  private connectionAddedEmitter = new vscode.EventEmitter<Connection>();
-  readonly onConnectionAdded = this.connectionAddedEmitter.event;
+  private addedEmitter = new vscode.EventEmitter<Connection>();
+  readonly onAdded = this.addedEmitter.event;
+  
   private addErrorEmitter = new vscode.EventEmitter<void>();
   readonly onAddError = this.addErrorEmitter.event;
-  private connectionRemovedEmitter = new vscode.EventEmitter<Connection>();
-  readonly onConnectionRemoved = this.connectionRemovedEmitter.event;
+  
+  private removedEmitter = new vscode.EventEmitter<Connection>();
+  readonly onRemoved = this.removedEmitter.event;
+  
   private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
 
@@ -88,7 +91,7 @@ export class ConnectionList {
       this.connections.set(this.lastProtocol.url.host, newConnection);
 
       // Events
-      this.connectionAddedEmitter.fire(newConnection);
+      this.addedEmitter.fire(newConnection);
     });
   }
 
@@ -125,7 +128,7 @@ export class ConnectionList {
       return;
     }
     this.connections.delete(host);
-    this.connectionRemovedEmitter.fire(connection);
+    this.removedEmitter.fire(connection);
   }
 
   public all(): Connection[] {

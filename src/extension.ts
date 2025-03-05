@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Events sorted by call order
-  connections.onConnectionAdded((connection) => {
+  connections.onAdded((connection) => {
     // Update views
     hierarchyView.description = undefined;
     hierarchyData.updateConnections();
@@ -120,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
   connections.onAddError(() => {
     vscode.window.showErrorMessage('Bevy instance refused to connect');
   });
-  connections.onConnectionRemoved(() => {
+  connections.onRemoved(() => {
     areThereConnections(connections.all().length > 0);
     hierarchyData.updateConnections();
   });
