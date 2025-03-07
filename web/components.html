@@ -13,52 +13,46 @@
 </head>
 
 <body>
-    <vscode-scrollable id="view-container">
-        <ul id="entity-info">
-            <li>
-                <label class="info-label">Connection</label>
-                <label id="entity-info-host"></label>
-            </li>
-            <li>
-                <label class="info-label">Entity ID</label>
-                <label id="entity-info-id"></label>
-            </li>
-        </ul>
-        <div id="component-list">
-            <vscode-collapsible class="component" title="Name">
-                <div class="component-values">
-                    <p>Value: 27193793</p>
-                    <p>Content: 2dfasdf</p>
-                    <p>More: dafsdaf</p>
-                    <p>data: adfdsf</p>
-                </div>
-            </vscode-collapsible>
-            <vscode-collapsible class="component" title="Location">
-                <div class="component-values">
-                    <p>x: 0.1</p>
-                    <p>y: 0.3</p>
-                    <p>z: 1.8</p>
-                </div>
-            </vscode-collapsible>
-            <vscode-collapsible class="component" title="Location">
-                <div id="colored-dev" class="component-values">
-                    <vscode-form-group>
-                        <vscode-label for="basic-textfield-01">
-                            Lorem <span class="normal">ipsum</span>:
-                        </vscode-label>
-                        <vscode-textfield id="basic-textfield-01" placeholder="Placeholder example"></vscode-textfield>
-                        <vscode-form-helper>
-                            <p>
-                                Lorem ipsum <code>let dolor = sit amet</code>, consectetur adipiscing
-                                elit. <span class="error">Suspendisse</span> faucibus imperdiet
-                                sapien, a gravida <a href="#">dolor</a>.
-                            </p>
-                        </vscode-form-helper>
-                    </vscode-form-group>
-                </div>
-            </vscode-collapsible>
-            <vscode-collapsible class="component" title="Visibility"></vscode-collapsible>
-            <vscode-collapsible class="component" title="Hahaha"></vscode-collapsible>
+    <vscode-scrollable>
+        <div id="view-container">
+            <ul id="entity-info">
+                <li>
+                    <label class="info-label">Connection</label>
+                    <label id="entity-info-host"></label>
+                </li>
+                <li>
+                    <label class="info-label">Entity ID</label>
+                    <label id="entity-info-id"></label>
+                </li>
+            </ul>
+            <div id="component-list">
+                <ext-component type-path="component::custom::Name">
+                    <ext-declaration></ext-declaration>
+                </ext-component>
+                <ext-component type-path="component::group::Example::1">
+                    <ext-declaration property="Text string enter here name please"></ext-declaration>
+                    <ext-declaration property="Some random declaration"></ext-declaration>
+                    <ext-declaration property="Where do you live"></ext-declaration>
+                    <ext-declaration property="Time"></ext-declaration>
+                    <div class="row">
+                        <label for="age">Age</label>
+                        <vscode-textfield type="number" min="12" max="120" step="1" id="form2-age" name="age"
+                            pattern="\d+" placeholder="number"></vscode-textfield>
+                    </div>
+                </ext-component>
+                <ext-component type-path="component::group::Example::2">
+                    So much content here. Fkdljfajkfjldajflkjlkfjlsjflsjlfjsl jdakfjlsfj jkdsklfjdlsjflsa
+                    dfsfjslkfk lj kadsjflk jlsadjfl kdjslkajfdj lkajlkd ajdkljflkj
+                    jdkaf jl jfkdlasjdflk jlkas jflk jkald jflkadjk lfjklafjskljflkajkfjkslafiopudf a dup
+                    dafiudpasfusufopdusfoidusaopfuosaidfuo
+                </ext-component>
+                <ext-component type-path="component::group::Example::3">
+                    So much content here. Fkdljfajkfjldajflkjlkfjlsjflsjlfjsl jdakfjlsfj jkdsklfjdlsjflsa
+                    dfsfjslkfk lj kadsjflk jlsadjfl kdjslkajfdj lkajlkd ajdkljflkj
+                    jdkaf jl jfkdlasjdflk jlkas jflk jkald jflkadjk lfjklafjskljflkajkfjkslafiopudf a dup
+                    dafiudpasfusufopdusfoidusaopfuosaidfuo
+                </ext-component>
+            </div>
         </div>
     </vscode-scrollable>
 </body>

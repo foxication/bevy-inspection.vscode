@@ -1,63 +1,156 @@
+/* 
+ * Global
+ */
+
 body {
   padding: 0;
+  user-select: none;
 }
+
+p {
+  margin: 0;
+}
+
+/*
+ * Scrollable Style
+ */
 
 vscode-scrollable {
   height: 100vh;
-  width: 100vw;
+  width: 100%;
+
+  vscode-tree:first-child {
+    margin-top: 0;
+  }
+
+  vscode-tree:last-child {
+    margin-bottom: 0;
+  }
+
+  #view-container {
+    margin: 0 14px;
+  }
 }
 
-vscode-scrollable vscode-tree:first-child {
-  margin-top: 0;
+/*
+ * Entity Information Style
+ */
+
+ul#entity-info {
+  padding-left: 0;
+  font-weight: 600;
+
+  li {
+    display: flex;
+
+    label {
+      flex: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+
+      &.info-label {
+        color: var(--vscode-foreground);
+      }
+    }
+  }
+
+  /* li {
+    display: table-row;
+
+    label {
+      display: table-cell;
+
+      &:not(:first-child) {
+        padding-left: 40px;
+      }
+
+      .info-label {
+        color: var(--vscode-foreground);
+      }
+    }
+  } */
 }
 
-vscode-scrollable vscode-tree:last-child {
-  margin-bottom: 0;
-}
+/*
+ * Component style
+ */
 
 #component-list {
-  padding: 16px;
-}
+  margin-block-end: 1em;
+  box-sizing: border-box;
 
-ul {
-  padding: 0 20px;
-  margin-top: 16px;
-  margin-bottom: 0;
-  font-weight: 600;
-}
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 
-li {
-  /* padding-left: 20px; */
-  display: table-row;
-}
+  details {
+    width: 100%;
+    border-radius: 2px;
 
-li:not(:first-child) {
-  padding-top: 10px;
-}
+    &:hover {
+      cursor: pointer;
+    }
 
-li label {
-  display: table-cell;
-}
+    &[open] {
+      .header-icon {
+        transform: rotate(90deg);
+      }
+    }
 
-li label:not(:first-child) {
-  padding-left: 40px;
-}
+    summary {
+      span {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
 
-.component {
-  background-color: blue;
-}
+      list-style: none;
+      display: flex;
+      height: 26px;
+      align-items: center;
 
-.info-label {
-  color: var(--vscode-foreground);
-}
+      &:focus {
+        outline: none;
+      }
 
-.component-values {
-  padding-left: 24px;
-  background-color: blueviolet;
-}
+      .header-icon {
+        display: block;
+        flex-shrink: 0;
+        margin: 0 3px;
+        height: 16px;
+        width: 16px;
+      }
+    }
+  }
 
-#colored-dev {
-  background-color: chocolate;
-  min-height: 40px;
-  padding-right: 20px;
+  .details-content {
+    cursor: default;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    row-gap: 4px;
+
+    .row {
+      display: flex;
+      column-gap: 8px;
+      align-items: center;
+
+      label {
+        flex: 3;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+
+      input {
+        flex: 5;
+      }
+
+      vscode-textfield {
+        flex: 5;
+      }
+    }
+  }
 }
