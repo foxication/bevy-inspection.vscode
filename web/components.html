@@ -30,15 +30,15 @@
             </div>
             <div id="section-component-list">
                 <h3>Component List</h3>
-                <div class="component-list" entity-id="real">
+                <div class="component-list" path="real">
                     <ext-component type-path="component::custom::Name">
                         <ext-declaration></ext-declaration>
                     </ext-component>
                     <ext-component type-path="example::Basic">
-                        <ext-declaration property="Text string enter here name please"></ext-declaration>
-                        <ext-declaration property="Some random declaration"></ext-declaration>
-                        <ext-declaration property="Where do you live"></ext-declaration>
-                        <ext-declaration property="Time"></ext-declaration>
+                        <ext-declaration path="Text string enter here name please"></ext-declaration>
+                        <ext-declaration path="Some random declaration"></ext-declaration>
+                        <ext-declaration path="Where do you live"></ext-declaration>
+                        <ext-declaration path="Time"></ext-declaration>
                         <div class="declaration">
                             <label for="form-age">Age</label>
                             <vscode-textfield type="number" min="12" max="120" step="1" id="form-age" name="age"
@@ -53,25 +53,25 @@
                         </div>
                     </ext-component>
                     <ext-component type-path="example::nested::Values">
-                        <ext-declaration property="Name"></ext-declaration>
-                        <ext-group property="First Child">
-                            <ext-declaration property="Name"></ext-declaration>
-                            <ext-group property="First Child">
-                                <ext-declaration property="Name"></ext-declaration>
+                        <ext-declaration path="Name"></ext-declaration>
+                        <ext-group path="First Child">
+                            <ext-declaration path="Name"></ext-declaration>
+                            <ext-group path="First Child">
+                                <ext-declaration path="Name"></ext-declaration>
                             </ext-group>
-                            <ext-group property="Second Child">
-                                <ext-declaration property="Name"></ext-declaration>
+                            <ext-group path="Second Child">
+                                <ext-declaration path="Name"></ext-declaration>
                             </ext-group>
                         </ext-group>
-                        <ext-group property="Second Child">
-                            <ext-group property="Documents">
-                                <ext-declaration property="Name"></ext-declaration>
-                                <ext-declaration property="Passport"></ext-declaration>
+                        <ext-group path="Second Child">
+                            <ext-group path="Documents">
+                                <ext-declaration path="Name"></ext-declaration>
+                                <ext-declaration path="Passport"></ext-declaration>
                             </ext-group>
-                            <ext-group property="Relationships">
-                                <ext-declaration property="Father"></ext-declaration>
-                                <ext-declaration property="Mather"></ext-declaration>
-                                <ext-declaration property="Sister"></ext-declaration>
+                            <ext-group path="Relationships">
+                                <ext-declaration path="Father"></ext-declaration>
+                                <ext-declaration path="Mather"></ext-declaration>
+                                <ext-declaration path="Sister"></ext-declaration>
                             </ext-group>
                         </ext-group>
                     </ext-component>
@@ -89,15 +89,15 @@
             </div>
             <div id="section-component-add">
                 <h3>Component Add</h3>
-                <div id="component-creation" entity-id="fake">
+                <div id="component-creation" path="fake">
                     <div id="component-creation-options">
                         <vscode-textfield disabled value="component::custom::Person"></vscode-textfield>
                         <vscode-button secondary icon="selection">Select</vscode-button>
                     </div>
-                    <ext-declaration property="Name"></ext-declaration>
-                    <ext-declaration property="Second Name"></ext-declaration>
-                    <ext-declaration property="Birth year"></ext-declaration>
-                    <ext-declaration property="Country"></ext-declaration>
+                    <ext-declaration path="Name"></ext-declaration>
+                    <ext-declaration path="Second Name"></ext-declaration>
+                    <ext-declaration path="Birth year"></ext-declaration>
+                    <ext-declaration path="Country"></ext-declaration>
                     <div id="component-creation-confirmation">
                         <vscode-button icon="plus">Add</vscode-button>
                     </div>

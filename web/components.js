@@ -55,17 +55,17 @@ customElements.define(
   'ext-component',
   class ExtComponent extends HTMLElement {
     connectedCallback() {
-      const entity = this.parentElement?.getAttribute('entity-id');
+      const entity = this.parentElement?.getAttribute('path');
       const component = this.getAttribute('type-path');
       const readableComponent = component?.replaceAll('::', ' :: ');
       this.outerHTML = dontIndent(`
-        <details class="is-expandable">
-          <summary class="component">
+        <details>
+          <summary>
             <vscode-icon name="chevron-right" class="header-icon"></vscode-icon>
             <span>${readableComponent}</span>
             <vscode-icon name="symbol-method" class="component-type-icon"></vscode-icon>
           </summary>
-          <div class="details-content" property="${entity + '.' + component}">${this.innerHTML}</div>
+          <div class="details-content" path="${entity + '.' + component}">${this.innerHTML}</div>
         </details>`);
     }
   }
@@ -75,17 +75,17 @@ customElements.define(
   'ext-group',
   class ExtGroup extends HTMLElement {
     connectedCallback() {
-      const parentProperty = this.parentElement?.getAttribute('property') ?? '';
-      const property = this.getAttribute('property');
-      const indentation = '<vscode-icon name="blank"></vscode-icon>'.repeat(parentProperty.replace(/[^.]/g, '').length);
+      const parentPath = this.parentElement?.getAttribute('path') ?? '';
+      const path = this.getAttribute('path');
+      const indentation = '<vscode-icon name="blank"></vscode-icon>'.repeat(parentPath.replace(/[^.]/g, '').length);
       this.outerHTML = dontIndent(`
-        <details class="is-expandable">
-          <summary class="component">
+        <details>
+          <summary>
             ${indentation}
             <vscode-icon name="chevron-right" class="header-icon"></vscode-icon>
-            <span>${property}</span>
+            <span>${path}</span>
           </summary>
-          <div class="details-content" property="${parentProperty + '.' + property}">${this.innerHTML}</div>
+          <div class="details-content" path="${parentPath + '.' + path}">${this.innerHTML}</div>
         </details>`);
     }
   }
@@ -95,20 +95,20 @@ customElements.define(
   'ext-declaration',
   class ExtDeclaration extends HTMLElement {
     connectedCallback() {
-      const parentProperty = this.parentElement?.getAttribute('property') ?? '';
-      const property = this.getAttribute('property');
+      const parentPath = this.parentElement?.getAttribute('path') ?? '';
+      const path = this.getAttribute('path');
 
-      if (property === null) {
+      if (path === null) {
         this.outerHTML = dontIndent(`
           <div class="declaration">
-            <label for="${parentProperty}" class="property"></label>
-            <vscode-textfield id="${parentProperty}"/>
+            <label for="${parentPath}" class="path"></label>
+            <vscode-textfield id="${parentPath}"/>
           </div>`);
       } else {
-        const id = parentProperty + '.' + property;
+        const id = parentPath + '.' + path;
         this.outerHTML = dontIndent(`
           <div class="declaration">
-            <label for="${id}" class="property">${property}</label>
+            <label for="${id}" class="path">${path}</label>
             <vscode-textfield id="${id}"/>
           </div>`);
       }
