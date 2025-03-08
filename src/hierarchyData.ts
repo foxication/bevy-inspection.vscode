@@ -112,10 +112,10 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
     if (collapsible === undefined) {
       switch (element.network) {
         case 'offline':
-          treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-unverified');
+          treeItem.iconPath = new vscode.ThemeIcon('debug-disconnect');
           break;
         case 'online':
-          treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-data-disabled');
+          treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-unverified');
           break;
       }
     }
