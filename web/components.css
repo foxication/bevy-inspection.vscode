@@ -5,10 +5,20 @@
 body {
   padding: 0;
   user-select: none;
+  color: var(--vscode-foreground);
 }
 
 p {
   margin: 0;
+}
+
+ul {
+  margin: 0;
+}
+
+h3 {
+  margin-block-start: 0;
+  margin-block-end: 6px;
 }
 
 /*
@@ -28,7 +38,11 @@ vscode-scrollable {
   }
 
   #view-container {
-    margin: 0 14px;
+    margin: 14px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
   }
 }
 
@@ -38,7 +52,6 @@ vscode-scrollable {
 
 ul#entity-info {
   padding-left: 0;
-  font-weight: 600;
 
   li {
     display: flex;
@@ -54,103 +67,120 @@ ul#entity-info {
       }
     }
   }
+}
 
-  /* li {
-    display: table-row;
+/*
+ * Component List
+ */
 
-    label {
-      display: table-cell;
+.component-list {
+  box-sizing: border-box;
 
-      &:not(:first-child) {
-        padding-left: 40px;
-      }
-
-      .info-label {
-        color: var(--vscode-foreground);
-      }
-    }
-  } */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /*
  * Component style
  */
 
-#component-list {
-  margin-block-end: 1em;
-  box-sizing: border-box;
+details {
+  width: 100%;
+  border-radius: 2px;
 
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  &:hover {
+    cursor: pointer;
+  }
 
-  details {
-    width: 100%;
-    border-radius: 2px;
+  &[open]>summary {
+    .header-icon {
+      transform: rotate(90deg);
+    }
+  }
 
-    &:hover {
-      cursor: pointer;
+  summary {
+    display: flex;
+    column-gap: 6px;
+
+    span {
+      overflow: hidden;
+      white-space: nowrap;
+      /* text-overflow: ellipsis; */
+      direction: rtl;
+      text-align: left;
+      flex: auto;
     }
 
-    &[open] {
-      .header-icon {
-        transform: rotate(90deg);
-      }
+    list-style: none;
+    display: flex;
+    height: 26px;
+    align-items: center;
+
+    &:focus {
+      outline: none;
     }
 
-    summary {
-      span {
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-
-      list-style: none;
-      display: flex;
-      height: 26px;
-      align-items: center;
-
-      &:focus {
-        outline: none;
-      }
-
-      .header-icon {
-        display: block;
-        flex-shrink: 0;
-        margin: 0 3px;
-        height: 16px;
-        width: 16px;
-      }
+    vscode-icon {
+      flex: none;
     }
   }
 
   .details-content {
     cursor: default;
-    padding: 8px;
+    padding-top: 4px;
     display: flex;
     flex-direction: column;
     row-gap: 4px;
+  }
+}
 
-    .row {
-      display: flex;
-      column-gap: 8px;
-      align-items: center;
+/*
+ * Declaration
+ */
 
-      label {
-        flex: 3;
-        text-align: right;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-      }
+.declaration {
+  display: flex;
+  column-gap: 8px;
+  align-items: center;
 
-      input {
-        flex: 5;
-      }
+  label {
+    flex: 3;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
 
-      vscode-textfield {
-        flex: 5;
-      }
+  input {
+    flex: 5;
+  }
+
+  vscode-textfield {
+    flex: 5;
+  }
+}
+
+#component-creation {
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+
+  #component-creation-options {
+    display: flex;
+    column-gap: 4px;
+
+    vscode-textfield {
+      flex: auto;
     }
+
+    vscode-button {
+      flex: none;
+    }
+  }
+
+  #component-creation-confirmation {
+    display: flex;
+    justify-content: flex-end;
   }
 }

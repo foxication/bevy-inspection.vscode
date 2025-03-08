@@ -20,6 +20,14 @@
     }
   });
 
+  const select = document.querySelector('#select-example');
+  if (select !== null) {
+    select.addEventListener('change', (event) => {
+      // @ts-ignore
+      console.log(select.value);
+    });
+  }
+
   function clear() {
     const element = document.querySelector('#component-list');
     if (element === null) return;
@@ -47,17 +55,37 @@ customElements.define(
   'ext-component',
   class ExtComponent extends HTMLElement {
     connectedCallback() {
-      const typePath = this.getAttribute('type-path');
+      const entity = this.parentElement?.getAttribute('entity-id');
+      const component = this.getAttribute('type-path');
+      const readableComponent = component?.replaceAll('::', ' :: ');
       this.outerHTML = dontIndent(`
         <details class="is-expandable">
           <summary class="component">
-            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="header-icon">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M10.072 8.024L5.715 3.667l.618-.62L11 7.716v.618L6.333 13l-.618-.619 4.357-4.357z">
-              </path>
-            </svg>
-            <span>${typePath}</span>
+            <vscode-icon name="chevron-right" class="header-icon"></vscode-icon>
+            <span>${readableComponent}</span>
+            <vscode-icon name="symbol-method" class="component-type-icon"></vscode-icon>
           </summary>
-          <div class="details-content" type-path="${typePath}">${this.innerHTML}</div>
+          <div class="details-content" property="${entity + '.' + component}">${this.innerHTML}</div>
+        </details>`);
+    }
+  }
+);
+
+customElements.define(
+  'ext-group',
+  class ExtGroup extends HTMLElement {
+    connectedCallback() {
+      const parentProperty = this.parentElement?.getAttribute('property') ?? '';
+      const property = this.getAttribute('property');
+      const indentation = '<vscode-icon name="blank"></vscode-icon>'.repeat(parentProperty.replace(/[^.]/g, '').length);
+      this.outerHTML = dontIndent(`
+        <details class="is-expandable">
+          <summary class="component">
+            ${indentation}
+            <vscode-icon name="chevron-right" class="header-icon"></vscode-icon>
+            <span>${property}</span>
+          </summary>
+          <div class="details-content" property="${parentProperty + '.' + property}">${this.innerHTML}</div>
         </details>`);
     }
   }
@@ -72,13 +100,14 @@ customElements.define(
 
       if (property === null) {
         this.outerHTML = dontIndent(`
-          <div class="row">
+          <div class="declaration">
+            <label for="${parentProperty}" class="property"></label>
             <vscode-textfield id="${parentProperty}"/>
           </div>`);
       } else {
         const id = parentProperty + '.' + property;
         this.outerHTML = dontIndent(`
-          <div class="row">
+          <div class="declaration">
             <label for="${id}" class="property">${property}</label>
             <vscode-textfield id="${id}"/>
           </div>`);
