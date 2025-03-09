@@ -101,14 +101,14 @@ customElements.define(
       if (path === null) {
         this.outerHTML = dontIndent(`
           <div class="declaration">
-            <label for="${parentPath}" class="path"></label>
+            <label for="${parentPath}"></label>
             <vscode-textfield id="${parentPath}"/>
           </div>`);
       } else {
         const id = parentPath + '.' + path;
         this.outerHTML = dontIndent(`
           <div class="declaration">
-            <label for="${id}" class="path">${path}</label>
+            <label for="${id}">${path}</label>
             <vscode-textfield id="${id}"/>
           </div>`);
       }
