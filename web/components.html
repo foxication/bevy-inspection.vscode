@@ -31,28 +31,14 @@
             <div id="section-component-list">
                 <h3>Component List</h3>
                 <div class="component-list" path="real">
-                    <ext-component type-path="component::custom::Name">
+                    <ext-component type-path="component::with::Value">
                         <ext-declaration></ext-declaration>
                     </ext-component>
-                    <ext-component type-path="example::Basic">
-                        <ext-declaration path="Text string enter here name please"></ext-declaration>
-                        <ext-declaration path="Some random declaration"></ext-declaration>
-                        <ext-declaration path="Where do you live"></ext-declaration>
-                        <ext-declaration path="Time"></ext-declaration>
-                        <div class="declaration">
-                            <label for="form-age">Age</label>
-                            <vscode-textfield type="number" min="12" max="120" step="1" id="form-age" name="age"
-                                pattern="\d+" placeholder="number"></vscode-textfield>
-                        </div>
-                        <div class="declaration">
-                            <label for="form-count">Count</label>
-                            <vscode-textfield id="form-count" name="count" pattern="\d+" placeholder="number">
-                                <vscode-icon slot="content-before" name="chevron-left" action-icon></vscode-icon>
-                                <vscode-icon slot="content-after" name="chevron-right" action-icon></vscode-icon>
-                            </vscode-textfield>
-                        </div>
+                    <ext-component type-path="all::examples::of::Declaration">
+                        <ext-declaration path="String"></ext-declaration>
+                        <ext-declaration path="Boolean" type="boolean"></ext-declaration>
                     </ext-component>
-                    <ext-component type-path="example::nested::Values">
+                    <ext-component type-path="example::with::nested::Values">
                         <ext-declaration path="Name"></ext-declaration>
                         <ext-group path="First Child">
                             <ext-declaration path="Name"></ext-declaration>
@@ -74,16 +60,6 @@
                                 <ext-declaration path="Sister"></ext-declaration>
                             </ext-group>
                         </ext-group>
-                    </ext-component>
-                    <ext-component type-path="example::basic::Text">
-                        So much content here. Fkdljfajkfjldajflkjlkfjlsjflsjlfjsl jdakfjlsfj jkdsklfjdlsjflsa
-                        dfsfjslkfk lj kadsjflk jlsadjfl kdjslkajfdj lkajlkd ajdkljflkj
-                        jdkaf jl jfkdlasjdflk jlkas jflk jkald jflkadjk lfjklafjskljflkajkfjkslafiopudf a dup
-                        dafiudpasfusufopdusfoidusaopfuosaidfuo
-                    </ext-component>
-                    <ext-component type-path="component::group::Checkboxes">
-                        <vscode-checkbox label="Lorem"></vscode-checkbox>
-                        <vscode-checkbox label="Ipsum"></vscode-checkbox>
                     </ext-component>
                 </div>
             </div>

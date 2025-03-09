@@ -5,7 +5,7 @@
 body {
   padding: 0;
   user-select: none;
-  color: var(--vscode-foreground);
+  color: var(--vscode-sideBar-foreground);
 }
 
 p {
@@ -61,10 +61,6 @@ ul#entity-info {
       text-overflow: ellipsis;
       white-space: nowrap;
       overflow: hidden;
-
-      &.info-label {
-        color: var(--vscode-foreground);
-      }
     }
   }
 }
@@ -79,86 +75,6 @@ ul#entity-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-/*
- * Component style
- */
-
-details {
-  width: 100%;
-  border-radius: 2px;
-
-  &:hover {
-    cursor: pointer;
-  }
-
-  &[open]>summary {
-    .header-icon {
-      transform: rotate(90deg);
-    }
-  }
-
-  summary {
-    display: flex;
-    column-gap: 6px;
-
-    span {
-      overflow: hidden;
-      white-space: nowrap;
-      /* text-overflow: ellipsis; */
-      direction: rtl;
-      text-align: left;
-      flex: auto;
-    }
-
-    list-style: none;
-    display: flex;
-    height: 26px;
-    align-items: center;
-
-    &:focus {
-      outline: none;
-    }
-
-    vscode-icon {
-      flex: none;
-    }
-  }
-
-  .details-content {
-    cursor: default;
-    padding-top: 4px;
-    display: flex;
-    flex-direction: column;
-    row-gap: 4px;
-  }
-}
-
-/*
- * Declaration
- */
-
-.declaration {
-  display: flex;
-  column-gap: 8px;
-  align-items: center;
-
-  label {
-    flex: 3;
-    text-align: right;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  input {
-    flex: 5;
-  }
-
-  vscode-textfield {
-    flex: 5;
-  }
 }
 
 #component-creation {
