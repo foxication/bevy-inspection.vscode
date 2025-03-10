@@ -80,7 +80,7 @@
         padding-top: 4px;
         display: flex;
         flex-direction: column;
-        row-gap: 6px;
+        row-gap: 4px;
       }
     }
     details:hover {
