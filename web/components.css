@@ -74,7 +74,7 @@ ul#entity-info {
 
   display: flex;
   flex-direction: column;
-  row-gap: 6px;
+  row-gap: 4px;
 }
 
 #component-creation {
