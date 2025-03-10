@@ -162,6 +162,22 @@
         color: var(--vscode-input-placeholderForeground, #989898);
         opacity: 1;
       }
+
+      div {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex: none;
+      }
+      div:hover {
+        background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
+      }
+      div:active {
+        background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
+      }
     }   
     :host([focused]) {
       border-color: var(--vscode-focusBorder, #0078d4);
@@ -257,49 +273,62 @@
   customElements.define(
     'ext-text',
     class ExtText extends HTMLElement {
-      // preventMouse = false;
+      inEdit = false;
+      state = 'field';
 
       connectedCallback() {
         const placeholder = this.getAttribute('placeholder');
-        const value = this.getAttribute('value');
+        const isDisabled = this.hasAttribute('disabled');
 
+        // Initialize elements
+        const field = document.createElement('input');
+        field.setAttribute('type', 'text');
+        field.setAttribute('value', this.getAttribute('value') ?? '');
+        field.setAttribute('placeholder', placeholder ?? '');
+        if (isDisabled) field.setAttribute('disabled', '');
+
+        const toArea = document.createElement('div');
+        const iconArea = document.createElement('vscode-icon');
+        iconArea.setAttribute('name', 'list-flat');
+        toArea.appendChild(iconArea);
+
+        // Initialize shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForTextInput];
-        shadow.innerHTML = dontIndent(`<input type="text" value="${value ?? ''}" placeholder="${placeholder ?? ''}">`);
-        const input = shadow.querySelector('input');
-        if (!(input instanceof HTMLInputElement)) {
-          return;
-        }
-        if (this.hasAttribute('disabled')) {
-          input.setAttribute('disabled', '');
-        }
-        input.onfocus = () => {
-          input.select();
+        shadow.appendChild(field);
+        if (!isDisabled) shadow.appendChild(toArea);
+
+        // Logics of field
+        field.onfocus = (e) => {
+          field.select();
           this.setAttribute('focused', '');
+          this.inEdit = true;
         };
-        input.onmouseup = (e) => {
-          e.preventDefault();
+        field.onmouseup = (e) => {
+          if (!this.inEdit) {
+            e.preventDefault();
+          }
         };
-        input.onkeydown = (e) => {
+        field.onkeydown = (e) => {
           if (!('key' in e)) {
             return;
           }
           if (e.key === 'Escape' || e.key === 'Esc') {
-            input.value = this.getAttribute('value') ?? '';
-            input.blur();
+            field.value = this.getAttribute('value') ?? '';
+            field.blur();
             e.preventDefault();
           }
         };
-        input.onchange = () => {
-          this.setAttribute('value', input.value);
-          if (this.hasAttribute('focused')) {
-            input.blur();
+        field.onchange = () => {
+          this.setAttribute('value', field.value);
+          if (this.inEdit) {
+            field.blur();
           }
-          console.log('onChange was called');
         };
-        input.onblur = () => {
-          input.value = this.getAttribute('value') ?? '';
+        field.onblur = () => {
+          field.value = this.getAttribute('value') ?? '';
           this.removeAttribute('focused');
+          this.inEdit = false;
         };
       }
     }
