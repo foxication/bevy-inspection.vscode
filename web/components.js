@@ -80,7 +80,7 @@
         padding-top: 4px;
         display: flex;
         flex-direction: column;
-        row-gap: 4px;
+        row-gap: 6px;
       }
     }
     details:hover {
@@ -95,26 +95,82 @@
   const styleForDeclaration = new CSSStyleSheet();
   styleForDeclaration.replaceSync(
     dontIndent(`
-    .declaration {
+    :host {
       display: flex;
       column-gap: 8px;
-      align-items: center;
+
       label {
         flex: 3;
         text-align: right;
         text-overflow: ellipsis;
+        line-height: 18px;
         white-space: nowrap;
         overflow: hidden;
+        padding: 4px 0;
       }
+      div.value {
+        flex: 5;
+        height: 26px;
+
+        vscode-textfield {
+          width: 100%;
+        }
+        vscode-checkbox {
+          width: 100%;
+        }
+        vscode-single-select {
+          width: 100%;
+        }
+      }
+    }`)
+  );
+
+  const styleForTextInput = new CSSStyleSheet();
+  styleForTextInput.replaceSync(
+    dontIndent(`
+    :host {
+      align-items: center;
+      background-color: var(--vscode-settings-textInputBackground, #313131);
+      border-color: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #3c3c3c));
+      border-radius: 2px;
+      border-style: solid;
+      border-width: 1px;
+      box-sizing: border-box;
+      color: var(--vscode-settings-textInputForeground, #cccccc);
+      display: inline-flex;
+      position: relative;
+      width: 100%;
+        
       input {
-        flex: 5;
+        background-color: var(--vscode-settings-textInputBackground, #313131);
+        border: 0px;
+        box-sizing: border-box;
+        color: var(--vscode-settings-textInputForeground, #cccccc);
+        display: block;
+        font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
+        font-size: var(--vscode-font-size, 13px);
+        font-weight: var(--vscode-font-weight, 'normal');
+        line-height: 18px;
+        outline: none;
+        padding: 3px 4px;
+        width: 100%;
+        
       }
-      vscode-textfield {
-        flex: 5;
+        
+      input.input:focus-visible {
+        outline-offset: 0px;
       }
-      vscode-checkbox {
-        flex: 5;
+        
+      input::placeholder {
+        color: var(--vscode-input-placeholderForeground, #989898);
+        opacity: 1;
       }
+    }   
+    :host([focused]) {
+      border-color: var(--vscode-focusBorder, #0078d4);
+    }
+    :host([focused]) {
+      border-color: var(--vscode-focusBorder, #0078d4);
     }`)
   );
 
@@ -175,18 +231,72 @@
 
         const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForDeclaration];
-        let declaration = dontIndent(`<div class="declaration"><label for="${full}">${path ?? ''}</label>`);
+        let declaration = dontIndent(`
+          <label for="${full}">${path ?? ''}</label>
+          <div class="value">`);
         switch (type) {
           case 'boolean':
             declaration += `<vscode-checkbox id="${full}"/>`;
             break;
 
+          case 'enum':
+            declaration += `<vscode-single-select id="${full}">${this.innerHTML}</vscode-single-select>`;
+            break;
+
           default: // string
-            declaration += `<vscode-textfield id="${full}"/>`;
+            declaration += `<ext-text id="${full}" />`;
             break;
         }
         declaration += '</div>';
         shadow.innerHTML = declaration;
+      }
+    }
+  );
+
+  customElements.define(
+    'ext-text',
+    class ExtText extends HTMLElement {
+      // preventMouse = false;
+
+      connectedCallback() {
+        const placeholder = this.getAttribute('placeholder');
+        const value = this.getAttribute('value');
+
+        const shadow = this.attachShadow({ mode: 'open' });
+        shadow.adoptedStyleSheets = [styleForTextInput];
+        shadow.innerHTML = dontIndent(`<input type="text" value="${value ?? ''}" placeholder="${placeholder ?? ''}">`);
+        const input = shadow.querySelector('input');
+        if (!(input instanceof HTMLInputElement)) {
+          return;
+        }
+        input.onfocus = () => {
+          input.select();
+          this.setAttribute('focused', '');
+        };
+        input.onmouseup = (e) => {
+          e.preventDefault();
+        };
+        input.onkeydown = (e) => {
+          if (!('key' in e)) {
+            return;
+          }
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            input.value = this.getAttribute('value') ?? '';
+            input.blur();
+            e.preventDefault();
+          }
+        };
+        input.onchange = () => {
+          this.setAttribute('value', input.value);
+          if (this.hasAttribute('focused')) {
+            input.blur();
+          }
+          console.log('onChange was called');
+        };
+        input.onblur = () => {
+          input.value = this.getAttribute('value') ?? '';
+          this.removeAttribute('focused');
+        };
       }
     }
   );

@@ -35,8 +35,18 @@
                         <ext-declaration></ext-declaration>
                     </ext-component>
                     <ext-component type-path="all::examples::of::Declaration">
-                        <ext-declaration path="String"></ext-declaration>
                         <ext-declaration path="Boolean" type="boolean"></ext-declaration>
+                        <ext-declaration path="String"></ext-declaration>
+                        <ext-declaration path="Enum" type="enum">
+                            <vscode-option selected description="Consectetur adipiscing elit">Lorem</vscode-option>
+                            <vscode-option description="Donec elit odio">Ipsum</vscode-option>
+                            <vscode-option description="Aliquam ac vulputate eros">Dolor</vscode-option>
+                        </ext-declaration>
+                        <vscode-single-select id="select-example">
+                            <vscode-option description="Consectetur adipiscing elit">Lorem</vscode-option>
+                            <vscode-option selected description="Donec elit odio">Ipsum</vscode-option>
+                            <vscode-option description="Aliquam ac vulputate eros">Dolor</vscode-option>
+                        </vscode-single-select>
                     </ext-component>
                     <ext-component type-path="example::with::nested::Values">
                         <ext-declaration path="Name"></ext-declaration>
