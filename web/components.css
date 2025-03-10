@@ -86,7 +86,7 @@ ul#entity-info {
     display: flex;
     column-gap: 4px;
 
-    vscode-textfield {
+    ext-text {
       flex: auto;
     }
 

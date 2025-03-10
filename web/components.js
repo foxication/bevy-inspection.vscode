@@ -112,9 +112,6 @@
         flex: 5;
         height: 26px;
 
-        vscode-textfield {
-          width: 100%;
-        }
         vscode-checkbox {
           width: 100%;
         }
@@ -171,7 +168,11 @@
     }
     :host([focused]) {
       border-color: var(--vscode-focusBorder, #0078d4);
-    }`)
+    }
+    :host([disabled]) {
+      border-color: var(--vscode-settings-textInputBackground);
+    }
+    `)
   );
 
   // Define custom elements
@@ -268,6 +269,9 @@
         const input = shadow.querySelector('input');
         if (!(input instanceof HTMLInputElement)) {
           return;
+        }
+        if (this.hasAttribute('disabled')) {
+          input.setAttribute('disabled', '');
         }
         input.onfocus = () => {
           input.select();
