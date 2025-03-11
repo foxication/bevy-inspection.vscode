@@ -242,7 +242,6 @@ styleForTextInput.replaceSync(
       connectedCallback() {
         const path = this.getAttribute('path');
         const parentPath = this.parentElement?.getAttribute('path');
-        // const indentation = '<div class="space"></div>'.repeat((parentPath ?? '').replace(/[^.]/g, '').length);
 
         // Initialize elements
         const indentation = document.createElement('div');
