@@ -217,9 +217,8 @@ styleForTextInput.replaceSync(
     'ext-component',
     class ExtComponent extends HTMLElement {
       connectedCallback() {
-        const entity = this.parentElement?.getAttribute('path');
-        const component = this.getAttribute('type-path');
-        const readableComponent = component?.replaceAll('::', ' :: ');
+        const label = this.getAttribute('label') ?? '';
+        const readable = label.replaceAll('::', ' :: ');
 
         const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForExpandable];
@@ -227,10 +226,10 @@ styleForTextInput.replaceSync(
           <details>
             <summary>
               <vscode-icon name="chevron-right" class="header-icon"></vscode-icon>
-              <span>${readableComponent}</span>
+              <span>${readable}</span>
               <vscode-icon name="symbol-method" class="component-type-icon"></vscode-icon>
             </summary>
-            <div class="details-content" path="${entity + '.' + component}">${this.innerHTML}</div>
+            <div class="details-content">${this.innerHTML}</div>
           </details>`);
       }
     }
@@ -240,25 +239,25 @@ styleForTextInput.replaceSync(
     'ext-group',
     class ExtGroup extends HTMLElement {
       connectedCallback() {
-        const path = this.getAttribute('path');
-        const parentPath = this.parentElement?.getAttribute('path');
+        const label = this.getAttribute('label');
+        const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-6') + 22;
 
         // Initialize elements
         const indentation = document.createElement('div');
-        indentation.style.width = ((parentPath ?? '').replace(/[^.]/g, '').length * 22 - 6).toString() + 'px';
+        indentation.style.width = indent.toString() + 'px';
         indentation.className = 'space';
         const icon = document.createElement('vscode-icon');
         icon.setAttribute('name', 'chevron-right');
         icon.setAttribute('class', 'header-icon');
-        const label = document.createElement('span');
-        label.innerText = path ?? '';
+        const labelElement = document.createElement('span');
+        labelElement.innerText = label ?? '';
         const summary = document.createElement('summary');
         summary.appendChild(indentation);
         summary.appendChild(icon);
-        summary.appendChild(label);
+        summary.appendChild(labelElement);
         const content = document.createElement('div');
         content.setAttribute('class', 'details-content');
-        content.setAttribute('path', fullPath(parentPath, path));
+        content.setAttribute('indent', indent.toString());
         content.innerHTML = this.innerHTML;
         const details = document.createElement('details');
         details.appendChild(summary);
@@ -276,14 +275,15 @@ styleForTextInput.replaceSync(
     'ext-declaration',
     class ExtDeclaration extends HTMLElement {
       connectedCallback() {
-        const path = this.getAttribute('path');
-        const full = fullPath(this.parentElement?.getAttribute('path'), path);
+        const path = this.getAttribute('path') ?? '';
+        const pathSplited = path.split('.');
+        const label = pathSplited[pathSplited.length - 1];
         const type = this.getAttribute('type');
 
         // Initialize elements
-        const label = document.createElement('label');
-        label.setAttribute('for', full);
-        label.innerText = path ?? '';
+        const labelElement = document.createElement('label');
+        labelElement.setAttribute('for', path);
+        labelElement.innerText = label;
 
         const valueHolder = document.createElement('div');
         valueHolder.classList.add('value');
@@ -291,20 +291,20 @@ styleForTextInput.replaceSync(
         switch (type) {
           case 'boolean':
             const checkbox = document.createElement('vscode-checkbox');
-            checkbox.id = full;
+            checkbox.id = path;
             valueHolder.appendChild(checkbox);
             break;
 
           case 'enum':
             const select = document.createElement('vscode-single-select');
-            select.id = full;
+            select.id = path;
             select.innerHTML = this.innerHTML;
             valueHolder.appendChild(select);
             break;
 
           default: // string
             const text = document.createElement('ext-text');
-            text.id = full;
+            text.id = path;
             valueHolder.appendChild(text); // TODO: somehow update value
             break;
         }
@@ -312,7 +312,7 @@ styleForTextInput.replaceSync(
         // Create shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForDeclaration];
-        shadow.appendChild(label);
+        shadow.appendChild(labelElement);
         shadow.appendChild(valueHolder);
       }
     }
