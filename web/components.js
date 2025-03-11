@@ -3,6 +3,178 @@
 // TODO: import somehow (maybe using importmap)
 // import '@vscode-elements/elements/dist/vscode-tree/index.js';
 
+// Styles
+const styleForExpandable = new CSSStyleSheet();
+styleForExpandable.replaceSync(
+  dontIndent(`
+  details {
+    width: 100%;
+    border-radius: 2px;
+    
+    summary {
+      display: flex;
+      column-gap: 6px;
+      
+      list-style: none;
+      display: flex;
+      height: 26px;
+      align-items: center;
+    
+      span {
+        overflow: hidden;
+        white-space: nowrap;
+        direction: rtl;
+        text-align: left;
+        flex: auto;
+      }
+      vscode-icon {
+        flex: none;
+      }
+      div.space {
+        height: 16px;
+        width: 16px;
+      }
+    }
+    summary:focus {
+      outline: none;
+    }
+    .details-content {
+      cursor: default;
+      padding-top: 4px;
+      display: flex;
+      flex-direction: column;
+      row-gap: 4px;
+    }
+  }
+  details:hover {
+    cursor: pointer;
+  }
+  details[open]>summary {
+    .header-icon {
+      transform: rotate(90deg);
+    }
+  }`)
+);
+const styleForDeclaration = new CSSStyleSheet();
+styleForDeclaration.replaceSync(
+  dontIndent(`
+  :host {
+    display: flex;
+    column-gap: 8px;
+
+    label {
+      flex: 3;
+      text-align: right;
+      text-overflow: ellipsis;
+      line-height: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      padding: 4px 0;
+    }
+    div.value {
+      flex: 5;
+
+      vscode-checkbox {
+        width: 100%;
+      }
+      vscode-single-select {
+        width: 100%;
+      }
+    }
+  }`)
+);
+const styleForTextInput = new CSSStyleSheet();
+styleForTextInput.replaceSync(
+  dontIndent(`
+  :host {
+    align-items: center;
+    background-color: var(--vscode-settings-textInputBackground, #313131);
+    border-color: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #3c3c3c));
+    border-radius: 2px;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    color: var(--vscode-settings-textInputForeground, #cccccc);
+    display: inline-flex;
+    position: relative;
+    width: 100%;
+      
+    input {
+      background-color: var(--vscode-settings-textInputBackground, #313131);
+      border: 0px;
+      box-sizing: border-box;
+      color: var(--vscode-settings-textInputForeground, #cccccc);
+      display: block;
+      font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
+      font-size: var(--vscode-font-size, 13px);
+      font-weight: var(--vscode-font-weight, 'normal');
+      line-height: 18px;
+      outline: none;
+      padding: 3px 4px;
+      width: 100%;
+    }
+      
+    input.input:focus-visible {
+      outline-offset: 0px;
+    }
+    
+    textarea {
+      background-color: var(--vscode-settings-textInputBackground, #313131);
+      box-sizing: border-box;
+      color: var(--vscode-settings-textInputForeground, #cccccc);
+      display: block;
+      font-family: var(--vscode-font-family, sans-serif);
+      font-size: var(--vscode-font-size, 13px);
+      font-weight: var(--vscode-font-weight, normal);
+      width: 100%;
+      line-height: 18px;
+      padding: 3px 4px;
+      padding-bottom: 9px;
+      text-wrap: nowrap;
+      resize: none;
+      border: 0px;
+    }
+    textarea:focus {
+      outline: none;
+    }
+    textarea::-webkit-scrollbar { 
+      display: none;
+    }
+    
+    ::placeholder {
+      color: var(--vscode-input-placeholderForeground, #989898);
+      opacity: 1;
+    }
+
+    div {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex: none;
+      border-radius: inherit;
+    }
+    div:hover {
+      background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
+    }
+    div:active {
+      background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
+    }
+  }   
+  :host([focused]) {
+    border-color: var(--vscode-focusBorder, #0078d4);
+  }
+  :host([focused]) {
+    border-color: var(--vscode-focusBorder, #0078d4);
+  }
+  :host([disabled]) {
+    border-color: var(--vscode-settings-textInputBackground);
+  }
+  `)
+);
+
 (function () {
   // const vscode = acquireVsCodeApi();
 
@@ -39,179 +211,6 @@
       idLabel.textContent = entityId;
     }
   }
-
-  // Styles
-  const styleForExpandable = new CSSStyleSheet();
-  styleForExpandable.replaceSync(
-    dontIndent(`
-    details {
-      width: 100%;
-      border-radius: 2px;
-      
-      summary {
-        display: flex;
-        column-gap: 6px;
-        
-        list-style: none;
-        display: flex;
-        height: 26px;
-        align-items: center;
-      
-        span {
-          overflow: hidden;
-          white-space: nowrap;
-          direction: rtl;
-          text-align: left;
-          flex: auto;
-        }
-        vscode-icon {
-          flex: none;
-        }
-        div.space {
-          height: 16px;
-          width: 16px;
-        }
-      }
-      summary:focus {
-        outline: none;
-      }
-      .details-content {
-        cursor: default;
-        padding-top: 4px;
-        display: flex;
-        flex-direction: column;
-        row-gap: 4px;
-      }
-    }
-    details:hover {
-      cursor: pointer;
-    }
-    details[open]>summary {
-      .header-icon {
-        transform: rotate(90deg);
-      }
-    }`)
-  );
-  const styleForDeclaration = new CSSStyleSheet();
-  styleForDeclaration.replaceSync(
-    dontIndent(`
-    :host {
-      display: flex;
-      column-gap: 8px;
-
-      label {
-        flex: 3;
-        text-align: right;
-        text-overflow: ellipsis;
-        line-height: 18px;
-        white-space: nowrap;
-        overflow: hidden;
-        padding: 4px 0;
-      }
-      div.value {
-        flex: 5;
-
-        vscode-checkbox {
-          width: 100%;
-        }
-        vscode-single-select {
-          width: 100%;
-        }
-      }
-    }`)
-  );
-
-  const styleForTextInput = new CSSStyleSheet();
-  styleForTextInput.replaceSync(
-    dontIndent(`
-    :host {
-      align-items: center;
-      background-color: var(--vscode-settings-textInputBackground, #313131);
-      border-color: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #3c3c3c));
-      border-radius: 2px;
-      border-style: solid;
-      border-width: 1px;
-      box-sizing: border-box;
-      color: var(--vscode-settings-textInputForeground, #cccccc);
-      display: inline-flex;
-      position: relative;
-      width: 100%;
-        
-      input {
-        background-color: var(--vscode-settings-textInputBackground, #313131);
-        border: 0px;
-        box-sizing: border-box;
-        color: var(--vscode-settings-textInputForeground, #cccccc);
-        display: block;
-        font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
-        font-size: var(--vscode-font-size, 13px);
-        font-weight: var(--vscode-font-weight, 'normal');
-        line-height: 18px;
-        outline: none;
-        padding: 3px 4px;
-        width: 100%;
-      }
-        
-      input.input:focus-visible {
-        outline-offset: 0px;
-      }
-      
-      textarea {
-        background-color: var(--vscode-settings-textInputBackground, #313131);
-        box-sizing: border-box;
-        color: var(--vscode-settings-textInputForeground, #cccccc);
-        display: block;
-        font-family: var(--vscode-font-family, sans-serif);
-        font-size: var(--vscode-font-size, 13px);
-        font-weight: var(--vscode-font-weight, normal);
-        width: 100%;
-        line-height: 18px;
-        padding: 3px 4px;
-        padding-bottom: 9px;
-        text-wrap: nowrap;
-        resize: none;
-        border: 0px;
-      }
-      textarea:focus {
-        outline: none;
-      }
-      textarea::-webkit-scrollbar { 
-        display: none;
-      }
-      
-      ::placeholder {
-        color: var(--vscode-input-placeholderForeground, #989898);
-        opacity: 1;
-      }
-
-      div {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        flex: none;
-        border-radius: inherit;
-      }
-      div:hover {
-        background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
-      }
-      div:active {
-        background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
-      }
-    }   
-    :host([focused]) {
-      border-color: var(--vscode-focusBorder, #0078d4);
-    }
-    :host([focused]) {
-      border-color: var(--vscode-focusBorder, #0078d4);
-    }
-    :host([disabled]) {
-      border-color: var(--vscode-settings-textInputBackground);
-    }
-    `)
-  );
 
   // Define custom elements
   customElements.define(
