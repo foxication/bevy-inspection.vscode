@@ -307,8 +307,6 @@
           default: // string
             const text = document.createElement('ext-text');
             text.id = full;
-            if ('value' in text) text.value = 'Hahaha';
-            if (this.hasAttribute('experiment')) text.setAttribute('type', 'area');
             valueHolder.appendChild(text); // TODO: somehow update value
             break;
         }
