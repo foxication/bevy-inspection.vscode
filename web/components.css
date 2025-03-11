@@ -2,10 +2,15 @@
  * Global
  */
 
+html {
+  scrollbar-color: unset;
+}
+
 body {
   padding: 0;
   user-select: none;
-  color: var(--vscode-sideBar-foreground);
+  color: var(--vscode-foreground);
+  overflow: hidden;
 }
 
 p {
