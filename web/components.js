@@ -445,8 +445,6 @@ const entityData = new Map();
   customElements.define(
     'ext-text',
     class ExtText extends HTMLElement {
-      inEdit = false;
-
       get value() {
         if (!entityData.has(this.id)) {
           console.error(`No such PATH (${this.id}) to get value`);
@@ -533,25 +531,20 @@ const entityData = new Map();
         };
         area.onfocus = (e) => {
           this.setAttribute('focused', '');
-          this.inEdit = true;
         };
         area.onchange = () => {
           this.value = area.value;
-          if (this.inEdit) {
-            area.blur();
-          }
+          area.blur();
         };
         area.onblur = () => {
           area.value = this.value;
           area.scrollTo(0, 0);
           this.removeAttribute('focused');
-          this.inEdit = false;
         };
 
         // Logics of field
         field.onfocus = (e) => {
           this.setAttribute('focused', '');
-          this.inEdit = true;
         };
         field.onkeydown = (e) => {
           if (!('key' in e)) {
@@ -568,14 +561,11 @@ const entityData = new Map();
         };
         field.onchange = () => {
           this.value = field.value;
-          if (this.inEdit) {
-            field.blur();
-          }
+          field.blur();
         };
         field.onblur = () => {
           field.value = this.value;
           this.removeAttribute('focused');
-          this.inEdit = false;
         };
       }
     }
