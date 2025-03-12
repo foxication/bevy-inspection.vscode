@@ -372,7 +372,7 @@ const entityData = new Map();
         icon.setAttribute('name', 'chevron-right');
         icon.setAttribute('class', 'header-icon');
         const labelElement = document.createElement('span');
-        labelElement.innerText = label ?? '';
+        labelElement.textContent = label ?? '';
         const summary = document.createElement('summary');
         summary.appendChild(indentation);
         summary.appendChild(icon);
@@ -405,7 +405,7 @@ const entityData = new Map();
         // Initialize elements
         const labelElement = document.createElement('label');
         labelElement.setAttribute('for', path);
-        labelElement.innerText = hideLabel ? '' : label;
+        labelElement.textContent = hideLabel ? '' : label;
 
         const valueHolder = document.createElement('div');
         valueHolder.classList.add('value');
@@ -514,7 +514,6 @@ const entityData = new Map();
           field.style.removeProperty('display');
           toArea.style.removeProperty('display');
         };
-
         switch (this.getAttribute('type')) {
           case 'area':
             toArea.onclick(new MouseEvent(''));
