@@ -488,8 +488,8 @@ const entityData = new Map();
         toArea.onclick = (e) => {
           area.value = this.value;
 
-          area.style.display = 'block';
-          toField.style.display = 'flex';
+          area.style.removeProperty('display');
+          toField.style.removeProperty('display');
           field.style.display = 'none';
           toArea.style.display = 'none';
         };
@@ -498,8 +498,8 @@ const entityData = new Map();
 
           area.style.display = 'none';
           toField.style.display = 'none';
-          field.style.display = 'block';
-          toArea.style.display = 'flex';
+          field.style.removeProperty('display');
+          toArea.style.removeProperty('display');
         };
 
         switch (this.getAttribute('type')) {
