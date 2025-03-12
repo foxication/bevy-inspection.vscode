@@ -314,13 +314,18 @@ const entityData = new Map();
 
       const componentPath = entityLabel + '/' + componentLabel;
 
-      if (typeof toParse === 'number' || typeof toParse === 'boolean' || typeof toParse === 'string') {
-        const element = parseElement(componentPath, toParse, true);
+      if (
+        typeof toParse === 'number' ||
+        typeof toParse === 'boolean' ||
+        typeof toParse === 'string' ||
+        toParse instanceof Array
+      ) {
+        const element = parseDeclarations(componentPath, toParse, true);
         if (element instanceof HTMLElement) component.appendChild(element);
       }
-      if (typeof toParse === 'object') {
+      if (typeof toParse === 'object' && !(toParse instanceof Array)) {
         for (const childLabel of Object.keys(toParse)) {
-          const element = parseElement(componentPath + '/' + childLabel, toParse[childLabel]);
+          const element = parseDeclarations(componentPath + '/' + childLabel, toParse[childLabel]);
           if (!(element instanceof HTMLElement)) {
             console.error('ELEMENT is not an HTMLELEMENT');
             console.error(element);
@@ -334,79 +339,91 @@ const entityData = new Map();
 
     return 'success';
 
-    function parseElement(path, parsed, hideLabel) {
+    function parseDeclarations(path, parsed, hideLabel) {
       if (typeof path !== 'string') {
         console.error('PATH is not a STRING');
-        return [];
+        return undefined;
       }
-      switch (typeof parsed) {
-        case 'number':
-          entityData.set(path, parsed);
-          const declareNumber = document.createElement('ext-declaration');
-          declareNumber.setAttribute('path', path);
-          declareNumber.setAttribute('type', 'number');
-          if (hideLabel === true) declareNumber.setAttribute('hide-label', '');
-          return declareNumber;
-
-        case 'boolean':
-          entityData.set(path, parsed);
-          const declareBool = document.createElement('ext-declaration');
-          declareBool.setAttribute('path', path);
-          declareBool.setAttribute('type', 'boolean');
-          if (hideLabel === true) declareBool.setAttribute('hide-label', '');
-          return declareBool;
-
-        case 'string':
-          entityData.set(path, parsed);
-          const declareString = document.createElement('ext-declaration');
-          declareString.setAttribute('path', path);
-          declareString.setAttribute('type', 'string');
-          if (hideLabel === true) declareString.setAttribute('hide-label', '');
-          return declareString;
-
-        case 'object':
-          const parentLabel = labelFromPath(path);
-          if (parsed instanceof Array) {
-            entityData.set(path, 'THERE MUST BE ARRAY');
-            const declareString = document.createElement('ext-declaration');
-            declareString.setAttribute('type', 'string');
-            return declareString;
-          }
-          if (parsed instanceof Object) {
-            const groupElem = document.createElement('ext-group');
-            groupElem.setAttribute('label', parentLabel);
-
-            for (const childLabel of Object.keys(parsed)) {
-              const element = parseElement(path + '/' + childLabel, parsed[childLabel]);
-              if (!(element instanceof HTMLElement)) {
-                console.error('ELEMENT is not an HTMLELEMENT');
-                console.error(element);
-                continue;
-              }
-              groupElem.appendChild(element);
-            }
-            return groupElem;
-          }
+      // Declaration
+      if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string') {
+        entityData.set(path, parsed);
+        const declaration = document.createElement('ext-declaration');
+        declaration.setAttribute('path', path);
+        if (hideLabel === true) declaration.setAttribute('hide-label', '');
+        return declaration;
       }
+
+      const parentLabel = labelFromPath(path);
+      console.log('got typeof value === object: ' + path);
+
+      // Array
+      if (parsed instanceof Array) {
+        return parseArray(path, parsed);
+      }
+      // Object
+      if (parsed instanceof Object) {
+        const groupElem = document.createElement('ext-group');
+        groupElem.setAttribute('label', parentLabel);
+
+        for (const childLabel of Object.keys(parsed)) {
+          const element = parseDeclarations(path + '/' + childLabel, parsed[childLabel]);
+          if (!(element instanceof HTMLElement)) {
+            console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
+            continue;
+          }
+          groupElem.appendChild(element);
+        }
+        return groupElem;
+      }
+
+      // Unknown
+      console.error('cannot parse Value');
       return undefined;
+    }
+    function parseArray(path, parsed) {
+      if (typeof path !== 'string') {
+        console.error('PATH is not a STRING');
+        return undefined;
+      }
+      if (!(parsed instanceof Array)) {
+        console.error('PARSED is not an ARRAY');
+        return undefined;
+      }
+      // TODO: create ext-array element
+      const array = document.createElement('ext-group');
+      array.setAttribute('label', 'ARRAY ELEMENT');
+
+      for (const childLabel of Object.keys(parsed)) {
+        const element = parseDeclarations(path + '/' + childLabel, parsed[childLabel]);
+        if (!(element instanceof HTMLElement)) {
+          console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
+          continue;
+        }
+        array.appendChild(element);
+      }
+      return array;
     }
   }
 
   const updateStatus = update({
-    'component::One': {
+    'component::AllInputs': {
       name: 'Alexa',
       age: 0.314,
       status: 'dead\nalive\nghost',
-      'is human': true,
+      is_human: true,
+      password: [1, 6, 2, 5, 6, 3],
+      favorite: ['ice cream', 'fox', 'sun', 'knifes'],
+      coin: [true, true, false, true, false],
     },
-    'component::Two': {
+    'component::Nesting': {
       world: {
         russia: {
           moscow: 'ulitsa Minskaya',
         },
       },
     },
-    'component::Simple': 'Hello, World!',
+    'component::DislabeledDeclaration': 'Hello, World!',
+    'component::DislabeledArray': ['Lorem', 'ipsum', 'dolor'],
   });
   console.log(updateStatus ?? 'failure');
   console.log(entityData);
@@ -489,8 +506,12 @@ const entityData = new Map();
       connectedCallback() {
         const path = this.getAttribute('path') ?? '';
         const label = labelFromPath(path);
-        const type = this.getAttribute('type');
         const hideLabel = this.hasAttribute('hide-label');
+        const value = entityData.get(path);
+        if (!(typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string')) {
+          console.error('VALUE is not basic type');
+          return;
+        }
 
         // Initialize elements
         const labelElement = document.createElement('label');
@@ -500,7 +521,7 @@ const entityData = new Map();
         const valueHolder = document.createElement('div');
         valueHolder.classList.add('value');
 
-        switch (type) {
+        switch (typeof value) {
           case 'number':
             const number = document.createElement('ext-number');
             number.id = path;
@@ -513,7 +534,7 @@ const entityData = new Map();
             valueHolder.appendChild(checkbox);
             break;
 
-          default: // string
+          case 'string':
             const text = document.createElement('ext-text');
             text.id = path;
             valueHolder.appendChild(text);
@@ -604,7 +625,7 @@ const entityData = new Map();
           field.style.removeProperty('display');
           toArea.style.removeProperty('display');
         };
-        
+
         // Set initial mode
         if (this.value.indexOf('\n') > -1) {
           toArea.onclick(new MouseEvent(''));
