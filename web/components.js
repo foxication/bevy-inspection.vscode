@@ -176,6 +176,83 @@ styleForTextInput.replaceSync(
   }
   `)
 );
+const styleForNumberInput = new CSSStyleSheet();
+styleForNumberInput.replaceSync(
+  dontIndent(`
+  :host {
+    align-items: center;
+    background-color: var(--vscode-settings-textInputBackground, #313131);
+    border-color: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #3c3c3c));
+    border-radius: 2px;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    color: var(--vscode-settings-textInputForeground, #cccccc);
+    display: inline-flex;
+    position: relative;
+    width: 100%;
+      
+    input {
+      background-color: var(--vscode-settings-textInputBackground, #313131);
+      border: 0px;
+      box-sizing: border-box;
+      color: var(--vscode-settings-textInputForeground, #cccccc);
+      display: block;
+      font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
+      font-size: var(--vscode-font-size, 13px);
+      font-weight: var(--vscode-font-weight, 'normal');
+      line-height: 18px;
+      outline: none;
+      padding: 3px 0px;
+      width: 100%;
+      text-align: center;
+    }
+      
+    input.input:focus-visible {
+      outline-offset: 0px;
+    }
+    
+    ::placeholder {
+      color: var(--vscode-input-placeholderForeground, #989898);
+      opacity: 1;
+    }
+
+    button {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex: none;
+      border-radius: inherit;
+      border: 0px;
+      background-color: transparent;
+      visibility: hidden;
+      padding-inline: 0px;
+    }
+    button:hover {
+      background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
+    }
+    button:active {
+      background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
+    }
+  }
+  :host(:hover) {
+    button {
+      visibility: visible;
+    }
+  }
+  :host([focused]) {
+    border-color: var(--vscode-focusBorder, #0078d4);
+  }
+  :host([focused]) {
+    border-color: var(--vscode-focusBorder, #0078d4);
+  }
+  :host([disabled]) {
+    border-color: var(--vscode-settings-textInputBackground);
+  }
+  `)
+);
 
 const entityData = new Map();
 
@@ -306,8 +383,7 @@ const entityData = new Map();
   const updateStatus = update({
     'component::One': {
       name: 'Alexa',
-      sex: 'male',
-      age: 2929,
+      age: 0.314,
       status: 'dead',
       'is human': true,
     },
@@ -413,6 +489,12 @@ const entityData = new Map();
         valueHolder.classList.add('value');
 
         switch (type) {
+          case 'number':
+            const number = document.createElement('ext-number');
+            number.id = path;
+            valueHolder.appendChild(number);
+            break;
+
           case 'boolean':
             const checkbox = document.createElement('vscode-checkbox');
             checkbox.id = path;
@@ -572,6 +654,107 @@ const entityData = new Map();
         };
         field.onblur = () => {
           field.value = this.value;
+          this.removeAttribute('focused');
+        };
+      }
+    }
+  );
+
+  customElements.define(
+    'ext-number',
+    class ExtText extends HTMLElement {
+      get value() {
+        if (!entityData.has(this.id)) {
+          console.error(`No such PATH (${this.id}) to get value`);
+        }
+        return parseFloat(entityData.get(this.id) ?? '0');
+      }
+
+      set value(v) {
+        if (typeof v !== 'number') {
+          console.error(`Recieved wrong value type (${this.id})`);
+          return;
+        }
+        if (!entityData.has(this.id)) {
+          console.error(`No such PATH (${this.id}) to overwrite value`);
+          return;
+        }
+        if (Number.isFinite(v)) entityData.set(this.id, v.toString());
+      }
+
+      getValueAsView() {
+        return this.value.toString();
+      }
+
+      getValueAsEdit() {
+        return this.value.toLocaleString(undefined, {
+          style: 'decimal',
+          useGrouping: false,
+          maximumFractionDigits: 30,
+        });
+      }
+
+      connectedCallback() {
+        const isDisabled = this.hasAttribute('disabled');
+
+        // Initialize elements
+        const decreaseButton = document.createElement('button');
+        const decreaseIcon = document.createElement('vscode-icon');
+        decreaseIcon.setAttribute('name', 'chevron-left');
+        decreaseButton.appendChild(decreaseIcon);
+
+        const increaseButton = document.createElement('button');
+        const increaseIcon = document.createElement('vscode-icon');
+        increaseIcon.setAttribute('name', 'chevron-right');
+        increaseButton.appendChild(increaseIcon);
+
+        const input = document.createElement('input');
+        input.setAttribute('type', 'text');
+        if (isDisabled) input.setAttribute('disabled', '');
+        input.value = this.value.toString();
+
+        // Initialize shadow DOM
+        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
+        shadow.adoptedStyleSheets = [styleForNumberInput];
+
+        if (!isDisabled) shadow.appendChild(decreaseButton);
+        shadow.appendChild(input);
+        if (!isDisabled) shadow.appendChild(increaseButton);
+
+        // Logics of buttons
+        decreaseButton.onclick = (e) => {
+          this.value -= 1;
+          input.value = this.getValueAsView();
+        };
+        increaseButton.onclick = (e) => {
+          this.value += 1;
+          input.value = this.getValueAsView();
+        };
+
+        // Logics of input
+        input.onfocus = (e) => {
+          input.value = this.getValueAsEdit();
+          this.setAttribute('focused', '');
+        };
+        input.onkeydown = (e) => {
+          if (!('key' in e)) {
+            return;
+          }
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            input.value = this.getValueAsView();
+            input.blur();
+            e.preventDefault();
+          }
+          if (e.key === 'Enter') {
+            input.blur();
+          }
+        };
+        input.onchange = () => {
+          this.value = parseFloat(input.value);
+          input.blur();
+        };
+        input.onblur = () => {
+          input.value = this.getValueAsView();
           this.removeAttribute('focused');
         };
       }
