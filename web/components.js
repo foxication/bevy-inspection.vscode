@@ -329,17 +329,30 @@ const entityData = new Map();
         const label = this.getAttribute('label') ?? '';
         const readable = label.replaceAll('::', ' :: ');
 
+        // Initialize elements
+        const chevron = document.createElement('vscode-icon');
+        chevron.setAttribute('name', 'chevron-right');
+        chevron.setAttribute('class', 'header-icon');
+        const labelElement = document.createElement('span');
+        labelElement.textContent = readable;
+        const symbol = document.createElement('vscode-icon');
+        symbol.setAttribute('name', 'symbol-method');
+        symbol.setAttribute('class', 'component-type-icon');
+
+        const summary = document.createElement('summary');
+        summary.appendChild(chevron);
+        summary.appendChild(labelElement);
+        summary.appendChild(symbol);
+        const content = document.createElement('div');
+        content.setAttribute('class', 'details-content');
+        content.innerHTML = this.innerHTML;
+        const details = document.createElement('details');
+        details.appendChild(summary);
+        details.appendChild(content);
+
         const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForExpandable];
-        shadow.innerHTML = dontIndent(`
-          <details>
-            <summary>
-              <vscode-icon name="chevron-right" class="header-icon"></vscode-icon>
-              <span>${readable}</span>
-              <vscode-icon name="symbol-method" class="component-type-icon"></vscode-icon>
-            </summary>
-            <div class="details-content">${this.innerHTML}</div>
-          </details>`);
+        shadow.append(details);
       }
     }
   );
