@@ -175,6 +175,8 @@ styleForTextInput.replaceSync(
   `)
 );
 
+const entityData = new Map();
+
 (function () {
   // const vscode = acquireVsCodeApi();
 
@@ -182,23 +184,16 @@ styleForTextInput.replaceSync(
   window.addEventListener('message', (event) => {
     const message = event.data;
     switch (message.cmd) {
-      case 'clear':
-        clear();
-        break;
       case 'add_component':
         break;
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
         break;
+      case 'update':
+        update(message.data);
+        break;
     }
   });
-
-  // Event functions
-  function clear() {
-    const element = document.querySelector('#component-list');
-    if (element === null) return;
-    element.remove();
-  }
 
   function setEntityInfo(host, entityId) {
     const hostLabel = document.querySelector('#entity-info-host');
@@ -211,6 +206,120 @@ styleForTextInput.replaceSync(
       idLabel.textContent = entityId;
     }
   }
+  function update(data) {
+    const componentList = document.querySelector('.component-list');
+    let entityLabel = document.querySelector('#entity-info-id')?.textContent ?? 'unknown';
+    if (entityLabel === '') entityLabel = 'unknown';
+    if (componentList === null) {
+      console.error('No .component-list OR #entity-info-id');
+      return;
+    }
+
+    componentList.innerHTML = '';
+    for (const componentLabel of Object.keys(data)) {
+      const toParse = data[componentLabel];
+      const component = document.createElement('ext-component');
+      component.setAttribute('label', componentLabel);
+
+      const componentPath = entityLabel + '/' + componentLabel;
+
+      if (typeof toParse === 'number' || typeof toParse === 'boolean' || typeof toParse === 'string') {
+        const element = parseElement(componentPath, toParse, true);
+        if (element instanceof HTMLElement) component.appendChild(element);
+      }
+      if (typeof toParse === 'object') {
+        for (const childLabel of Object.keys(toParse)) {
+          const element = parseElement(componentPath + '/' + childLabel, toParse[childLabel]);
+          if (!(element instanceof HTMLElement)) {
+            console.error('ELEMENT is not an HTMLELEMENT');
+            console.error(element);
+            continue;
+          }
+          component.appendChild(element);
+        }
+      }
+      componentList.appendChild(component);
+    }
+
+    return 'success';
+
+    function parseElement(path, parsed, hideLabel) {
+      if (typeof path !== 'string') {
+        console.error('PATH is not a STRING');
+        return [];
+      }
+      switch (typeof parsed) {
+        case 'number':
+          entityData.set(path, parsed);
+          const declareNumber = document.createElement('ext-declaration');
+          declareNumber.setAttribute('path', path);
+          declareNumber.setAttribute('type', 'number');
+          if (hideLabel === true) declareNumber.setAttribute('hide-label', '');
+          return declareNumber;
+
+        case 'boolean':
+          entityData.set(path, parsed);
+          const declareBool = document.createElement('ext-declaration');
+          declareBool.setAttribute('path', path);
+          declareBool.setAttribute('type', 'boolean');
+          if (hideLabel === true) declareBool.setAttribute('hide-label', '');
+          return declareBool;
+
+        case 'string':
+          entityData.set(path, parsed);
+          const declareString = document.createElement('ext-declaration');
+          declareString.setAttribute('path', path);
+          declareString.setAttribute('type', 'string');
+          if (hideLabel === true) declareString.setAttribute('hide-label', '');
+          return declareString;
+
+        case 'object':
+          const parentLabel = labelFromPath(path);
+          if (parsed instanceof Array) {
+            entityData.set(path, 'THERE MUST BE ARRAY');
+            const declareString = document.createElement('ext-declaration');
+            declareString.setAttribute('type', 'string');
+            return declareString;
+          }
+          if (parsed instanceof Object) {
+            const groupElem = document.createElement('ext-group');
+            groupElem.setAttribute('label', parentLabel);
+
+            for (const childLabel of Object.keys(parsed)) {
+              const element = parseElement(path + '/' + childLabel, parsed[childLabel]);
+              if (!(element instanceof HTMLElement)) {
+                console.error('ELEMENT is not an HTMLELEMENT');
+                console.error(element);
+                continue;
+              }
+              groupElem.appendChild(element);
+            }
+            return groupElem;
+          }
+      }
+      return undefined;
+    }
+  }
+
+  const updateStatus = update({
+    'component::One': {
+      name: 'Alexa',
+      sex: 'male',
+      age: 2929,
+      status: 'dead',
+      'is human': true,
+    },
+    'component::Two': {
+      world: {
+        russia: {
+          moscow: 'ulitsa Minskaya',
+        },
+      },
+    },
+    'component::Simple': 'Hello, World!',
+  });
+  console.log(updateStatus ?? 'failure');
+  console.log(entityData);
 
   // Define custom elements
   customElements.define(
@@ -276,14 +385,14 @@ styleForTextInput.replaceSync(
     class ExtDeclaration extends HTMLElement {
       connectedCallback() {
         const path = this.getAttribute('path') ?? '';
-        const pathSplited = path.split('.');
-        const label = pathSplited[pathSplited.length - 1];
+        const label = labelFromPath(path);
         const type = this.getAttribute('type');
+        const hideLabel = this.hasAttribute('hide-label');
 
         // Initialize elements
         const labelElement = document.createElement('label');
         labelElement.setAttribute('for', path);
-        labelElement.innerText = label;
+        labelElement.innerText = hideLabel ? '' : label;
 
         const valueHolder = document.createElement('div');
         valueHolder.classList.add('value');
@@ -310,7 +419,7 @@ styleForTextInput.replaceSync(
         }
 
         // Create shadow DOM
-        const shadow = this.attachShadow({ mode: 'open' });
+        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
         shadow.adoptedStyleSheets = [styleForDeclaration];
         shadow.appendChild(labelElement);
         shadow.appendChild(valueHolder);
@@ -322,7 +431,21 @@ styleForTextInput.replaceSync(
     'ext-text',
     class ExtText extends HTMLElement {
       inEdit = false;
-      value = '';
+
+      get value() {
+        if (!entityData.has(this.id)) {
+          console.error(`No such PATH (${this.id}) to get value`);
+        }
+        return entityData.get(this.id) ?? '';
+      }
+
+      set value(v) {
+        if (entityData.has(this.id)) {
+          entityData.set(this.id, v);
+          return;
+        }
+        console.error(`No such PATH (${this.id}) to overwrite value`);
+      }
 
       connectedCallback() {
         const placeholder = this.getAttribute('placeholder');
@@ -351,7 +474,7 @@ styleForTextInput.replaceSync(
         toField.appendChild(iconField);
 
         // Initialize shadow DOM
-        const shadow = this.attachShadow({ mode: 'open' });
+        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
         shadow.adoptedStyleSheets = [styleForTextInput];
 
         shadow.appendChild(area);
@@ -441,6 +564,16 @@ styleForTextInput.replaceSync(
     }
   );
 })();
+
+function labelFromPath(path) {
+  const arr = path.split('/');
+  if (arr.length === 0) {
+    console.error('ARR is empty');
+    return 'ERRORLABEL';
+  }
+  const label = arr[arr.length - 1];
+  return label.replace(/(^\w{1})|(\s+\w{1})/g, (letter) => letter.toUpperCase());
+}
 
 function dontIndent(str) {
   return ('' + str).replace(/(\n)\s+/g, '$1');
