@@ -501,13 +501,6 @@ const entityData = new Map();
             valueHolder.appendChild(checkbox);
             break;
 
-          case 'enum':
-            const select = document.createElement('vscode-single-select');
-            select.id = path;
-            select.innerHTML = this.innerHTML;
-            valueHolder.appendChild(select);
-            break;
-
           default: // string
             const text = document.createElement('ext-text');
             text.id = path;
