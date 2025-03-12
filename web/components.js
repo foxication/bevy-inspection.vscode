@@ -309,7 +309,8 @@ const entityData = new Map();
     componentList.innerHTML = '';
     for (const componentLabel of Object.keys(data)) {
       const toParse = data[componentLabel];
-      const component = document.createElement('ext-component');
+      const component = document.createElement('ext-expandable');
+      component.setAttribute('component', '');
       component.setAttribute('label', componentLabel);
 
       const componentPath = entityLabel + '/' + componentLabel;
@@ -356,13 +357,9 @@ const entityData = new Map();
       const parentLabel = labelFromPath(path);
       console.log('got typeof value === object: ' + path);
 
-      // Array
-      if (parsed instanceof Array) {
-        return parseArray(path, parsed);
-      }
       // Object
       if (parsed instanceof Object) {
-        const groupElem = document.createElement('ext-group');
+        const groupElem = document.createElement('ext-expandable');
         groupElem.setAttribute('label', parentLabel);
 
         for (const childLabel of Object.keys(parsed)) {
@@ -377,7 +374,7 @@ const entityData = new Map();
       }
 
       // Unknown
-      console.error('cannot parse Value');
+      console.error('cannot parse VALUE');
       return undefined;
     }
     function parseArray(path, parsed) {
@@ -390,8 +387,7 @@ const entityData = new Map();
         return undefined;
       }
       // TODO: create ext-array element
-      const array = document.createElement('ext-group');
-      array.setAttribute('label', 'ARRAY ELEMENT');
+      const array = document.createElement('ext-array');
 
       for (const childLabel of Object.keys(parsed)) {
         const element = parseDeclarations(path + '/' + childLabel, parsed[childLabel]);
@@ -428,67 +424,50 @@ const entityData = new Map();
   console.log(updateStatus ?? 'failure');
   console.log(entityData);
 
-  // Define custom elements
   customElements.define(
-    'ext-component',
-    class ExtComponent extends HTMLElement {
-      connectedCallback() {
-        const label = this.getAttribute('label') ?? '';
-        const readable = label.replaceAll('::', ' :: ');
-
-        // Initialize elements
-        const chevron = document.createElement('vscode-icon');
-        chevron.setAttribute('name', 'chevron-right');
-        chevron.setAttribute('class', 'header-icon');
-        const labelElement = document.createElement('span');
-        labelElement.textContent = readable;
-        const symbol = document.createElement('vscode-icon');
-        symbol.setAttribute('name', 'symbol-method');
-        symbol.setAttribute('class', 'component-type-icon');
-
-        const summary = document.createElement('summary');
-        summary.appendChild(chevron);
-        summary.appendChild(labelElement);
-        summary.appendChild(symbol);
-        const content = document.createElement('div');
-        content.setAttribute('class', 'details-content');
-        content.innerHTML = this.innerHTML;
-        const details = document.createElement('details');
-        details.appendChild(summary);
-        details.appendChild(content);
-
-        const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForExpandable];
-        shadow.append(details);
-      }
-    }
-  );
-
-  customElements.define(
-    'ext-group',
+    'ext-expandable',
     class ExtGroup extends HTMLElement {
       connectedCallback() {
-        const label = this.getAttribute('label');
-        const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-6') + 22;
+        const label = this.getAttribute('label') ?? '';
+        const readableLabel = label.replaceAll('::', ' :: ');
+        const isComponent = this.hasAttribute('component');
+        const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
-        // Initialize elements
-        const indentation = document.createElement('div');
-        indentation.style.width = indent.toString() + 'px';
-        indentation.className = 'space';
-        const icon = document.createElement('vscode-icon');
-        icon.setAttribute('name', 'chevron-right');
-        icon.setAttribute('class', 'header-icon');
+        // Detials.summary.chevron
+        const chevroon = document.createElement('vscode-icon');
+        chevroon.setAttribute('name', 'chevron-right');
+        chevroon.setAttribute('class', 'header-icon');
+
+        // Detials.summary.label
         const labelElement = document.createElement('span');
-        labelElement.textContent = label ?? '';
+        labelElement.textContent = readableLabel ?? '';
+
+        // Detials.summary
         const summary = document.createElement('summary');
-        summary.appendChild(indentation);
-        summary.appendChild(icon);
+        if (indent >= 0) {
+          const indentation = document.createElement('div');
+          indentation.style.width = indent.toString() + 'px';
+          indentation.className = 'space';
+          summary.appendChild(indentation);
+        }
+        summary.appendChild(chevroon);
         summary.appendChild(labelElement);
+        if (isComponent) {
+          const icon = document.createElement('vscode-icon');
+          icon.setAttribute('name', 'symbol-method');
+          icon.setAttribute('class', 'component-type-icon');
+          summary.appendChild(icon);
+        }
+
+        // Detials.content
         const content = document.createElement('div');
         content.setAttribute('class', 'details-content');
         content.setAttribute('indent', indent.toString());
         content.innerHTML = this.innerHTML;
+
+        // Detials
         const details = document.createElement('details');
+        details.setAttribute('open', '');
         details.appendChild(summary);
         details.appendChild(content);
 
