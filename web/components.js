@@ -146,7 +146,7 @@ styleForTextInput.replaceSync(
       opacity: 1;
     }
 
-    div {
+    button {
       width: 24px;
       height: 24px;
       display: flex;
@@ -155,11 +155,13 @@ styleForTextInput.replaceSync(
       cursor: pointer;
       flex: none;
       border-radius: inherit;
+      border: 0px;
+      background-color: transparent;
     }
-    div:hover {
+    button:hover {
       background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
     }
-    div:active {
+    button:active {
       background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
     }
   }   
@@ -470,7 +472,7 @@ const entityData = new Map();
         field.setAttribute('placeholder', placeholder ?? '');
         if (isDisabled) field.setAttribute('disabled', '');
 
-        const toArea = document.createElement('div');
+        const toArea = document.createElement('button');
         const iconArea = document.createElement('vscode-icon');
         iconArea.setAttribute('name', 'list-selection');
         toArea.appendChild(iconArea);
@@ -480,7 +482,7 @@ const entityData = new Map();
         if (isDisabled) area.setAttribute('disabled', '');
         area.setAttribute('rows', '5');
 
-        const toField = document.createElement('div');
+        const toField = document.createElement('button');
         toField.className = 'inArea';
         const iconField = document.createElement('vscode-icon');
         iconField.setAttribute('name', 'symbol-string');
