@@ -429,7 +429,7 @@ const entityData = new Map();
           default: // string
             const text = document.createElement('ext-text');
             text.id = path;
-            valueHolder.appendChild(text); // TODO: somehow update value
+            valueHolder.appendChild(text);
             break;
         }
 
