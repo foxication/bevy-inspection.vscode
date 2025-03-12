@@ -102,6 +102,7 @@ styleForTextInput.replaceSync(
     input {
       background-color: var(--vscode-settings-textInputBackground, #313131);
       border: 0px;
+      border-radius: inherit;
       box-sizing: border-box;
       color: var(--vscode-settings-textInputForeground, #cccccc);
       display: block;
@@ -121,6 +122,7 @@ styleForTextInput.replaceSync(
     textarea {
       background-color: var(--vscode-settings-textInputBackground, #313131);
       box-sizing: border-box;
+      border-radius: inherit;
       color: var(--vscode-settings-textInputForeground, #cccccc);
       display: block;
       font-family: var(--vscode-font-family, sans-serif);
@@ -129,7 +131,6 @@ styleForTextInput.replaceSync(
       width: 100%;
       line-height: 18px;
       padding: 3px 4px;
-      padding-bottom: 9px;
       text-wrap: nowrap;
       resize: none;
       border: 0px;
@@ -145,26 +146,37 @@ styleForTextInput.replaceSync(
       color: var(--vscode-input-placeholderForeground, #989898);
       opacity: 1;
     }
-
-    button {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex: none;
+    div.button-background {
+      background-color: var(--vscode-settings-textInputBackground);
+      visibility: hidden;
+      position: absolute;
+      bottom: 0px;
+      right: 0px;
       border-radius: inherit;
-      border: 0px;
-      background-color: transparent;
+
+      button {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex: none;
+        border-radius: inherit;
+        border: 0px;
+        background-color: transparent;
+      }
+      button:hover {
+        background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
+      }
+      button:active {
+        background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
+      }
     }
-    button:hover {
-      background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
-    }
-    button:active {
-      background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
-    }
-  }   
+  }
+  :host(:hover) div.button-background {
+    visibility: visible;
+  }
   :host([focused]) {
     border-color: var(--vscode-focusBorder, #0078d4);
   }
@@ -539,21 +551,22 @@ const entityData = new Map();
         const placeholder = this.getAttribute('placeholder');
         const isDisabled = this.hasAttribute('disabled');
 
-        // Initialize elements of input
+        // Initialize field input
         const field = document.createElement('input');
         field.setAttribute('type', 'text');
         field.setAttribute('placeholder', placeholder ?? '');
         if (isDisabled) field.setAttribute('disabled', '');
 
+        // Initialize area input
+        const area = document.createElement('textarea');
+        if (isDisabled) area.setAttribute('disabled', '');
+        area.setAttribute('rows', '5');
+
+        // Initialize buttons
         const toArea = document.createElement('button');
         const iconArea = document.createElement('vscode-icon');
         iconArea.setAttribute('name', 'list-selection');
         toArea.appendChild(iconArea);
-
-        // Initialize elements of textarea
-        const area = document.createElement('textarea');
-        if (isDisabled) area.setAttribute('disabled', '');
-        area.setAttribute('rows', '5');
 
         const toField = document.createElement('button');
         toField.className = 'inArea';
@@ -561,16 +574,18 @@ const entityData = new Map();
         iconField.setAttribute('name', 'symbol-string');
         toField.appendChild(iconField);
 
+        const buttonHolder = document.createElement('div');
+        buttonHolder.setAttribute('class', 'button-background');
+        buttonHolder.appendChild(toArea);
+        buttonHolder.appendChild(toField);
+
         // Initialize shadow DOM
         const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
         shadow.adoptedStyleSheets = [styleForTextInput];
 
         shadow.appendChild(area);
         shadow.appendChild(field);
-        if (!isDisabled) {
-          shadow.appendChild(toField);
-          shadow.appendChild(toArea);
-        }
+        if (!isDisabled) shadow.appendChild(buttonHolder);
 
         // Switchers
         toArea.onclick = (e) => {
