@@ -548,6 +548,9 @@ const entityData = new Map();
             field.blur();
             e.preventDefault();
           }
+          if (e.key === 'Enter') {
+            field.blur();
+          }
         };
         field.onchange = () => {
           this.value = field.value;
