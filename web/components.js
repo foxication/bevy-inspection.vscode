@@ -396,7 +396,7 @@ const entityData = new Map();
     'component::One': {
       name: 'Alexa',
       age: 0.314,
-      status: 'dead',
+      status: 'dead\nalive\nghost',
       'is human': true,
     },
     'component::Two': {
@@ -604,14 +604,12 @@ const entityData = new Map();
           field.style.removeProperty('display');
           toArea.style.removeProperty('display');
         };
-        switch (this.getAttribute('type')) {
-          case 'area':
-            toArea.onclick(new MouseEvent(''));
-            break;
-
-          default:
-            toField.onclick(new MouseEvent(''));
-            break;
+        
+        // Set initial mode
+        if (this.value.indexOf('\n') > -1) {
+          toArea.onclick(new MouseEvent(''));
+        } else {
+          toField.onclick(new MouseEvent(''));
         }
 
         // Logics of area
