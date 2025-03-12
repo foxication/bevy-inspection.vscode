@@ -532,6 +532,16 @@ const entityData = new Map();
         area.onfocus = (e) => {
           this.setAttribute('focused', '');
         };
+        area.onkeydown = (e) => {
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            area.value = this.value;
+            area.blur();
+            e.preventDefault();
+          }
+          if (e.ctrlKey && e.key === 'Enter') {
+            area.blur();
+          }
+        };
         area.onchange = () => {
           this.value = area.value;
           area.blur();
@@ -547,9 +557,6 @@ const entityData = new Map();
           this.setAttribute('focused', '');
         };
         field.onkeydown = (e) => {
-          if (!('key' in e)) {
-            return;
-          }
           if (e.key === 'Escape' || e.key === 'Esc') {
             field.value = this.value;
             field.blur();
