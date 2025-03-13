@@ -396,7 +396,7 @@ const entityData = new Map();
 
   customElements.define(
     'ext-expandable',
-    class ExtGroup extends HTMLElement {
+    class ExtExpandable extends HTMLElement {
       connectedCallback() {
         const label = this.getAttribute('label') ?? '';
         const readableLabel = label.replaceAll('::', ' :: ');
@@ -651,7 +651,7 @@ const entityData = new Map();
 
   customElements.define(
     'ext-number',
-    class ExtText extends ExtValue {
+    class ExtNumber extends ExtValue {
       getValueAsView() {
         return this.value.toString();
       }
