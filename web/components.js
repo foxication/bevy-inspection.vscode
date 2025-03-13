@@ -491,7 +491,7 @@ const entityData = new Map();
         }
 
         // Create shadow DOM
-        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
+        const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForDeclaration];
         shadow.appendChild(labelElement);
         shadow.appendChild(valueHolder);
@@ -563,7 +563,7 @@ const entityData = new Map();
         buttonHolder.appendChild(toField);
 
         // Initialize shadow DOM
-        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
+        const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForTextInput];
 
         shadow.appendChild(area);
@@ -684,7 +684,7 @@ const entityData = new Map();
         input.value = this.value.toString();
 
         // Initialize shadow DOM
-        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
+        const shadow = this.attachShadow({ mode: 'open' });
         shadow.adoptedStyleSheets = [styleForNumberInput];
 
         if (!isDisabled) shadow.appendChild(decreaseButton);
@@ -745,7 +745,7 @@ const entityData = new Map();
         }
 
         // Initialize shadow DOM
-        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
+        const shadow = this.attachShadow({ mode: 'open' });
         shadow.appendChild(checkbox);
 
         // Logics
