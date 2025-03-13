@@ -484,7 +484,7 @@ const entityData = new Map();
             break;
 
           case 'string':
-            const text = document.createElement('ext-text');
+            const text = document.createElement('ext-string');
             text.id = path;
             valueHolder.appendChild(text);
             break;
@@ -528,8 +528,8 @@ const entityData = new Map();
   }
 
   customElements.define(
-    'ext-text',
-    class ExtText extends ExtValue {
+    'ext-string',
+    class ExtString extends ExtValue {
       connectedCallback() {
         const placeholder = this.getAttribute('placeholder');
         const isDisabled = this.hasAttribute('disabled');

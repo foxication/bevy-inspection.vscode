@@ -91,7 +91,7 @@ ul#entity-info {
     display: flex;
     column-gap: 4px;
 
-    ext-text {
+    ext-string {
       flex: auto;
     }
 
