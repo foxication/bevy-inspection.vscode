@@ -334,14 +334,11 @@ const entityData = new Map();
         return declaration;
       }
 
-      const parentLabel = labelFromPath(path);
-      console.log('got typeof value === object: ' + path);
-
       // Object
       if (parsed instanceof Object) {
         const isArray = parsed instanceof Array;
         const groupElem = document.createElement('ext-expandable');
-        groupElem.setAttribute('label', parentLabel);
+        groupElem.setAttribute('label', labelFromPath(path));
         if (isComponent) groupElem.setAttribute('component', '');
 
         for (const childLabel of Object.keys(parsed)) {
@@ -360,6 +357,9 @@ const entityData = new Map();
       console.error('cannot parse VALUE');
       return undefined;
     }
+  }
+  function onEntityDataChange() {
+    console.log(entityData);
   }
 
   const updateStatus = update({
@@ -388,7 +388,7 @@ const entityData = new Map();
     ],
   });
   console.log(updateStatus ?? 'failure');
-  console.log(entityData);
+  onEntityDataChange();
 
   customElements.define(
     'ext-expandable',
@@ -495,24 +495,37 @@ const entityData = new Map();
     }
   );
 
+  class ExtValue extends HTMLElement {
+    get value() {
+      if (!entityData.has(this.id)) {
+        console.error(`${this.id} => this path not in table`);
+        return;
+      }
+      return entityData.get(this.id);
+    }
+
+    set value(v) {
+      if (!entityData.has(this.id)) {
+        console.error(`${this.id} => this path not in table`);
+        return;
+      }
+      const previous = entityData.get(this.id);
+      if (typeof v !== typeof previous) {
+        console.error(`${this.id} => types of newValue and oldValue don't match`);
+        return;
+      }
+      if (typeof v === 'number' && !Number.isFinite(v)) {
+        console.error(`${this.id} => number is not finite`);
+        return;
+      }
+      entityData.set(this.id, v);
+      onEntityDataChange();
+    }
+  }
+
   customElements.define(
     'ext-text',
-    class ExtText extends HTMLElement {
-      get value() {
-        if (!entityData.has(this.id)) {
-          console.error(`No such PATH (${this.id}) to get value`);
-        }
-        return entityData.get(this.id) ?? '';
-      }
-
-      set value(v) {
-        if (entityData.has(this.id)) {
-          entityData.set(this.id, v);
-          return;
-        }
-        console.error(`No such PATH (${this.id}) to overwrite value`);
-      }
-
+    class ExtText extends ExtValue {
       connectedCallback() {
         const placeholder = this.getAttribute('placeholder');
         const isDisabled = this.hasAttribute('disabled');
@@ -634,26 +647,7 @@ const entityData = new Map();
 
   customElements.define(
     'ext-number',
-    class ExtText extends HTMLElement {
-      get value() {
-        if (!entityData.has(this.id)) {
-          console.error(`No such PATH (${this.id}) to get value`);
-        }
-        return parseFloat(entityData.get(this.id) ?? '0');
-      }
-
-      set value(v) {
-        if (typeof v !== 'number') {
-          console.error(`Recieved wrong value type (${this.id})`);
-          return;
-        }
-        if (!entityData.has(this.id)) {
-          console.error(`No such PATH (${this.id}) to overwrite value`);
-          return;
-        }
-        if (Number.isFinite(v)) entityData.set(this.id, v.toString());
-      }
-
+    class ExtText extends ExtValue {
       getValueAsView() {
         return this.value.toString();
       }
