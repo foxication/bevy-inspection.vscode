@@ -105,3 +105,35 @@ ul#entity-info {
     justify-content: flex-end;
   }
 }
+
+/* 
+ * EXPERIMENTAL
+ */
+
+div#section-experimental {
+  display: flex;
+  flex-direction: column;
+  row-gap: 5px;
+  position: relative;
+  width: 100%;
+
+  .draggable {
+    width: 100%;
+    height: 40px;
+    background-color: lightgray;
+    display: flex;
+    position: absolute;
+    border: 2px solid black;
+    box-sizing: border-box;
+
+    p {
+      margin: auto;
+    }
+
+    .dragHandle {
+      width: 20px;
+      height: 100%;
+      background-color: darkgray;
+    }
+  }
+}
