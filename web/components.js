@@ -358,7 +358,11 @@ const entityData = new Map();
       return undefined;
     }
   }
-  function onEntityDataChange() {
+  function onEntityDataChange(path) {
+    if (entityData.has(path)) {
+      console.log(`${path} is set to ${entityData.get(path)}`);
+      return;
+    }
     console.log(entityData);
   }
 
@@ -519,7 +523,7 @@ const entityData = new Map();
         return;
       }
       entityData.set(this.id, v);
-      onEntityDataChange();
+      onEntityDataChange(this.id);
     }
   }
 
