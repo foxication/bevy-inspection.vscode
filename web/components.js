@@ -478,7 +478,7 @@ const entityData = new Map();
             break;
 
           case 'boolean':
-            const checkbox = document.createElement('vscode-checkbox');
+            const checkbox = document.createElement('ext-boolean');
             checkbox.id = path;
             valueHolder.appendChild(checkbox);
             break;
@@ -727,6 +727,32 @@ const entityData = new Map();
           input.value = this.getValueAsView();
           this.removeAttribute('focused');
         };
+      }
+    }
+  );
+
+  customElements.define(
+    'ext-boolean',
+    class ExtBoolean extends ExtValue {
+      connectedCallback() {
+        const isDisabled = this.hasAttribute('disabled');
+
+        // Initialize elements
+        const checkbox = document.createElement('vscode-checkbox');
+        if (isDisabled) checkbox.setAttribute('disabled', '');
+        if (this.value) {
+          checkbox.setAttribute('checked', '');
+        }
+
+        // Initialize shadow DOM
+        const shadow = this.attachShadow({ mode: 'open', delegatesFocus: true });
+        shadow.appendChild(checkbox);
+
+        // Logics
+        const observer = new MutationObserver(() => {
+          this.value = checkbox.hasAttribute('checked');
+        });
+        observer.observe(checkbox, { attributes: true, attributeFilter: ['checked'] });
       }
     }
   );
