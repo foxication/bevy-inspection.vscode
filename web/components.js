@@ -308,39 +308,12 @@ const entityData = new Map();
 
     componentList.innerHTML = '';
     for (const componentLabel of Object.keys(data)) {
-      const toParse = data[componentLabel];
-      const component = document.createElement('ext-expandable');
-      component.setAttribute('component', '');
-      component.setAttribute('label', componentLabel);
-
-      const componentPath = entityLabel + '/' + componentLabel;
-
-      if (
-        typeof toParse === 'number' ||
-        typeof toParse === 'boolean' ||
-        typeof toParse === 'string' ||
-        toParse instanceof Array
-      ) {
-        const element = parseDeclarations(componentPath, toParse, true);
-        if (element instanceof HTMLElement) component.appendChild(element);
-      }
-      if (typeof toParse === 'object' && !(toParse instanceof Array)) {
-        for (const childLabel of Object.keys(toParse)) {
-          const element = parseDeclarations(componentPath + '/' + childLabel, toParse[childLabel]);
-          if (!(element instanceof HTMLElement)) {
-            console.error('ELEMENT is not an HTMLELEMENT');
-            console.error(element);
-            continue;
-          }
-          component.appendChild(element);
-        }
-      }
-      componentList.appendChild(component);
+      const component = parseElements(entityLabel + '/' + componentLabel, data[componentLabel], true);
+      if (component !== undefined) componentList.appendChild(component);
     }
-
     return 'success';
 
-    function parseDeclarations(path, parsed, hideLabel) {
+    function parseElements(path, parsed, isComponent) {
       if (typeof path !== 'string') {
         console.error('PATH is not a STRING');
         return undefined;
@@ -350,7 +323,14 @@ const entityData = new Map();
         entityData.set(path, parsed);
         const declaration = document.createElement('ext-declaration');
         declaration.setAttribute('path', path);
-        if (hideLabel === true) declaration.setAttribute('hide-label', '');
+        if (isComponent === true) {
+          declaration.setAttribute('hide-label', '');
+          const wrapped = document.createElement('ext-expandable');
+          wrapped.setAttribute('component', '');
+          wrapped.setAttribute('label', labelFromPath(path));
+          wrapped.appendChild(declaration);
+          return wrapped;
+        }
         return declaration;
       }
 
@@ -359,11 +339,14 @@ const entityData = new Map();
 
       // Object
       if (parsed instanceof Object) {
+        const isArray = parsed instanceof Array;
         const groupElem = document.createElement('ext-expandable');
         groupElem.setAttribute('label', parentLabel);
+        if (isComponent) groupElem.setAttribute('component', '');
 
         for (const childLabel of Object.keys(parsed)) {
-          const element = parseDeclarations(path + '/' + childLabel, parsed[childLabel]);
+          const separator = isArray ? '.' : '/';
+          const element = parseElements(path + separator + childLabel, parsed[childLabel]);
           if (!(element instanceof HTMLElement)) {
             console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
             continue;
@@ -376,28 +359,6 @@ const entityData = new Map();
       // Unknown
       console.error('cannot parse VALUE');
       return undefined;
-    }
-    function parseArray(path, parsed) {
-      if (typeof path !== 'string') {
-        console.error('PATH is not a STRING');
-        return undefined;
-      }
-      if (!(parsed instanceof Array)) {
-        console.error('PARSED is not an ARRAY');
-        return undefined;
-      }
-      // TODO: create ext-array element
-      const array = document.createElement('ext-array');
-
-      for (const childLabel of Object.keys(parsed)) {
-        const element = parseDeclarations(path + '/' + childLabel, parsed[childLabel]);
-        if (!(element instanceof HTMLElement)) {
-          console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
-          continue;
-        }
-        array.appendChild(element);
-      }
-      return array;
     }
   }
 
@@ -769,13 +730,15 @@ const entityData = new Map();
 })();
 
 function labelFromPath(path) {
-  const arr = path.split('/');
-  if (arr.length === 0) {
+  const labels = path.split('/');
+  if (labels.length === 0) {
     console.error('ARR is empty');
     return 'ERRORLABEL';
   }
-  const label = arr[arr.length - 1];
-  return label.replace(/(^\w{1})|(\s+\w{1})/g, (letter) => letter.toUpperCase());
+  const label = labels[labels.length - 1];
+  const parts = label.split('.');
+  const part = parts[parts.length - 1];
+  return part.replace(/(^\w{1})|(\s+\w{1})/g, (letter) => letter.toUpperCase());
 }
 
 function dontIndent(str) {
