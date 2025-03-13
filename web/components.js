@@ -381,6 +381,11 @@ const entityData = new Map();
     },
     'component::DislabeledDeclaration': 'Hello, World!',
     'component::DislabeledArray': ['Lorem', 'ipsum', 'dolor'],
+    'component::ArrayOfObjects': [
+      { name: 'Revolver', bullets: 12, damage: 80 },
+      { name: 'Bomb', bullets: 1, damage: 200 },
+      { name: 'Rocket Launcher', bullets: 4, damage: 120 },
+    ],
   });
   console.log(updateStatus ?? 'failure');
   console.log(entityData);
