@@ -523,7 +523,7 @@ const entityData = new Map();
         return;
       }
       entityData.set(this.id, v);
-      onEntityDataChange(this.id);
+      if (previous !== v) onEntityDataChange(this.id);
     }
   }
 
