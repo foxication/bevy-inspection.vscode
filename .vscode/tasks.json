@@ -9,9 +9,6 @@
 				"npm: watch:tsc",
 				"npm: watch:esbuild"
 			],
-			"presentation": {
-				"reveal": "never"
-			},
 			"group": {
 				"kind": "build",
 				"isDefault": true
