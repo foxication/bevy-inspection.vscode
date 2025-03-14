@@ -1,5 +1,5 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-import { ExtBoolean, ExtDeclaration, ExtExpandable, ExtNumber, ExtString } from './componentsElements';
+import { initExtElements } from './componentsElements';
 import { JsonObject, JsonValue, labelFromPath, RealValue } from './lib';
 
 // Entity Values
@@ -11,6 +11,8 @@ export function onEntityDataChange(path?: string) {
   }
   console.log(entityData);
 }
+
+initExtElements();
 
 // Main script
 (function () {
@@ -124,12 +126,6 @@ export function onEntityDataChange(path?: string) {
   });
   console.log(updateStatus ?? 'failure');
   onEntityDataChange(); // log whole table
-
-  customElements.define('ext-expandable', ExtExpandable);
-  customElements.define('ext-declaration', ExtDeclaration);
-  customElements.define('ext-string', ExtString);
-  customElements.define('ext-number', ExtNumber);
-  customElements.define('ext-boolean', ExtBoolean);
 })();
 
 // EXPERIMENTAL

@@ -2,8 +2,17 @@ import * as extStyles from './componentsStyles';
 import { entityData, onEntityDataChange } from './components';
 import { labelFromPath, RealValue } from './lib';
 
+// Initialization
+export function initExtElements() {
+  customElements.define('ext-expandable', ExtExpandable);
+  customElements.define('ext-declaration', ExtDeclaration);
+  customElements.define('ext-string', ExtString);
+  customElements.define('ext-number', ExtNumber);
+  customElements.define('ext-boolean', ExtBoolean);
+}
+
 // ExtElements
-export class ExtExpandable extends HTMLElement {
+class ExtExpandable extends HTMLElement {
   connectedCallback() {
     const label = this.getAttribute('label') ?? '';
     const readableLabel = label.replace(/::/g, ' :: ');
@@ -54,7 +63,7 @@ export class ExtExpandable extends HTMLElement {
     shadow.appendChild(details);
   }
 }
-export class ExtDeclaration extends HTMLElement {
+class ExtDeclaration extends HTMLElement {
   connectedCallback() {
     const path = this.getAttribute('path') ?? '';
     const label = labelFromPath(path);
@@ -128,7 +137,7 @@ class ExtValue extends HTMLElement {
     if (previous !== v) onEntityDataChange(this.id);
   }
 }
-export class ExtString extends ExtValue {
+class ExtString extends ExtValue {
   connectedCallback() {
     const placeholder = this.getAttribute('placeholder');
     const isDisabled = this.hasAttribute('disabled');
@@ -246,7 +255,7 @@ export class ExtString extends ExtValue {
     };
   }
 }
-export class ExtNumber extends ExtValue {
+class ExtNumber extends ExtValue {
   getValueAsView() {
     return (this.value as number).toString();
   }
@@ -323,7 +332,7 @@ export class ExtNumber extends ExtValue {
     };
   }
 }
-export class ExtBoolean extends ExtValue {
+class ExtBoolean extends ExtValue {
   connectedCallback() {
     const isDisabled = this.hasAttribute('disabled');
 
