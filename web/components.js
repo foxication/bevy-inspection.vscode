@@ -4,6 +4,45 @@
 // import '@vscode-elements/elements/dist/vscode-tree/index.js';
 
 // Styles
+const styleForButtons = new CSSStyleSheet();
+styleForButtons.replaceSync(
+  dontIndent(`
+    .button-collection {
+      background-color: var(--vscode-settings-textInputBackground);
+      border-radius: inherit;
+      bottom: 0px;
+      position: absolute;
+      right: 0px;
+      visibility: hidden;
+    }
+    button {
+      align-items: center;
+      background-color: transparent;
+      border-radius: inherit;
+      border: 0px;
+      cursor: pointer;
+      display: flex;
+      flex: none;
+      height: 24px;
+      justify-content: center;
+      padding-inline: 0px;
+      visibility: hidden;
+      width: 24px;
+    }
+    button:active {
+      background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
+    }
+    button:hover {
+      background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
+    }
+    :host(:hover) .button-collection {
+      visibility: visible;
+    }
+    :host(:hover) button {
+      visibility: visible;
+    }
+`)
+);
 const styleForExpandable = new CSSStyleSheet();
 styleForExpandable.replaceSync(
   dontIndent(`
@@ -146,36 +185,6 @@ styleForTextInput.replaceSync(
       color: var(--vscode-input-placeholderForeground, #989898);
       opacity: 1;
     }
-    div.button-background {
-      background-color: var(--vscode-settings-textInputBackground);
-      visibility: hidden;
-      position: absolute;
-      bottom: 0px;
-      right: 0px;
-      border-radius: inherit;
-
-      button {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        flex: none;
-        border-radius: inherit;
-        border: 0px;
-        background-color: transparent;
-      }
-      button:hover {
-        background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
-      }
-      button:active {
-        background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
-      }
-    }
-  }
-  :host(:hover) div.button-background {
-    visibility: visible;
   }
   :host([focused]) {
     border-color: var(--vscode-focusBorder, #0078d4);
@@ -228,30 +237,9 @@ styleForNumberInput.replaceSync(
       color: var(--vscode-input-placeholderForeground, #989898);
       opacity: 1;
     }
-
+    
     button {
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex: none;
-      border-radius: inherit;
-      border: 0px;
-      background-color: transparent;
-      visibility: hidden;
-      padding-inline: 0px;
-    }
-    button:hover {
-      background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
-    }
-    button:active {
-      background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
-    }
-  }
-  :host(:hover) {
-    button {
-      visibility: visible;
+      width: unset;
     }
   }
   :host([focused]) {
@@ -557,18 +545,18 @@ const entityData = new Map();
         iconField.setAttribute('name', 'symbol-string');
         toField.appendChild(iconField);
 
-        const buttonHolder = document.createElement('div');
-        buttonHolder.setAttribute('class', 'button-background');
-        buttonHolder.appendChild(toArea);
-        buttonHolder.appendChild(toField);
+        const buttonCollection = document.createElement('div');
+        buttonCollection.setAttribute('class', 'button-collection');
+        buttonCollection.appendChild(toArea);
+        buttonCollection.appendChild(toField);
 
         // Initialize shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForTextInput];
+        shadow.adoptedStyleSheets = [styleForTextInput, styleForButtons];
 
         shadow.appendChild(area);
         shadow.appendChild(field);
-        if (!isDisabled) shadow.appendChild(buttonHolder);
+        if (!isDisabled) shadow.appendChild(buttonCollection);
 
         // Switchers
         toArea.onclick = (e) => {
@@ -685,8 +673,7 @@ const entityData = new Map();
 
         // Initialize shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForNumberInput];
-
+        shadow.adoptedStyleSheets = [styleForButtons, styleForNumberInput];
         if (!isDisabled) shadow.appendChild(decreaseButton);
         shadow.appendChild(input);
         if (!isDisabled) shadow.appendChild(increaseButton);
