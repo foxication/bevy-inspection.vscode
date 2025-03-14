@@ -4,67 +4,66 @@
 // import '@vscode-elements/elements/dist/vscode-tree/index.js';
 
 // Styles
-const styleForButtons = new CSSStyleSheet();
-styleForButtons.replaceSync(
+const styleButtons = new CSSStyleSheet();
+styleButtons.replaceSync(
   dontIndent(`
-    .button-collection {
-      background-color: var(--vscode-settings-textInputBackground);
-      border-radius: inherit;
-      bottom: 0px;
-      position: absolute;
-      right: 0px;
-      visibility: hidden;
-    }
-    button {
-      align-items: center;
-      background-color: transparent;
-      border-radius: inherit;
-      border: 0px;
-      cursor: pointer;
-      display: flex;
-      flex: none;
-      height: 24px;
-      justify-content: center;
-      padding-inline: 0px;
-      visibility: hidden;
-      width: 24px;
-    }
-    button:active {
-      background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
-    }
-    button:hover {
-      background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
-    }
-    :host(:hover) .button-collection {
-      visibility: visible;
-    }
-    :host(:hover) button {
-      visibility: visible;
-    }
+  .button-collection {
+    background-color: var(--vscode-settings-textInputBackground);
+    border-radius: inherit;
+    bottom: 0px;
+    position: absolute;
+    right: 0px;
+    visibility: hidden;
+  }
+  button {
+    align-items: center;
+    background-color: transparent;
+    border-radius: inherit;
+    border: 0px;
+    cursor: pointer;
+    display: flex;
+    flex: none;
+    height: 24px;
+    justify-content: center;
+    padding-inline: 0px;
+    visibility: hidden;
+    width: 24px;
+  }
+  button:active {
+    background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
+  }
+  button:hover {
+    background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
+  }
+  :host(:hover) .button-collection {
+    visibility: visible;
+  }
+  :host(:hover) button {
+    visibility: visible;
+  }
 `)
 );
-const styleForExpandable = new CSSStyleSheet();
-styleForExpandable.replaceSync(
+const styleExpandable = new CSSStyleSheet();
+styleExpandable.replaceSync(
   dontIndent(`
   details {
-    width: 100%;
     border-radius: 2px;
-    
+    width: 100%;
+
     summary {
+      align-items: center;
+      column-gap: 6px;      
       display: flex;
-      column-gap: 6px;
-      
-      list-style: none;
       display: flex;
       height: 26px;
-      align-items: center;
-    
+      list-style: none;
+
       span {
-        overflow: hidden;
-        white-space: nowrap;
         direction: rtl;
-        text-align: left;
         flex: auto;
+        overflow: hidden;
+        text-align: left;
+        white-space: nowrap;
       }
       vscode-icon {
         flex: none;
@@ -79,51 +78,44 @@ styleForExpandable.replaceSync(
     }
     .details-content {
       cursor: default;
-      padding-top: 4px;
       display: flex;
       flex-direction: column;
+      padding-top: 4px;
       row-gap: 4px;
     }
   }
   details:hover {
     cursor: pointer;
   }
-  details[open]>summary {
-    .header-icon {
-      transform: rotate(90deg);
-    }
-  }`)
+  details[open] > summary .header-icon {
+    transform: rotate(90deg);
+  }
+`)
 );
-const styleForDeclaration = new CSSStyleSheet();
-styleForDeclaration.replaceSync(
+const styleDeclaration = new CSSStyleSheet();
+styleDeclaration.replaceSync(
   dontIndent(`
   :host {
-    display: flex;
     column-gap: 8px;
-
+    display: flex;
+    
     label {
       flex: 3;
-      text-align: right;
-      text-overflow: ellipsis;
       line-height: 18px;
-      white-space: nowrap;
       overflow: hidden;
       padding: 4px 0;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    div.value {
+    .value {
       flex: 5;
-
-      vscode-checkbox {
-        width: 100%;
-      }
-      vscode-single-select {
-        width: 100%;
-      }
     }
-  }`)
+  }
+`)
 );
-const styleForTextInput = new CSSStyleSheet();
-styleForTextInput.replaceSync(
+const styleInput = new CSSStyleSheet();
+styleInput.replaceSync(
   dontIndent(`
   :host {
     align-items: center;
@@ -137,11 +129,11 @@ styleForTextInput.replaceSync(
     display: inline-flex;
     position: relative;
     width: 100%;
-      
+    
     input {
       background-color: var(--vscode-settings-textInputBackground, #313131);
-      border: 0px;
       border-radius: inherit;
+      border: 0px;
       box-sizing: border-box;
       color: var(--vscode-settings-textInputForeground, #cccccc);
       display: block;
@@ -152,35 +144,10 @@ styleForTextInput.replaceSync(
       outline: none;
       padding: 3px 4px;
       width: 100%;
-    }
-      
+    } 
     input.input:focus-visible {
       outline-offset: 0px;
     }
-    
-    textarea {
-      background-color: var(--vscode-settings-textInputBackground, #313131);
-      box-sizing: border-box;
-      border-radius: inherit;
-      color: var(--vscode-settings-textInputForeground, #cccccc);
-      display: block;
-      font-family: var(--vscode-font-family, sans-serif);
-      font-size: var(--vscode-font-size, 13px);
-      font-weight: var(--vscode-font-weight, normal);
-      width: 100%;
-      line-height: 18px;
-      padding: 3px 4px;
-      text-wrap: nowrap;
-      resize: none;
-      border: 0px;
-    }
-    textarea:focus {
-      outline: none;
-    }
-    textarea::-webkit-scrollbar { 
-      display: none;
-    }
-    
     ::placeholder {
       color: var(--vscode-input-placeholderForeground, #989898);
       opacity: 1;
@@ -189,69 +156,48 @@ styleForTextInput.replaceSync(
   :host([focused]) {
     border-color: var(--vscode-focusBorder, #0078d4);
   }
-  :host([focused]) {
-    border-color: var(--vscode-focusBorder, #0078d4);
-  }
   :host([disabled]) {
     border-color: var(--vscode-settings-textInputBackground);
   }
-  `)
+`)
 );
-const styleForNumberInput = new CSSStyleSheet();
-styleForNumberInput.replaceSync(
+const styleTextArea = new CSSStyleSheet();
+styleTextArea.replaceSync(
   dontIndent(`
-  :host {
-    align-items: center;
+  textarea {
     background-color: var(--vscode-settings-textInputBackground, #313131);
-    border-color: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #3c3c3c));
-    border-radius: 2px;
-    border-style: solid;
-    border-width: 1px;
+    border-radius: inherit;
+    border: 0px;
     box-sizing: border-box;
     color: var(--vscode-settings-textInputForeground, #cccccc);
-    display: inline-flex;
-    position: relative;
+    display: block;
+    font-family: var(--vscode-font-family, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    font-weight: var(--vscode-font-weight, normal);
+    line-height: 18px;
+    padding: 3px 4px;
+    resize: none;
+    text-wrap: nowrap;
     width: 100%;
-      
-    input {
-      background-color: var(--vscode-settings-textInputBackground, #313131);
-      border: 0px;
-      box-sizing: border-box;
-      color: var(--vscode-settings-textInputForeground, #cccccc);
-      display: block;
-      font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
-      font-size: var(--vscode-font-size, 13px);
-      font-weight: var(--vscode-font-weight, 'normal');
-      line-height: 18px;
-      outline: none;
-      padding: 3px 0px;
-      width: 100%;
-      text-align: center;
-    }
-      
-    input.input:focus-visible {
-      outline-offset: 0px;
-    }
-    
-    ::placeholder {
-      color: var(--vscode-input-placeholderForeground, #989898);
-      opacity: 1;
-    }
-    
-    button {
-      width: unset;
-    }
   }
-  :host([focused]) {
-    border-color: var(--vscode-focusBorder, #0078d4);
+  textarea:focus {
+    outline: none;
   }
-  :host([focused]) {
-    border-color: var(--vscode-focusBorder, #0078d4);
+  textarea::-webkit-scrollbar { 
+    display: none;
   }
-  :host([disabled]) {
-    border-color: var(--vscode-settings-textInputBackground);
+`)
+);
+const styleNumberInput = new CSSStyleSheet();
+styleNumberInput.replaceSync(
+  dontIndent(`
+  input {
+    text-align: center;
   }
-  `)
+  button {
+    width: unset;
+  }
+`)
 );
 
 const entityData = new Map();
@@ -431,7 +377,7 @@ const entityData = new Map();
 
         // Create shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForExpandable];
+        shadow.adoptedStyleSheets = [styleExpandable];
         shadow.appendChild(details);
       }
     }
@@ -480,7 +426,7 @@ const entityData = new Map();
 
         // Create shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForDeclaration];
+        shadow.adoptedStyleSheets = [styleDeclaration];
         shadow.appendChild(labelElement);
         shadow.appendChild(valueHolder);
       }
@@ -552,7 +498,7 @@ const entityData = new Map();
 
         // Initialize shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForTextInput, styleForButtons];
+        shadow.adoptedStyleSheets = [styleButtons, styleInput, styleTextArea];
 
         shadow.appendChild(area);
         shadow.appendChild(field);
@@ -673,7 +619,7 @@ const entityData = new Map();
 
         // Initialize shadow DOM
         const shadow = this.attachShadow({ mode: 'open' });
-        shadow.adoptedStyleSheets = [styleForButtons, styleForNumberInput];
+        shadow.adoptedStyleSheets = [styleButtons, styleInput, styleNumberInput];
         if (!isDisabled) shadow.appendChild(decreaseButton);
         shadow.appendChild(input);
         if (!isDisabled) shadow.appendChild(increaseButton);
