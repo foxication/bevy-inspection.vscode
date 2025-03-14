@@ -15,6 +15,8 @@ export function initExtElements() {
 // ExtElements
 class ExtExpandable extends HTMLElement {
   connectedCallback() {
+    if (this.shadowRoot !== null) return;
+
     const label = this.getAttribute('label') ?? '';
     const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
@@ -39,6 +41,10 @@ class ExtExpandable extends HTMLElement {
       return element;
     };
 
+    // Details.summary.gripper
+    const gripper = document.createElement('ext-gripper') as ExtGripper;
+    gripper.indexed = this;
+
     // Detials.summary
     const summary = document.createElement('summary');
     if (indent >= 0) {
@@ -50,7 +56,7 @@ class ExtExpandable extends HTMLElement {
     summary.appendChild(chevron);
     summary.appendChild(labelElement);
     if (isComponent) summary.appendChild(icon());
-    if (isIndexed) summary.appendChild(document.createElement('ext-gripper'));
+    if (isIndexed) summary.appendChild(gripper);
 
     // Detials.content
     const content = document.createElement('div');
@@ -72,6 +78,8 @@ class ExtExpandable extends HTMLElement {
 }
 class ExtDeclaration extends HTMLElement {
   connectedCallback() {
+    if (this.shadowRoot !== null) return;
+
     const path = this.getAttribute('path') ?? '';
     const label = labelFromPath(path);
     const hideLabel = this.hasAttribute('hide-label');
@@ -89,6 +97,9 @@ class ExtDeclaration extends HTMLElement {
 
     const valueHolder = document.createElement('div');
     valueHolder.classList.add('value');
+
+    const gripper = document.createElement('ext-gripper') as ExtGripper;
+    gripper.indexed = this;
 
     switch (typeof value) {
       case 'number': {
@@ -112,7 +123,7 @@ class ExtDeclaration extends HTMLElement {
         break;
       }
     }
-    if (isIndexed) valueHolder.appendChild(document.createElement('ext-gripper'));
+    if (isIndexed) valueHolder.appendChild(gripper);
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
@@ -148,6 +159,8 @@ class ExtValue extends HTMLElement {
 }
 class ExtString extends ExtValue {
   connectedCallback() {
+    if (this.shadowRoot !== null) return;
+
     const placeholder = this.getAttribute('placeholder');
     const isDisabled = this.hasAttribute('disabled');
 
@@ -278,6 +291,8 @@ class ExtNumber extends ExtValue {
   }
 
   connectedCallback() {
+    if (this.shadowRoot !== null) return;
+
     const isDisabled = this.hasAttribute('disabled');
 
     // Initialize elements
@@ -343,6 +358,8 @@ class ExtNumber extends ExtValue {
 }
 class ExtBoolean extends ExtValue {
   connectedCallback() {
+    if (this.shadowRoot !== null) return;
+
     const isDisabled = this.hasAttribute('disabled');
 
     // Initialize elements
@@ -364,25 +381,104 @@ class ExtBoolean extends ExtValue {
   }
 }
 class ExtGripper extends HTMLElement {
+  private button = document.createElement('button');
+
+  public set indexed(element: HTMLElement) {
+    const list = element.parentElement;
+    if (list === null) return;
+
+    // Constants
+    const gap = 4; // px
+    console.log(`gap: ${gap}`);
+
+    // Logics
+    this.button.onpointerdown = (eDown) => {
+      console.log('gripper in dragged');
+      this.button.setPointerCapture(eDown.pointerId);
+      element.style.zIndex = '1';
+
+      let minOffset = -element.offsetTop;
+      let maxOffset = minOffset + list.offsetHeight - element.offsetHeight;
+      let initialClientY = eDown.clientY;
+
+      console.log(`calculated minOffset: ${minOffset}, maxOffet: ${maxOffset}`);
+
+      let prevSibling: HTMLElement | null = null;
+      let nextSibling: HTMLElement | null = null;
+      const updateSiblings = () => {
+        prevSibling = element.previousElementSibling as HTMLElement;
+        nextSibling = element.nextElementSibling as HTMLElement;
+      };
+      updateSiblings();
+
+      this.button.onpointermove = (eMove) => {
+        // console.log('gripper is moving');
+        const position = (): number => {
+          return Math.min(Math.max(eMove.clientY - initialClientY, minOffset), maxOffset);
+        };
+
+        // console.log('--------');
+
+        let isTreeChanged = false;
+        if (prevSibling instanceof HTMLElement) {
+          const prevShift = prevSibling.offsetHeight + gap;
+          if (position() <= -prevShift) {
+            initialClientY -= prevShift;
+            minOffset += prevShift;
+            maxOffset += prevShift;
+
+            list.removeChild(element);
+            list.insertBefore(element, prevSibling);
+            isTreeChanged = true;
+          }
+          // console.log(`prev: ${prevShift}`);
+        }
+        if (nextSibling instanceof HTMLElement) {
+          const nextShift = nextSibling.offsetHeight + gap;
+          if (position() >= nextShift) {
+            initialClientY += nextShift;
+            minOffset -= nextShift;
+            maxOffset -= nextShift;
+
+            list.removeChild(element);
+            list.insertBefore(element, nextSibling.nextSibling);
+            isTreeChanged = true;
+          }
+          // console.log(`next: ${nextShift}`);
+        }
+        if (isTreeChanged) {
+          updateSiblings();
+          this.button.setPointerCapture(eDown.pointerId); // restore
+        }
+        element.style.top = position() + 'px';
+
+        // console.log(`position: ${position()}`);
+      };
+
+      this.button.onpointerup = () => {
+        console.log('gripper is dropped');
+
+        // pointer automatically releases on onpointerup
+        this.button.onpointermove = null;
+        this.button.onpointerup = null;
+
+        element.style.removeProperty('top');
+        element.style.removeProperty('z-index');
+      };
+    };
+  }
+
   connectedCallback() {
+    if (this.shadowRoot !== null) return;
+
     // Initialize elements
     const icon = document.createElement('vscode-icon');
     icon.setAttribute('name', 'gripper');
-
-    const button = document.createElement('button');
-    button.appendChild(icon);
+    this.button.appendChild(icon);
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.gripper];
-    shadow.appendChild(button);
-
-    // Logics
-    button.onpointerdown = () => {
-      console.log('gripper in dragged');
-    };
-    button.onpointerup = () => {
-      console.log('gripper is dropped');
-    };
+    shadow.appendChild(this.button);
   }
 }

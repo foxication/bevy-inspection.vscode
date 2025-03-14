@@ -76,9 +76,9 @@ ul#entity-info {
 
 .component-list {
   box-sizing: border-box;
-
   display: flex;
   flex-direction: column;
+  position: relative;
   row-gap: 4px;
 }
 

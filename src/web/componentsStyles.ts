@@ -44,6 +44,10 @@ buttons.replaceSync(
 export const expandable = new CSSStyleSheet();
 expandable.replaceSync(
   dontIndent(`
+  :host {
+    position: relative;
+  }
+  
   details {
     border-radius: 2px;
     width: 100%;
@@ -78,7 +82,8 @@ expandable.replaceSync(
       cursor: default;
       display: flex;
       flex-direction: column;
-      padding-top: 4px;
+      margin-top: 4px;
+      position: relative;
       row-gap: 4px;
     }
   }
@@ -96,6 +101,7 @@ declaration.replaceSync(
   :host {
     column-gap: 8px;
     display: flex;
+    position: relative;
     
     label {
       flex: 3;
