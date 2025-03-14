@@ -4,6 +4,20 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "compile",
+			"type": "npm",
+			"script": "compile",
+			"group": {
+				"kind": "build",
+			},
+			"problemMatcher": "$esbuild-watch",
+			"isBackground": true,
+			"presentation": {
+				"group": "compile",
+				"reveal": "never"
+			}
+		},
+		{
 			"label": "watch",
 			"dependsOn": [
 				"npm: watch:tsc",
@@ -11,7 +25,6 @@
 			],
 			"group": {
 				"kind": "build",
-				"isDefault": true
 			}
 		},
 		{
