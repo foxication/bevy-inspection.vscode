@@ -573,8 +573,8 @@ function onEntityDataChange(path?: string) {
   console.log(entityData);
 }
 
-type NestedInsides = number | boolean | string | number[] | boolean[] | string[] | NestedRecord | NestedRecord[];
-type NestedRecord = { [k: string]: NestedInsides };
+type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
+type JsonObject = { [key: string]: JsonValue };
 
 // Main script
 (function () {
@@ -604,29 +604,24 @@ type NestedRecord = { [k: string]: NestedInsides };
       idLabel.textContent = entityId.toString();
     }
   }
-  function update(data: NestedRecord) {
+  function update(data: JsonObject) {
     const componentList = document.querySelector('.component-list');
+    if (componentList === null) return 'failure';
     let entityLabel = document.querySelector('#entity-info-id')?.textContent ?? 'unknown';
     if (entityLabel === '') entityLabel = 'unknown';
-    if (componentList === null) {
-      console.error('No .component-list OR #entity-info-id');
-      return;
-    }
+    if (data === null) return 'success';
 
     componentList.innerHTML = '';
-    for (const componentLabel in data) {
-      if (typeof data[componentLabel] === 'object') {
-        const component = parseElements(entityLabel + '/' + componentLabel, data[componentLabel], true);
-        if (component !== undefined) componentList.appendChild(component);
-      }
+    for (const [componentLabel, componentValue] of Object.entries(data)) {
+      console.log(`component: ${componentLabel}`);
+      const component = parseElements(entityLabel + '/' + componentLabel, componentValue, true);
+      if (component !== undefined) componentList.appendChild(component);
     }
     return 'success';
 
-    function parseElements(path: string, parsed: NestedInsides, isComponent = false) {
-      if (typeof path !== 'string') {
-        console.error('PATH is not a STRING');
-        return undefined;
-      }
+    function parseElements(path: string, parsed: JsonValue, isComponent = false): HTMLElement {
+      console.log(`parsing: ${parsed}`);
+
       // Declaration
       if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string') {
         entityData.set(path, parsed);
@@ -643,25 +638,28 @@ type NestedRecord = { [k: string]: NestedInsides };
         return declaration;
       }
 
-      // Object
-      const isArray = parsed instanceof Array;
+      // Array OR NestedRecord
       const groupElem = document.createElement('ext-expandable');
       groupElem.setAttribute('label', labelFromPath(path));
       if (isComponent) groupElem.setAttribute('component', '');
 
-      for (const childLabel of Object.keys(parsed)) {
-        const separator = isArray ? '.' : '/';
-        const element = parseElements(path + separator + childLabel, parsed);
-        if (!(element instanceof HTMLElement)) {
-          console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
-          continue;
+      if (parsed instanceof Array) {
+        for (const childLabel of parsed.keys()) {
+          const element = parseElements(path + '.' + childLabel, parsed[childLabel]);
+          groupElem.appendChild(element);
         }
-        groupElem.appendChild(element);
+        return groupElem;
       }
-      return groupElem;
+      if (parsed !== null) {
+        for (const [childLabel, childValue] of Object.entries(parsed)) {
+          const element = parseElements(path + '/' + childLabel, childValue);
+          groupElem.appendChild(element);
+        }
+        return groupElem;
+      }
+      return document.createElement('ext-expandable');
     }
   }
-
   const updateStatus = update({
     'component::AllInputs': {
       name: 'Alexa',
