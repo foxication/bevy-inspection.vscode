@@ -10,7 +10,7 @@ import stylistic from '@stylistic/eslint-plugin';
 
 export default tseslint.config(
   {
-    ignores: ['.vscode-test', 'out', 'web'],
+    ignores: ['.vscode-test', 'dist', 'esbuild.js'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

@@ -91,7 +91,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     const webview = this.view.webview;
     const htmlUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'web', 'components.html'));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'web', 'components.css'));
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'web', 'components.js'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js'));
     const elementsUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode-elements', 'elements', 'dist', 'bundled.js')
     );
