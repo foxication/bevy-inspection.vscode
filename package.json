@@ -28,8 +28,6 @@
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"vscode:prepublish": "npm run package",
 		"package": "npm run check-types && node esbuild.js --production",
-		"pretest": "tsc -p . --outDir out",
-		"test": "vscode-test",
 		"lint": "eslint src web --ext ts"
 	},
 	"devDependencies": {
