@@ -26,7 +26,7 @@ initExtElements();
         setEntityInfo(message.host, message.entityId);
         break;
       case 'update':
-        update(message.data);
+        loadComponents(message.data);
         break;
     }
   });
@@ -42,7 +42,7 @@ initExtElements();
       idLabel.textContent = entityId.toString();
     }
   }
-  function update(data: JsonObject) {
+  function loadComponents(data: JsonObject) {
     const componentList = document.querySelector('.component-list');
     if (componentList === null) return 'failure';
     let entityLabel = document.querySelector('#entity-info-id')?.textContent ?? 'unknown';
@@ -52,12 +52,12 @@ initExtElements();
     componentList.innerHTML = '';
     for (const [componentLabel, componentValue] of Object.entries(data)) {
       console.log(`component: ${componentLabel}`);
-      const component = parseElements(entityLabel + '/' + componentLabel, componentValue, true);
+      const component = parseElements(entityLabel + '/' + componentLabel, componentValue, true, true);
       if (component !== undefined) componentList.appendChild(component);
     }
     return 'success';
 
-    function parseElements(path: string, parsed: JsonValue, isComponent = false): HTMLElement {
+    function parseElements(path: string, parsed: JsonValue, isIndexed = false, isComponent = false): HTMLElement {
       console.log(`parsing: ${parsed}`);
 
       // Declaration
@@ -70,35 +70,38 @@ initExtElements();
           const wrapped = document.createElement('ext-expandable');
           wrapped.setAttribute('component', '');
           wrapped.setAttribute('label', labelFromPath(path));
+          if (isIndexed) wrapped.setAttribute('indexed', '');
           wrapped.appendChild(declaration);
           return wrapped;
         }
+        if (isIndexed) declaration.setAttribute('indexed', '');
         return declaration;
       }
 
       // Array OR NestedRecord
-      const groupElem = document.createElement('ext-expandable');
-      groupElem.setAttribute('label', labelFromPath(path));
-      if (isComponent) groupElem.setAttribute('component', '');
+      const expandable = document.createElement('ext-expandable');
+      expandable.setAttribute('label', labelFromPath(path));
+      if (isComponent) expandable.setAttribute('component', '');
+      if (isIndexed) expandable.setAttribute('indexed', '');
 
       if (parsed instanceof Array) {
         for (const childLabel of parsed.keys()) {
-          const element = parseElements(path + '.' + childLabel, parsed[childLabel]);
-          groupElem.appendChild(element);
+          const element = parseElements(path + '.' + childLabel, parsed[childLabel], true);
+          expandable.appendChild(element);
         }
-        return groupElem;
+        return expandable;
       }
       if (parsed !== null) {
         for (const [childLabel, childValue] of Object.entries(parsed)) {
           const element = parseElements(path + '/' + childLabel, childValue);
-          groupElem.appendChild(element);
+          expandable.appendChild(element);
         }
-        return groupElem;
+        return expandable;
       }
       return document.createElement('ext-expandable');
     }
   }
-  const updateStatus = update({
+  const updateStatus = loadComponents({
     'component::AllInputs': {
       name: 'Alexa',
       age: 0.314,
@@ -129,9 +132,9 @@ initExtElements();
 })();
 
 // EXPERIMENTAL
-const rowGap = 5;
 let draggableHeight = 40;
 
+const rowGap = 5;
 const dragList = document.querySelector('#section-experimental');
 const draggables = dragList?.querySelectorAll('.draggable');
 

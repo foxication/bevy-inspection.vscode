@@ -85,7 +85,7 @@ expandable.replaceSync(
   details:hover {
     cursor: pointer;
   }
-  details[open] > summary .header-icon {
+  details[open] > summary .rotatable {
     transform: rotate(90deg);
   }
 `)
@@ -108,6 +108,8 @@ declaration.replaceSync(
     }
     .value {
       flex: 5;
+      display: flex;
+      align-items: center;
     }
   }
 `)
@@ -194,6 +196,23 @@ numberInput.replaceSync(
   }
   button {
     width: unset;
+  }
+`)
+);
+export const gripper = new CSSStyleSheet();
+gripper.replaceSync(
+  dontIndent(`
+  :host {
+    display: block;
+    height: 100%;
+
+    button {
+      visibility: inherit;
+      width: unset;
+      height: 100%;
+      border-top-right-radius: 2px;
+      border-bottom-right-radius: 2px;
+    }
   }
 `)
 );

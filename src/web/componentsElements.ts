@@ -9,6 +9,7 @@ export function initExtElements() {
   customElements.define('ext-string', ExtString);
   customElements.define('ext-number', ExtNumber);
   customElements.define('ext-boolean', ExtBoolean);
+  customElements.define('ext-gripper', ExtGripper);
 }
 
 // ExtElements
@@ -17,16 +18,26 @@ class ExtExpandable extends HTMLElement {
     const label = this.getAttribute('label') ?? '';
     const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
+    const isIndexed = this.hasAttribute('indexed');
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
     // Detials.summary.chevron
-    const chevroon = document.createElement('vscode-icon');
-    chevroon.setAttribute('name', 'chevron-right');
-    chevroon.setAttribute('class', 'header-icon');
+    const chevron = document.createElement('vscode-icon');
+    chevron.setAttribute('name', 'chevron-right');
+    chevron.setAttribute('class', 'rotatable');
 
     // Detials.summary.label
     const labelElement = document.createElement('span');
     labelElement.textContent = readableLabel ?? '';
+
+    // Details.summary.icon
+    const icon = () => {
+      const element = document.createElement('vscode-icon');
+      element.setAttribute('name', 'symbol-method');
+      element.setAttribute('class', 'component-type-icon');
+      summary.appendChild(element);
+      return element;
+    };
 
     // Detials.summary
     const summary = document.createElement('summary');
@@ -36,14 +47,10 @@ class ExtExpandable extends HTMLElement {
       indentation.className = 'space';
       summary.appendChild(indentation);
     }
-    summary.appendChild(chevroon);
+    summary.appendChild(chevron);
     summary.appendChild(labelElement);
-    if (isComponent) {
-      const icon = document.createElement('vscode-icon');
-      icon.setAttribute('name', 'symbol-method');
-      icon.setAttribute('class', 'component-type-icon');
-      summary.appendChild(icon);
-    }
+    if (isComponent) summary.appendChild(icon());
+    if (isIndexed) summary.appendChild(document.createElement('ext-gripper'));
 
     // Detials.content
     const content = document.createElement('div');
@@ -68,6 +75,7 @@ class ExtDeclaration extends HTMLElement {
     const path = this.getAttribute('path') ?? '';
     const label = labelFromPath(path);
     const hideLabel = this.hasAttribute('hide-label');
+    const isIndexed = this.hasAttribute('indexed');
     const value = entityData.get(path);
     if (!(typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string')) {
       console.error('VALUE is not basic type');
@@ -104,6 +112,7 @@ class ExtDeclaration extends HTMLElement {
         break;
       }
     }
+    if (isIndexed) valueHolder.appendChild(document.createElement('ext-gripper'));
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
@@ -352,5 +361,28 @@ class ExtBoolean extends ExtValue {
       this.value = checkbox.hasAttribute('checked');
     });
     observer.observe(checkbox, { attributes: true, attributeFilter: ['checked'] });
+  }
+}
+class ExtGripper extends HTMLElement {
+  connectedCallback() {
+    // Initialize elements
+    const icon = document.createElement('vscode-icon');
+    icon.setAttribute('name', 'gripper');
+
+    const button = document.createElement('button');
+    button.appendChild(icon);
+
+    // Initialize shadow DOM
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.gripper];
+    shadow.appendChild(button);
+
+    // Logics
+    button.onpointerdown = () => {
+      console.log('gripper in dragged');
+    };
+    button.onpointerup = () => {
+      console.log('gripper is dropped');
+    };
   }
 }
