@@ -6,14 +6,14 @@
 			"es2020",
 			"DOM"
 		],
-		"outDir": "out",
+		"outDir": "dist",
 		"sourceMap": true,
 		"strict": true,
 		"rootDir": "src"
 	},
 	"exclude": [
 		".vscode-test",
-		"node_modules",
-		"web"
+		"dist",
+		"node_modules"
 	]
 }

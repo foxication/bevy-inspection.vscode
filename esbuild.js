@@ -5,7 +5,7 @@ const watch = process.argv.includes('--watch');
 
 async function main() {
   const ctxComponentsWebView = await esbuild.context({
-    entryPoints: ['web/components.ts'],
+    entryPoints: ['src/web/components.ts'],
     bundle: true,
     format: 'esm',
     minify: production,
@@ -37,9 +37,11 @@ async function main() {
     ],
   });
   if (watch) {
-    await ctxComponentsWebView.rebuild();
-    await ctxComponentsWebView.dispose();
-    await ctxExtension.watch();
+    const componentsWebWatched = ctxComponentsWebView.watch();
+    const extensionWatched = ctxExtension.watch();
+
+    await componentsWebWatched;
+    await extensionWatched;
   } else {
     await ctxComponentsWebView.rebuild();
     await ctxComponentsWebView.dispose();

@@ -201,7 +201,7 @@ styleNumberInput.replaceSync(
 );
 
 // Fun
-function labelFromPath(path) {
+function labelFromPath(path: string) {
   const labels = path.split('/');
   if (labels.length === 0) {
     console.error('ARR is empty');
@@ -213,7 +213,7 @@ function labelFromPath(path) {
   return part.replace(/(^\w{1})|(\s+\w{1})/g, (letter) => letter.toUpperCase());
 }
 
-function dontIndent(str) {
+function dontIndent(str: string) {
   return ('' + str).replace(/(\n)\s+/g, '$1');
 }
 
@@ -221,7 +221,7 @@ function dontIndent(str) {
 class ExtExpandable extends HTMLElement {
   connectedCallback() {
     const label = this.getAttribute('label') ?? '';
-    const readableLabel = label.replaceAll('::', ' :: ');
+    const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
@@ -573,6 +573,9 @@ function onEntityDataChange(path?: string) {
   console.log(entityData);
 }
 
+type NestedInsides = number | boolean | string | number[] | boolean[] | string[] | NestedRecord | NestedRecord[];
+type NestedRecord = { [k: string]: NestedInsides };
+
 // Main script
 (function () {
   // Event listener
@@ -590,7 +593,7 @@ function onEntityDataChange(path?: string) {
     }
   });
 
-  function setEntityInfo(host, entityId) {
+  function setEntityInfo(host: string, entityId: number) {
     const hostLabel = document.querySelector('#entity-info-host');
     if (hostLabel instanceof Element) {
       hostLabel.textContent = host;
@@ -598,10 +601,10 @@ function onEntityDataChange(path?: string) {
 
     const idLabel = document.querySelector('#entity-info-id');
     if (idLabel instanceof Element) {
-      idLabel.textContent = entityId;
+      idLabel.textContent = entityId.toString();
     }
   }
-  function update(data) {
+  function update(data: NestedRecord) {
     const componentList = document.querySelector('.component-list');
     let entityLabel = document.querySelector('#entity-info-id')?.textContent ?? 'unknown';
     if (entityLabel === '') entityLabel = 'unknown';
@@ -611,13 +614,15 @@ function onEntityDataChange(path?: string) {
     }
 
     componentList.innerHTML = '';
-    for (const componentLabel of Object.keys(data)) {
-      const component = parseElements(entityLabel + '/' + componentLabel, data[componentLabel], true);
-      if (component !== undefined) componentList.appendChild(component);
+    for (const componentLabel in data) {
+      if (typeof data[componentLabel] === 'object') {
+        const component = parseElements(entityLabel + '/' + componentLabel, data[componentLabel], true);
+        if (component !== undefined) componentList.appendChild(component);
+      }
     }
     return 'success';
 
-    function parseElements(path: string, parsed: number | number | string | object, isComponent = false) {
+    function parseElements(path: string, parsed: NestedInsides, isComponent = false) {
       if (typeof path !== 'string') {
         console.error('PATH is not a STRING');
         return undefined;
@@ -639,27 +644,21 @@ function onEntityDataChange(path?: string) {
       }
 
       // Object
-      if (parsed instanceof Object) {
-        const isArray = parsed instanceof Array;
-        const groupElem = document.createElement('ext-expandable');
-        groupElem.setAttribute('label', labelFromPath(path));
-        if (isComponent) groupElem.setAttribute('component', '');
+      const isArray = parsed instanceof Array;
+      const groupElem = document.createElement('ext-expandable');
+      groupElem.setAttribute('label', labelFromPath(path));
+      if (isComponent) groupElem.setAttribute('component', '');
 
-        for (const childLabel of Object.keys(parsed)) {
-          const separator = isArray ? '.' : '/';
-          const element = parseElements(path + separator + childLabel, parsed[childLabel]);
-          if (!(element instanceof HTMLElement)) {
-            console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
-            continue;
-          }
-          groupElem.appendChild(element);
+      for (const childLabel of Object.keys(parsed)) {
+        const separator = isArray ? '.' : '/';
+        const element = parseElements(path + separator + childLabel, parsed);
+        if (!(element instanceof HTMLElement)) {
+          console.error(`ELEMENT (${element}) is not an HTMLELEMENT`);
+          continue;
         }
-        return groupElem;
+        groupElem.appendChild(element);
       }
-
-      // Unknown
-      console.error('cannot parse VALUE');
-      return undefined;
+      return groupElem;
     }
   }
 
@@ -687,6 +686,7 @@ function onEntityDataChange(path?: string) {
       { name: 'Bomb', bullets: 1, damage: 200 },
       { name: 'Rocket Launcher', bullets: 4, damage: 120 },
     ],
+    'component::AnotherArray': [{ hello: 'simple' }],
   });
   console.log(updateStatus ?? 'failure');
   onEntityDataChange(); // log whole table
@@ -709,9 +709,9 @@ function onEntityDataChange(path?: string) {
   const draggables = dragList.querySelectorAll('.draggable');
   if (draggables === null) return;
 
-  for (const draggable of draggables) {
-    const dragHandle = draggable.querySelector('div.dragHandle');
-    if (!(dragHandle instanceof HTMLDivElement && draggable instanceof HTMLDivElement)) continue;
+  draggables.forEach((draggable) => {
+    const dragHandle = draggable.querySelector('div.dragHandle') as HTMLDivElement;
+    if (!(draggable instanceof HTMLDivElement)) return;
     draggable.style.height = draggableHeight + 'px';
 
     // exponential
@@ -781,5 +781,5 @@ function onEntityDataChange(path?: string) {
         draggable.style.removeProperty('z-index');
       };
     };
-  }
+  });
 })();
