@@ -65,8 +65,10 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
   public async resolveWebviewView(
     webviewView: vscode.WebviewView,
-    _context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    context: vscode.WebviewViewResolveContext,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    token: vscode.CancellationToken
   ) {
     this.view = webviewView;
     this.view.webview.options = {
