@@ -758,7 +758,6 @@ const entityData = new Map();
   );
   // EXPERIMENTAL
   const rowGap = 5;
-  let containerHeight = -rowGap;
   let draggableHeight = 40;
 
   const dragList = document.querySelector('#section-experimental');
@@ -767,100 +766,79 @@ const entityData = new Map();
   const draggables = dragList.querySelectorAll('.draggable');
   if (draggables == null) return;
 
-  draggables.forEach((draggable) => {
+  for (const draggable of draggables) {
     const dragHandle = draggable.querySelector('div.dragHandle');
-    if (dragHandle instanceof HTMLDivElement && draggable instanceof HTMLDivElement) {
-      containerHeight += rowGap;
-      draggable.style.top = containerHeight + 'px';
-      draggable.style.height = draggableHeight + 'px';
-      containerHeight += draggable.offsetHeight;
+    if (!(dragHandle instanceof HTMLDivElement && draggable instanceof HTMLDivElement)) continue;
+    draggable.style.height = draggableHeight + 'px';
 
-      // exponential
-      draggableHeight += 30;
+    // exponential
+    draggableHeight += 30;
 
-      dragHandle.onpointerdown = (e) => {
-        // Style
-        dragHandle.setPointerCapture(e.pointerId);
-        draggable.style.zIndex = '1';
+    dragHandle.onpointerdown = (e) => {
+      // Style
+      dragHandle.setPointerCapture(e.pointerId);
+      draggable.style.zIndex = '1';
 
-        // Variables
-        const currentIndex = () => parseInt(draggable.getAttribute('index') ?? '0');
-        const diff = draggable.offsetTop - e.clientY;
-        let homeOffset = draggable.offsetTop;
-        let maximiumOffset = containerHeight - draggable.offsetHeight;
-        let topItem = getDraggableByIndex(currentIndex() - 1);
-        let bottomItem = getDraggableByIndex(currentIndex() + 1);
+      // Variables
+      let minOffset = -draggable.offsetTop;
+      let maxOffset = minOffset + dragList.offsetHeight - draggable.offsetHeight;
+      let initialClientY = e.clientY;
 
-        dragHandle.onpointermove = (e) => {
-          const newOffset = e.clientY + diff;
-          const limitedOffset = Math.min(Math.max(newOffset, 0), maximiumOffset);
-          draggable.style.top = limitedOffset + 'px';
-
-          if (topItem !== undefined && limitedOffset <= topItem.offsetTop) {
-            console.log('trying to swap with top item');
-            homeOffset = moveItemRelativeToDragged(topItem, draggable, homeOffset);
-            bottomItem = topItem;
-            topItem = getDraggableByIndex(currentIndex() - 1);
-          }
-          if (bottomItem !== undefined)
-            if (limitedOffset + draggable.offsetHeight >= bottomItem.offsetTop + bottomItem.offsetHeight) {
-              console.log('trying to swap with bottom item');
-              homeOffset = moveItemRelativeToDragged(bottomItem, draggable, homeOffset);
-              topItem = bottomItem;
-              bottomItem = getDraggableByIndex(currentIndex() + 1);
-            }
-        };
-
-        dragHandle.onpointerup = (e) => {
-          // pointer automatically releases on onpointerup
-          dragHandle.onpointermove = null;
-          dragHandle.onpointerup = null;
-
-          draggable.style.top = homeOffset + 'px';
-          draggable.style.removeProperty('z-index');
-        };
+      let prevSibling = null;
+      let nextSibling = null;
+      const updateSiblings = () => {
+        prevSibling = draggable.previousElementSibling;
+        nextSibling = draggable.nextElementSibling;
       };
-    }
-  });
+      updateSiblings();
 
-  function getDraggableByIndex(index) {
-    if (typeof index !== 'number') return;
-    if (index >= draggables.length) return;
+      dragHandle.onpointermove = (e) => {
+        const position = () => {
+          return Math.min(Math.max(e.clientY - initialClientY, minOffset), maxOffset);
+        };
 
-    for (const draggable of draggables) {
-      if (draggable instanceof HTMLDivElement && draggable.getAttribute('index') === index.toString()) {
-        return draggable;
-      }
-    }
-    return;
+        let isTreeChanged = false;
+        if (prevSibling instanceof HTMLDivElement) {
+          const prevShift = prevSibling.offsetHeight + rowGap;
+          if (position() <= -prevShift) {
+            initialClientY -= prevShift;
+            minOffset += prevShift;
+            maxOffset += prevShift;
+
+            dragList.removeChild(draggable);
+            dragList.insertBefore(draggable, prevSibling);
+            isTreeChanged = true;
+          }
+        }
+        if (nextSibling instanceof HTMLDivElement) {
+          const nextShift = nextSibling.offsetHeight + rowGap;
+          if (position() >= nextShift) {
+            initialClientY += nextShift;
+            minOffset -= nextShift;
+            maxOffset -= nextShift;
+
+            dragList.removeChild(draggable);
+            dragList.insertBefore(draggable, nextSibling.nextSibling);
+            isTreeChanged = true;
+          }
+        }
+        if (isTreeChanged) {
+          updateSiblings();
+          dragHandle.setPointerCapture(e.pointerId); // restore
+        }
+        draggable.style.top = position() + 'px';
+      };
+
+      dragHandle.onpointerup = (e) => {
+        // pointer automatically releases on onpointerup
+        dragHandle.onpointermove = null;
+        dragHandle.onpointerup = null;
+
+        draggable.style.removeProperty('top');
+        draggable.style.removeProperty('z-index');
+      };
+    };
   }
-
-  function moveItemRelativeToDragged(movable, dragged, draggedOffset) {
-    if (!(movable instanceof HTMLDivElement && dragged instanceof HTMLDivElement)) return 0;
-    if (typeof draggedOffset !== 'number') return draggedOffset;
-
-    // check indexes
-    const movableIndex = parseInt(movable.getAttribute('index') ?? '0');
-    const draggedIndex = parseInt(dragged.getAttribute('index') ?? '0');
-    if (Math.abs(movableIndex - draggedIndex) !== 1) return draggedOffset;
-
-    // swap indexes
-    movable.setAttribute('index', draggedIndex.toString());
-    dragged.setAttribute('index', movableIndex.toString());
-
-    // swap offsets
-    if (movable.offsetTop <= draggedOffset) {
-      movable.style.top = (movable.offsetTop + dragged.offsetHeight + rowGap).toString() + 'px';
-      return draggedOffset - movable.offsetHeight - rowGap;
-    }
-    if (movable.offsetTop >= draggedOffset) {
-      movable.style.top = (movable.offsetTop - dragged.offsetHeight - rowGap).toString() + 'px';
-      return draggedOffset + movable.offsetHeight + rowGap;
-    }
-    return draggedOffset;
-  }
-
-  dragList.style.height = containerHeight + 'px';
 })();
 
 function labelFromPath(path) {
