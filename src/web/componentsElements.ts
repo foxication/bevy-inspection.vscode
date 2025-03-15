@@ -28,7 +28,6 @@ class ExtExpandable extends HTMLElement {
       const element = document.createElement('div');
       element.style.width = indent.toString() + 'px';
       element.classList.add('indent');
-      summary.appendChild(element);
       return element;
     };
 
@@ -46,7 +45,6 @@ class ExtExpandable extends HTMLElement {
       const element = document.createElement('vscode-icon');
       element.setAttribute('name', 'symbol-method');
       element.setAttribute('class', 'component-type-icon');
-      summary.appendChild(element);
       return element;
     };
 
