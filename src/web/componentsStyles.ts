@@ -62,7 +62,6 @@ expandable.replaceSync(
 
       span {
         direction: rtl;
-        flex: auto;
         overflow: hidden;
         text-align: left;
         white-space: nowrap;
@@ -70,9 +69,12 @@ expandable.replaceSync(
       vscode-icon {
         flex: none;
       }
-      div.space {
+      div.indent {
         height: 16px;
         width: 16px;
+      }
+      div.space {
+        flex: auto;
       }
     }
     summary:focus {

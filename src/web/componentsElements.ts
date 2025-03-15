@@ -23,6 +23,15 @@ class ExtExpandable extends HTMLElement {
     const isIndexed = this.hasAttribute('indexed');
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
+    // Detials.summary.indent
+    const indentation = () => {
+      const element = document.createElement('div');
+      element.style.width = indent.toString() + 'px';
+      element.classList.add('indent');
+      summary.appendChild(element);
+      return element;
+    };
+
     // Detials.summary.chevron
     const chevron = document.createElement('vscode-icon');
     chevron.setAttribute('name', 'chevron-right');
@@ -41,21 +50,21 @@ class ExtExpandable extends HTMLElement {
       return element;
     };
 
+    // Details.summary.space
+    const space = document.createElement('div');
+    space.classList.add('space');
+
     // Details.summary.gripper
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
 
     // Detials.summary
     const summary = document.createElement('summary');
-    if (indent >= 0) {
-      const indentation = document.createElement('div');
-      indentation.style.width = indent.toString() + 'px';
-      indentation.className = 'space';
-      summary.appendChild(indentation);
-    }
+    if (indent >= 0) summary.append(indentation());
     summary.appendChild(chevron);
-    summary.appendChild(labelElement);
     if (isComponent) summary.appendChild(icon());
+    summary.appendChild(labelElement);
+    summary.appendChild(space);
     if (isIndexed) summary.appendChild(gripper);
 
     // Detials.content
