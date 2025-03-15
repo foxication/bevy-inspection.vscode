@@ -53,15 +53,30 @@ class ExtExpandable extends HTMLElement {
     const space = document.createElement('div');
     space.classList.add('space');
 
-    // Details.summary.add
-    const addIcon = document.createElement('vscode-icon');
-    addIcon.setAttribute('name', 'add');
-    const addButton = document.createElement('button');
-    addButton.appendChild(addIcon);
+    // Details.summary.buttons.remove
+    const removeIcon = document.createElement('vscode-icon');
+    removeIcon.setAttribute('name', 'trash');
+    const removeButton = document.createElement('button');
+    removeButton.appendChild(removeIcon);
+    removeButton.classList.add('autohide');
 
-    // Details.summary.gripper
+    // Details.summary.buttons.append
+    const appendIcon = document.createElement('vscode-icon');
+    appendIcon.setAttribute('name', 'expand-all');
+    const appendButton = document.createElement('button');
+    appendButton.appendChild(appendIcon);
+    appendButton.classList.add('autohide');
+
+    // Details.summary.buttons.gripper
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
+
+    // Details.summary.buttons
+    const buttons = document.createElement('div');
+    buttons.classList.add('buttons');
+    if (isArray) buttons.appendChild(appendButton);
+    if (isIndexed) buttons.appendChild(removeButton);
+    if (isIndexed) buttons.appendChild(gripper);
 
     // Detials.summary
     const summary = document.createElement('summary');
@@ -70,8 +85,7 @@ class ExtExpandable extends HTMLElement {
     if (isComponent) summary.appendChild(icon());
     summary.appendChild(labelElement);
     summary.appendChild(space);
-    if (isArray) summary.appendChild(addButton);
-    if (isIndexed) summary.appendChild(gripper);
+    summary.appendChild(buttons);
 
     // Detials.content
     const content = document.createElement('div');
@@ -113,6 +127,13 @@ class ExtDeclaration extends HTMLElement {
     const valueHolder = document.createElement('div');
     valueHolder.classList.add('value');
 
+    // Details.summary.buttons.remove
+    const removeIcon = document.createElement('vscode-icon');
+    removeIcon.setAttribute('name', 'trash');
+    const removeButton = document.createElement('button');
+    removeButton.appendChild(removeIcon);
+    removeButton.classList.add('compact-tall');
+
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
 
@@ -138,11 +159,12 @@ class ExtDeclaration extends HTMLElement {
         break;
       }
     }
+    if (isIndexed) valueHolder.appendChild(removeButton);
     if (isIndexed) valueHolder.appendChild(gripper);
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.declaration];
+    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.declaration];
     shadow.appendChild(labelElement);
     shadow.appendChild(valueHolder);
   }

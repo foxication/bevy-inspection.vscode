@@ -12,9 +12,6 @@ buttons.replaceSync(
     position: absolute;
     right: 0px;
   }
-  .button-collection.autohide {
-    visibility: hidden;
-  }
   button {
     align-items: center;
     background-color: transparent;
@@ -28,9 +25,6 @@ buttons.replaceSync(
     padding-inline: 0px;
     width: 26px;
   }
-  button.autohide {
-    visibility: hidden;
-  }
   button.inside {
     height: 24px;
     width: 24px;
@@ -43,17 +37,20 @@ buttons.replaceSync(
     height: 100%;
     width: unset;
   }
-  button:active {
-    background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
-  }
   button:hover {
     background-color: var(--vscode-toolbar-hoverBackground,rgba(90, 93, 94, 0.31));
   }
-  :host(:hover) .button-collection {
-    visibility: visible;
+  button:active {
+    background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
   }
-  :host(:hover) button {
-    visibility: visible;
+  .autohide {
+    visibility: hidden;
+  }
+  summary:hover > .buttons > .autohide {
+    visibility: inherit;
+  }
+  :host(:hover) > .autohide {
+    visibility: inherit;
   }
 `)
 );
@@ -91,6 +88,11 @@ expandable.replaceSync(
       }
       div.space {
         flex: auto;
+      }
+      div.buttons {
+        display: flex;
+        flex-direction: row;
+        height: 100%;
       }
     }
     summary:focus {
