@@ -394,7 +394,7 @@ class ExtBoolean extends ExtValue {
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.booleanInput];
+    shadow.adoptedStyleSheets = [extStyles.hostIsContent];
     shadow.appendChild(checkbox);
 
     // Logics
@@ -504,7 +504,7 @@ class ExtGripper extends HTMLElement {
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.buttons];
+    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.hostIsContent];
     shadow.appendChild(this.button);
   }
 }

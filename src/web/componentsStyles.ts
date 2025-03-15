@@ -215,22 +215,5 @@ textArea.replaceSync(
   }
 `)
 );
-export const booleanInput = new CSSStyleSheet();
-booleanInput.replaceSync(
-  dontIndent(`
-  :host {
-    display: contents;
-  }
-`)
-);
-export const gripper = new CSSStyleSheet();
-gripper.replaceSync(
-  dontIndent(`
-  :host {
-    border-radius: 2px;
-    border-width: 1px;
-    display: block;
-    height: 100%;
-  }
-`)
-);
+export const hostIsContent = new CSSStyleSheet();
+hostIsContent.replaceSync(':host { display: contents; }');
