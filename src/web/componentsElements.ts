@@ -331,6 +331,7 @@ class ExtNumber extends ExtValue {
     const input = document.createElement('input');
     input.setAttribute('type', 'text');
     input.classList.add('centered');
+    input.classList.add('wider');
     if (isDisabled) input.setAttribute('disabled', '');
     input.value = (this.value as number).toString();
 

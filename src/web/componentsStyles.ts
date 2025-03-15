@@ -172,6 +172,10 @@ input.replaceSync(
     input.centered {
       text-align: center;
     } 
+    input.wider {
+      padding-left: 0px;
+      padding-right: 0px;
+    }
     input.input:focus-visible {
       outline-offset: 0px;
     }
