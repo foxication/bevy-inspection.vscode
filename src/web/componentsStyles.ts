@@ -205,6 +205,14 @@ numberInput.replaceSync(
   }
 `)
 );
+export const booleanInput = new CSSStyleSheet();
+booleanInput.replaceSync(
+  dontIndent(`
+  :host {
+    display: contents;
+  }
+`)
+);
 export const gripper = new CSSStyleSheet();
 gripper.replaceSync(
   dontIndent(`
