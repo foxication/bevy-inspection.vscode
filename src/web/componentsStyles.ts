@@ -217,15 +217,15 @@ export const gripper = new CSSStyleSheet();
 gripper.replaceSync(
   dontIndent(`
   :host {
+    border-radius: 2px;
+    border-width: 1px;
     display: block;
     height: 100%;
 
     button {
+      height: 100%;
       visibility: inherit;
       width: unset;
-      height: 100%;
-      border-top-right-radius: 2px;
-      border-bottom-right-radius: 2px;
     }
   }
 `)
