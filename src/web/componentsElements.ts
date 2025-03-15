@@ -21,6 +21,7 @@ class ExtExpandable extends HTMLElement {
     const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
     const isIndexed = this.hasAttribute('indexed');
+    const isArray = this.hasAttribute('array');
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
     // Detials.summary.indent
@@ -52,6 +53,12 @@ class ExtExpandable extends HTMLElement {
     const space = document.createElement('div');
     space.classList.add('space');
 
+    // Details.summary.add
+    const addIcon = document.createElement('vscode-icon');
+    addIcon.setAttribute('name', 'add');
+    const addButton = document.createElement('button');
+    addButton.appendChild(addIcon);
+
     // Details.summary.gripper
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
@@ -63,6 +70,7 @@ class ExtExpandable extends HTMLElement {
     if (isComponent) summary.appendChild(icon());
     summary.appendChild(labelElement);
     summary.appendChild(space);
+    if (isArray) summary.appendChild(addButton);
     if (isIndexed) summary.appendChild(gripper);
 
     // Detials.content
@@ -79,7 +87,7 @@ class ExtExpandable extends HTMLElement {
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.expandable];
+    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
     shadow.appendChild(details);
   }
 }
@@ -184,18 +192,21 @@ class ExtString extends ExtValue {
 
     // Initialize buttons
     const toArea = document.createElement('button');
+    toArea.classList.add('inside');
     const iconArea = document.createElement('vscode-icon');
     iconArea.setAttribute('name', 'list-selection');
     toArea.appendChild(iconArea);
 
     const toField = document.createElement('button');
-    toField.className = 'inArea';
+    toField.classList.add('inArea');
+    toField.classList.add('inside');
     const iconField = document.createElement('vscode-icon');
     iconField.setAttribute('name', 'symbol-string');
     toField.appendChild(iconField);
 
     const buttonCollection = document.createElement('div');
-    buttonCollection.setAttribute('class', 'button-collection');
+    buttonCollection.classList.add('button-collection');
+    buttonCollection.classList.add('autohide');
     buttonCollection.appendChild(toArea);
     buttonCollection.appendChild(toField);
 
@@ -304,23 +315,28 @@ class ExtNumber extends ExtValue {
 
     // Initialize elements
     const decreaseButton = document.createElement('button');
+    decreaseButton.classList.add('inside-compact');
+    decreaseButton.classList.add('autohide');
     const decreaseIcon = document.createElement('vscode-icon');
     decreaseIcon.setAttribute('name', 'chevron-left');
     decreaseButton.appendChild(decreaseIcon);
 
     const increaseButton = document.createElement('button');
+    increaseButton.classList.add('inside-compact');
+    increaseButton.classList.add('autohide');
     const increaseIcon = document.createElement('vscode-icon');
     increaseIcon.setAttribute('name', 'chevron-right');
     increaseButton.appendChild(increaseIcon);
 
     const input = document.createElement('input');
     input.setAttribute('type', 'text');
+    input.classList.add('centered');
     if (isDisabled) input.setAttribute('disabled', '');
     input.value = (this.value as number).toString();
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.input, extStyles.numberInput];
+    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.input];
     if (!isDisabled) shadow.appendChild(decreaseButton);
     shadow.appendChild(input);
     if (!isDisabled) shadow.appendChild(increaseButton);
@@ -480,13 +496,15 @@ class ExtGripper extends HTMLElement {
     if (this.shadowRoot !== null) return;
 
     // Initialize elements
+    this.button.classList.add('compact-tall');
+
     const icon = document.createElement('vscode-icon');
     icon.setAttribute('name', 'gripper');
     this.button.appendChild(icon);
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.gripper];
+    shadow.adoptedStyleSheets = [extStyles.buttons];
     shadow.appendChild(this.button);
   }
 }

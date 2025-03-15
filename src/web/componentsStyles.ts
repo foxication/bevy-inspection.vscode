@@ -11,6 +11,8 @@ buttons.replaceSync(
     bottom: 0px;
     position: absolute;
     right: 0px;
+  }
+  .button-collection.autohide {
     visibility: hidden;
   }
   button {
@@ -21,11 +23,25 @@ buttons.replaceSync(
     cursor: pointer;
     display: flex;
     flex: none;
-    height: 24px;
+    height: 26px;
     justify-content: center;
     padding-inline: 0px;
+    width: 26px;
+  }
+  button.autohide {
     visibility: hidden;
+  }
+  button.inside {
+    height: 24px;
     width: 24px;
+  }
+  button.inside-compact {
+    height: 24px;
+    width: unset;
+  }
+  button.compact-tall {
+    height: 100%;
+    width: unset;
   }
   button:active {
     background-color: var(--vscode-toolbar-activeBackground,rgba(99, 102, 103, 0.31));
@@ -152,6 +168,9 @@ input.replaceSync(
       outline: none;
       padding: 3px 4px;
       width: 100%;
+    }
+    input.centered {
+      text-align: center;
     } 
     input.input:focus-visible {
       outline-offset: 0px;
@@ -196,17 +215,6 @@ textArea.replaceSync(
   }
 `)
 );
-export const numberInput = new CSSStyleSheet();
-numberInput.replaceSync(
-  dontIndent(`
-  input {
-    text-align: center;
-  }
-  button {
-    width: unset;
-  }
-`)
-);
 export const booleanInput = new CSSStyleSheet();
 booleanInput.replaceSync(
   dontIndent(`
@@ -223,12 +231,6 @@ gripper.replaceSync(
     border-width: 1px;
     display: block;
     height: 100%;
-
-    button {
-      height: 100%;
-      visibility: inherit;
-      width: unset;
-    }
   }
 `)
 );
