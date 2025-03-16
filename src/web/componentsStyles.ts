@@ -115,9 +115,10 @@ expandable.replaceSync(
   }
   :host([dragging]) {
     background-color: var(--vscode-sideBar-background);
+    color: var(--vscode-list-activeSelectionForeground);
     
     >details {
-      background-color: var(--vscode-list-hoverBackground);
+      background-color: var(--vscode-list-activeSelectionBackground);
     }
   }
 `)
@@ -126,7 +127,6 @@ export const declaration = new CSSStyleSheet();
 declaration.replaceSync(
   dontIndent(`
   :host {
-    background-color: var(--vscode-sideBar-background);
     column-gap: 8px;
     display: flex;
     position: relative;
@@ -153,8 +153,13 @@ declaration.replaceSync(
       align-items: center;
     }
   }
-  :host([dragging]) > .background {
-    background-color: var(--vscode-list-hoverBackground);
+  :host([dragging]) {
+    background-color: var(--vscode-sideBar-background);
+    color: var(--vscode-list-activeSelectionForeground);
+    
+    >.background {
+      background-color: var(--vscode-list-activeSelectionBackground);
+    }
   }
 `)
 );
