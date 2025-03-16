@@ -119,32 +119,29 @@ class ExtExpandable extends HTMLElement {
   public onReorder(root: string) {
     let index = 0;
     for (const child of this.content.children) {
-      (child as ExtExpandable | ExtDeclaration).changePath(root + '.' + index++);
+      if (child instanceof ExtExpandable) console.error(`not implemented`);
+      if (child instanceof ExtDeclaration) child.changePath(root, index);
+      index += 1;
     }
-  }
-  changePath(path: string) {
-    return path;
   }
 }
 class ExtDeclaration extends HTMLElement {
-  labelElement = document.createElement('label') as HTMLElement;
-  valueElement: ExtValue | undefined;
+  label = document.createElement('label') as HTMLElement;
+  value: ExtValue | undefined;
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
 
     const path = this.getAttribute('path') ?? '';
-    const label = labelFromPath(path);
     const hideLabel = this.hasAttribute('hide-label');
     const isIndexed = this.hasAttribute('indexed');
-    const value = entityData.get(path);
 
     // Initialize elements
     const background = document.createElement('div');
     background.classList.add('background');
 
-    this.labelElement.setAttribute('for', path);
-    this.labelElement.textContent = hideLabel ? '' : label;
+    this.label.setAttribute('for', path);
+    this.label.textContent = hideLabel ? '' : labelFromPath(path);
 
     const valueHolder = document.createElement('div');
     valueHolder.classList.add('value');
@@ -160,33 +157,33 @@ class ExtDeclaration extends HTMLElement {
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
 
-    switch (typeof value) {
+    switch (typeof entityData.get(path)) {
       case 'number': {
-        const number = document.createElement('ext-number');
-        number.id = path;
-        valueHolder.appendChild(number);
+        this.value = document.createElement('ext-number') as ExtNumber;
+        this.value.id = path;
+        valueHolder.appendChild(this.value);
         break;
       }
 
       case 'boolean': {
-        const checkbox = document.createElement('ext-boolean');
-        checkbox.id = path;
-        valueHolder.appendChild(checkbox);
+        this.value = document.createElement('ext-boolean') as ExtBoolean;
+        this.value.id = path;
+        valueHolder.appendChild(this.value);
         break;
       }
 
       case 'string': {
-        const text = document.createElement('ext-string');
-        text.id = path;
-        valueHolder.appendChild(text);
+        this.value = document.createElement('ext-string') as ExtString;
+        this.value.id = path;
+        valueHolder.appendChild(this.value);
         break;
       }
 
       default: {
-        const text = document.createElement('ext-string');
-        text.id = path;
-        text.setAttribute('disabled', '');
-        valueHolder.appendChild(text);
+        this.value = document.createElement('ext-string') as ExtString;
+        this.value.id = path;
+        this.value.setAttribute('disabled', '');
+        valueHolder.appendChild(this.value);
       }
     }
     if (isIndexed) valueHolder.appendChild(removeButton);
@@ -196,14 +193,20 @@ class ExtDeclaration extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.declaration];
     shadow.appendChild(background);
-    shadow.appendChild(this.labelElement);
+    shadow.appendChild(this.label);
     shadow.appendChild(valueHolder);
   }
-  changePath(path: string) {
-    if (this.valueElement === undefined) return;
+  changePath(root: string, index: number) {
+    const path = root + '.' + index;
+
+    // Skip conditions
+    if (this.value === undefined) return;
+    if (this.getAttribute('path') === path) return;
+
+    // Apply
     this.setAttribute('path', path);
-    if (this.labelElement.textContent !== '') this.labelElement.textContent = path;
-    this.valueElement.changePath(path);
+    if (this.label.textContent !== '') this.label.textContent = index.toString();
+    this.value.changePath(path);
   }
 }
 class ExtValue extends HTMLElement {
@@ -234,11 +237,15 @@ class ExtValue extends HTMLElement {
     if (previous !== v) onEntityDataChange(this.id);
   }
   changePath(path: string) {
-    const previous = entityData.get(this.id);
-    if (previous === undefined) return;
+    const previous = entityData.get(path);
+    if (previous === undefined) {
+      console.error(`${path} doesn't exist on table`);
+      return;
+    }
     this.id = path;
     entityData.set(path, this.lastValue);
     if (previous !== this.lastValue) onEntityDataChange(path);
+    else console.log(`${path} without changes`)
   }
 }
 class ExtString extends ExtValue {

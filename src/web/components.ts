@@ -82,7 +82,7 @@ initExtElements();
       if (isIndexed) expandable.setAttribute('indexed', '');
 
       if (parsed instanceof Array) {
-        expandable.setAttribute('array', '');
+        expandable.setAttribute('array', path);
         for (const childLabel of parsed.keys()) {
           const element = parseElements(path + '.' + childLabel, parsed[childLabel], true);
           expandable.appendChild(element);
