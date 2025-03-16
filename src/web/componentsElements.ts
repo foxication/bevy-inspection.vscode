@@ -439,67 +439,65 @@ class ExtGripper extends HTMLElement {
     console.log(`gap: ${gap}`);
 
     // Logics
-    this.button.onpointerdown = (eDown) => {
+    this.button.onpointerdown = (eventDown) => {
       console.log('gripper in dragged');
-      this.button.setPointerCapture(eDown.pointerId);
+      this.button.setPointerCapture(eventDown.pointerId);
       element.style.zIndex = '1';
 
-      let minOffset = -element.offsetTop;
-      let maxOffset = minOffset + list.offsetHeight - element.offsetHeight;
-      let initialClientY = eDown.clientY;
+      const initialClientY = eventDown.clientY;
+      const minOffset = -element.offsetTop;
+      const maxOffset = minOffset + list.offsetHeight - element.offsetHeight;
 
-      console.log(`calculated minOffset: ${minOffset}, maxOffet: ${maxOffset}`);
+      let insertAfter: HTMLElement | null = element.previousElementSibling as HTMLElement;
+      let insertBefore: HTMLElement | null = element.nextElementSibling as HTMLElement;
+      let elementOffset = 0;
 
-      let prevSibling: HTMLElement | null = null;
-      let nextSibling: HTMLElement | null = null;
-      const updateSiblings = () => {
-        prevSibling = element.previousElementSibling as HTMLElement;
-        nextSibling = element.nextElementSibling as HTMLElement;
+      const moveBackTrigger = () => {
+        if (insertAfter === null) return 0;
+        return -(insertAfter.offsetHeight + gap);
       };
-      updateSiblings();
+      const moveForwTrigger = () => {
+        if (insertBefore === null) return 0;
+        return insertBefore.offsetHeight + gap;
+      };
 
-      this.button.onpointermove = (eMove) => {
-        // console.log('gripper is moving');
+      this.button.onpointermove = (eventMove) => {
         const position = (): number => {
-          return Math.min(Math.max(eMove.clientY - initialClientY, minOffset), maxOffset);
+          return Math.min(Math.max(eventMove.clientY - initialClientY, minOffset), maxOffset);
         };
 
-        // console.log('--------');
+        let change: 'back' | 'none' | 'forward' = 'none';
+        if (insertAfter instanceof HTMLElement && position() <= elementOffset + moveBackTrigger() * 0.75) {
+          elementOffset += moveBackTrigger();
 
-        let isTreeChanged = false;
-        if (prevSibling instanceof HTMLElement) {
-          const prevShift = prevSibling.offsetHeight + gap;
-          if (position() <= -prevShift) {
-            initialClientY -= prevShift;
-            minOffset += prevShift;
-            maxOffset += prevShift;
+          [insertAfter, insertBefore] = [insertAfter.previousElementSibling as HTMLElement, insertAfter];
+          if (insertAfter === element) insertAfter = element.previousElementSibling as HTMLElement;
 
-            list.removeChild(element);
-            list.insertBefore(element, prevSibling);
-            isTreeChanged = true;
-          }
-          // console.log(`prev: ${prevShift}`);
+          change = 'back';
+          console.log('index shifted back');
         }
-        if (nextSibling instanceof HTMLElement) {
-          const nextShift = nextSibling.offsetHeight + gap;
-          if (position() >= nextShift) {
-            initialClientY += nextShift;
-            minOffset -= nextShift;
-            maxOffset -= nextShift;
+        if (insertBefore instanceof HTMLElement && position() >= elementOffset + moveForwTrigger() * 0.75) {
+          elementOffset += moveForwTrigger();
 
-            list.removeChild(element);
-            list.insertBefore(element, nextSibling.nextSibling);
-            isTreeChanged = true;
-          }
-          // console.log(`next: ${nextShift}`);
+          [insertAfter, insertBefore] = [insertBefore, insertBefore.nextElementSibling as HTMLElement];
+          if (insertBefore === element) insertBefore = element.nextElementSibling as HTMLElement;
+
+          change = 'forward';
+          console.log('index shifted forward');
         }
-        if (isTreeChanged) {
-          updateSiblings();
-          this.button.setPointerCapture(eDown.pointerId); // restore
+        if (elementOffset < 0 && change === 'back' && insertBefore instanceof HTMLElement) {
+          insertBefore.style.top = (element.offsetHeight + gap).toString() + 'px';
+        }
+        if (elementOffset > 0 && change === 'forward' && insertAfter instanceof HTMLElement) {
+          insertAfter.style.top = (-element.offsetHeight - gap).toString() + 'px';
+        }
+        if (elementOffset <= 0 && change === 'forward') {
+          insertAfter?.style.removeProperty('top');
+        }
+        if (elementOffset >= 0 && change === 'back') {
+          insertBefore?.style.removeProperty('top');
         }
         element.style.top = position() + 'px';
-
-        // console.log(`position: ${position()}`);
       };
 
       this.button.onpointerup = () => {
@@ -511,6 +509,15 @@ class ExtGripper extends HTMLElement {
 
         element.style.removeProperty('top');
         element.style.removeProperty('z-index');
+
+        if (elementOffset !== 0) {
+          for (const child of list.children) {
+            if (child instanceof HTMLElement) child.style.removeProperty('top');
+          }
+          element.remove();
+          if (insertBefore instanceof HTMLElement) insertBefore.before(element);
+          else list.appendChild(element);
+        }
       };
     };
   }
