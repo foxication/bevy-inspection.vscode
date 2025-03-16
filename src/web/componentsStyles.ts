@@ -204,6 +204,9 @@ input.replaceSync(
     input.input:focus-visible {
       outline-offset: 0px;
     }
+    input[disabled] {
+      color: var(--vscode-disabledForeground);
+    }
     ::placeholder {
       color: var(--vscode-input-placeholderForeground, #989898);
       opacity: 1;
@@ -211,9 +214,6 @@ input.replaceSync(
   }
   :host([focused]) {
     border-color: var(--vscode-focusBorder, #0078d4);
-  }
-  :host([disabled]) {
-    border-color: var(--vscode-settings-textInputBackground);
   }
 `)
 );

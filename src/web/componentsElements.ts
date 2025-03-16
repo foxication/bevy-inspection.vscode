@@ -114,10 +114,6 @@ class ExtDeclaration extends HTMLElement {
     const hideLabel = this.hasAttribute('hide-label');
     const isIndexed = this.hasAttribute('indexed');
     const value = entityData.get(path);
-    if (!(typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string')) {
-      console.error('VALUE is not basic type');
-      return;
-    }
 
     // Initialize elements
     const background = document.createElement('div');
@@ -161,6 +157,13 @@ class ExtDeclaration extends HTMLElement {
         valueHolder.appendChild(text);
         break;
       }
+
+      default: {
+        const text = document.createElement('ext-string');
+        text.id = path;
+        text.setAttribute('disabled', '');
+        valueHolder.appendChild(text);
+      }
     }
     if (isIndexed) valueHolder.appendChild(removeButton);
     if (isIndexed) valueHolder.appendChild(gripper);
@@ -175,9 +178,9 @@ class ExtDeclaration extends HTMLElement {
 }
 class ExtValue extends HTMLElement {
   get value(): RealValue {
-    const result = entityData.get(this.id) ?? null;
-    if (result === null) console.error(`${this.id} => this path not in table`);
-    return entityData.get(this.id) ?? null;
+    const result = entityData.get(this.id);
+    if (result === undefined) console.error(`${this.id} => this path not in table`);
+    return result ?? null;
   }
 
   set value(v: RealValue) {
@@ -246,7 +249,7 @@ class ExtString extends ExtValue {
 
     // Switchers
     toArea.onclick = () => {
-      area.value = this.value as string;
+      area.value = (this.value as string) ?? 'NULL';
 
       area.style.removeProperty('display');
       toField.style.removeProperty('display');
@@ -254,7 +257,7 @@ class ExtString extends ExtValue {
       toArea.style.display = 'none';
     };
     toField.onclick = () => {
-      field.value = this.value as string;
+      field.value = (this.value as string) ?? 'NULL';
 
       area.style.display = 'none';
       toField.style.display = 'none';
@@ -263,7 +266,7 @@ class ExtString extends ExtValue {
     };
 
     // Set initial mode
-    if ((this.value as string).indexOf('\n') > -1) {
+    if (((this.value as string) ?? '').indexOf('\n') > -1) {
       toArea.onclick(new MouseEvent(''));
     } else {
       toField.onclick(new MouseEvent(''));

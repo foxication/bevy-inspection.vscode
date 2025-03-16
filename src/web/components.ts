@@ -61,7 +61,7 @@ initExtElements();
       console.log(`parsing: ${parsed}`);
 
       // Declaration
-      if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string') {
+      if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string' || parsed === null) {
         entityData.set(path, parsed);
         const declaration = document.createElement('ext-declaration');
         declaration.setAttribute('path', path);
@@ -99,7 +99,7 @@ initExtElements();
         }
         return expandable;
       }
-      return document.createElement('ext-expandable');
+      return document.createElement('ext-declaration');
     }
   }
   const updateStatus = loadComponents({
@@ -111,6 +111,7 @@ initExtElements();
       password: [1, 6, 2, 5, 6, 3],
       favorite: ['ice cream', 'fox', 'sun', 'knifes'],
       coin: [true, true, false, true, false],
+      emptyness: null,
     },
     'component::Nesting': {
       world: {
