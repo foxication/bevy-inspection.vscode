@@ -440,11 +440,9 @@ class ExtGripper extends HTMLElement {
 
     // Constants
     const gap = 4; // px
-    console.log(`gap: ${gap}`);
 
     // Logics
     this.button.onpointerdown = (eventDown) => {
-      console.log('gripper in dragged');
       this.button.setPointerCapture(eventDown.pointerId);
       draggable.style.zIndex = '1';
       draggable.setAttribute('dragging', '');
@@ -457,38 +455,31 @@ class ExtGripper extends HTMLElement {
       let insertBefore: HTMLElement | null = draggable.nextElementSibling as HTMLElement;
       let elementOffset = 0;
 
-      const moveBackTrigger = () => {
-        if (insertAfter === null) return 0;
-        return -(insertAfter.offsetHeight + gap);
-      };
-      const moveForwTrigger = () => {
-        if (insertBefore === null) return 0;
-        return insertBefore.offsetHeight + gap;
-      };
-
       this.button.onpointermove = (eventMove) => {
         const position = (): number => {
           return Math.min(Math.max(eventMove.clientY - initialClientY, minOffset), maxOffset);
+        };
+        const moveBackTrigger = () => {
+          if (insertAfter === null) return 0;
+          return -(insertAfter.offsetHeight + gap);
+        };
+        const moveForwTrigger = () => {
+          if (insertBefore === null) return 0;
+          return insertBefore.offsetHeight + gap;
         };
 
         let change: 'back' | 'none' | 'forward' = 'none';
         if (insertAfter instanceof HTMLElement && position() <= elementOffset + moveBackTrigger() * 0.75) {
           elementOffset += moveBackTrigger();
-
           [insertAfter, insertBefore] = [insertAfter.previousElementSibling as HTMLElement, insertAfter];
           if (insertAfter === draggable) insertAfter = draggable.previousElementSibling as HTMLElement;
-
           change = 'back';
-          console.log('index shifted back');
         }
         if (insertBefore instanceof HTMLElement && position() >= elementOffset + moveForwTrigger() * 0.75) {
           elementOffset += moveForwTrigger();
-
           [insertAfter, insertBefore] = [insertBefore, insertBefore.nextElementSibling as HTMLElement];
           if (insertBefore === draggable) insertBefore = draggable.nextElementSibling as HTMLElement;
-
           change = 'forward';
-          console.log('index shifted forward');
         }
         if (elementOffset < 0 && change === 'back' && insertBefore instanceof HTMLElement) {
           insertBefore.style.top = (draggable.offsetHeight + gap).toString() + 'px';
@@ -506,9 +497,6 @@ class ExtGripper extends HTMLElement {
       };
 
       this.button.onpointerup = () => {
-        console.log('gripper is dropped');
-
-        // pointer automatically releases on onpointerup
         this.button.onpointermove = null;
         this.button.onpointerup = null;
 
@@ -516,13 +504,10 @@ class ExtGripper extends HTMLElement {
         draggable.style.removeProperty('z-index');
         draggable.removeAttribute('dragging');
 
-        if (elementOffset !== 0) {
-          for (const child of list.children) {
-            if (child instanceof HTMLElement) child.style.removeProperty('top');
-          }
-          if (insertBefore instanceof HTMLElement) insertBefore.before(draggable);
-          else list.appendChild(draggable);
-        }
+        if (elementOffset === 0) return;
+        for (const child of list.children) (child as HTMLElement)?.style.removeProperty('top');
+        if (insertBefore instanceof HTMLElement) insertBefore.before(draggable);
+        else list.appendChild(draggable);
       };
     };
   }
