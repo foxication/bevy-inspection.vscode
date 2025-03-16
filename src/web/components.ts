@@ -51,15 +51,12 @@ initExtElements();
 
     componentList.innerHTML = '';
     for (const [componentLabel, componentValue] of Object.entries(data)) {
-      console.log(`component: ${componentLabel}`);
       const component = parseElements(entityLabel + '/' + componentLabel, componentValue, true, true);
       if (component !== undefined) componentList.appendChild(component);
     }
     return 'success';
 
     function parseElements(path: string, parsed: JsonValue, isIndexed = false, isComponent = false): HTMLElement {
-      console.log(`parsing: ${parsed}`);
-
       // Declaration
       if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string' || parsed === null) {
         entityData.set(path, parsed);

@@ -13,7 +13,12 @@ export function initExtElements() {
 }
 
 // ExtElements
+class ExtExpandableContent extends HTMLDivElement {
+  onReorder = () => {};
+}
 class ExtExpandable extends HTMLElement {
+  content = document.createElement('div') as ExtExpandableContent;
+
   connectedCallback() {
     if (this.shadowRoot !== null) return;
 
@@ -21,7 +26,7 @@ class ExtExpandable extends HTMLElement {
     const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
     const isIndexed = this.hasAttribute('indexed');
-    const isArray = this.hasAttribute('array');
+    const arrayRoot = this.getAttribute('array');
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
     // Detials.summary.indent
@@ -76,7 +81,7 @@ class ExtExpandable extends HTMLElement {
     // Details.summary.buttons
     const buttons = document.createElement('div');
     buttons.classList.add('buttons');
-    if (isArray) buttons.appendChild(appendButton);
+    if (arrayRoot !== null) buttons.appendChild(appendButton);
     if (isIndexed) buttons.appendChild(removeButton);
     if (isIndexed) buttons.appendChild(gripper);
 
@@ -90,24 +95,41 @@ class ExtExpandable extends HTMLElement {
     summary.appendChild(buttons);
 
     // Detials.content
-    const content = document.createElement('div');
-    content.setAttribute('class', 'details-content');
-    content.setAttribute('indent', indent.toString());
-    content.innerHTML = this.innerHTML;
+    this.content.setAttribute('class', 'details-content');
+    this.content.setAttribute('indent', indent.toString());
+    this.content.innerHTML = this.innerHTML;
+    if (arrayRoot !== null) {
+      this.content.onReorder = () => {
+        console.log('reorder is called');
+        this.onReorder(arrayRoot);
+      };
+    }
 
     // Detials
     const details = document.createElement('details');
     details.setAttribute('open', '');
     details.appendChild(summary);
-    details.appendChild(content);
+    details.appendChild(this.content);
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
     shadow.appendChild(details);
   }
+  public onReorder(root: string) {
+    let index = 0;
+    for (const child of this.content.children) {
+      (child as ExtExpandable | ExtDeclaration).changePath(root + '.' + index++);
+    }
+  }
+  changePath(path: string) {
+    return path;
+  }
 }
 class ExtDeclaration extends HTMLElement {
+  labelElement = document.createElement('label') as HTMLElement;
+  valueElement: ExtValue | undefined;
+
   connectedCallback() {
     if (this.shadowRoot !== null) return;
 
@@ -121,9 +143,8 @@ class ExtDeclaration extends HTMLElement {
     const background = document.createElement('div');
     background.classList.add('background');
 
-    const labelElement = document.createElement('label');
-    labelElement.setAttribute('for', path);
-    labelElement.textContent = hideLabel ? '' : label;
+    this.labelElement.setAttribute('for', path);
+    this.labelElement.textContent = hideLabel ? '' : label;
 
     const valueHolder = document.createElement('div');
     valueHolder.classList.add('value');
@@ -175,15 +196,23 @@ class ExtDeclaration extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.declaration];
     shadow.appendChild(background);
-    shadow.appendChild(labelElement);
+    shadow.appendChild(this.labelElement);
     shadow.appendChild(valueHolder);
+  }
+  changePath(path: string) {
+    if (this.valueElement === undefined) return;
+    this.setAttribute('path', path);
+    if (this.labelElement.textContent !== '') this.labelElement.textContent = path;
+    this.valueElement.changePath(path);
   }
 }
 class ExtValue extends HTMLElement {
+  lastValue: RealValue = null;
+
   get value(): RealValue {
-    const result = entityData.get(this.id);
-    if (result === undefined) console.error(`${this.id} => this path not in table`);
-    return result ?? null;
+    if (!entityData.has(this.id)) console.error(`${this.id} => this path not in table`);
+    this.lastValue = entityData.get(this.id) ?? null;
+    return this.lastValue;
   }
 
   set value(v: RealValue) {
@@ -200,8 +229,16 @@ class ExtValue extends HTMLElement {
       console.error(`${this.id} => number is not finite`);
       return;
     }
+    this.lastValue = v;
     entityData.set(this.id, v);
     if (previous !== v) onEntityDataChange(this.id);
+  }
+  changePath(path: string) {
+    const previous = entityData.get(this.id);
+    if (previous === undefined) return;
+    this.id = path;
+    entityData.set(path, this.lastValue);
+    if (previous !== this.lastValue) onEntityDataChange(path);
   }
 }
 class ExtString extends ExtValue {
@@ -445,7 +482,7 @@ class ExtGripper extends HTMLElement {
   private button = document.createElement('button');
 
   public set indexed(draggable: HTMLElement) {
-    const list = draggable.parentElement;
+    const list = draggable.parentElement as ExtExpandableContent;
     if (list === null) return;
 
     // Constants
@@ -518,6 +555,7 @@ class ExtGripper extends HTMLElement {
         for (const child of list.children) (child as HTMLElement)?.style.removeProperty('top');
         if (insertBefore instanceof HTMLElement) insertBefore.before(draggable);
         else list.appendChild(draggable);
+        list.onReorder();
       };
     };
   }
