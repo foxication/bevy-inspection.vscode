@@ -475,7 +475,7 @@ class ExtBoolean extends ExtValue {
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.hostIsContent];
+    shadow.adoptedStyleSheets = [extStyles.hostIsContent, extStyles.wideCheckbox];
     shadow.appendChild(checkbox);
 
     // Logics

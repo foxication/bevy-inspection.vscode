@@ -247,3 +247,5 @@ textArea.replaceSync(
 );
 export const hostIsContent = new CSSStyleSheet();
 hostIsContent.replaceSync(':host { display: contents; }');
+export const wideCheckbox = new CSSStyleSheet();
+wideCheckbox.replaceSync('vscode-checkbox { flex: auto; }');
