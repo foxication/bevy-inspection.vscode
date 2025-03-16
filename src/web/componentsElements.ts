@@ -59,6 +59,7 @@ class ExtExpandable extends HTMLElement {
     const removeButton = document.createElement('button');
     removeButton.appendChild(removeIcon);
     removeButton.classList.add('autohide');
+    removeButton.tabIndex = -1;
 
     // Details.summary.buttons.append
     const appendIcon = document.createElement('vscode-icon');
@@ -66,6 +67,7 @@ class ExtExpandable extends HTMLElement {
     const appendButton = document.createElement('button');
     appendButton.appendChild(appendIcon);
     appendButton.classList.add('autohide');
+    appendButton.tabIndex = -1;
 
     // Details.summary.buttons.gripper
     const gripper = document.createElement('ext-gripper') as ExtGripper;
@@ -132,6 +134,7 @@ class ExtDeclaration extends HTMLElement {
     const removeButton = document.createElement('button');
     removeButton.appendChild(removeIcon);
     removeButton.classList.add('compact-tall');
+    removeButton.tabIndex = -1;
 
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
@@ -222,6 +225,7 @@ class ExtString extends ExtValue {
     // Initialize buttons
     const toArea = document.createElement('button');
     toArea.classList.add('inside');
+    toArea.tabIndex = -1;
     const iconArea = document.createElement('vscode-icon');
     iconArea.setAttribute('name', 'list-selection');
     toArea.appendChild(iconArea);
@@ -229,6 +233,7 @@ class ExtString extends ExtValue {
     const toField = document.createElement('button');
     toField.classList.add('inArea');
     toField.classList.add('inside');
+    toField.tabIndex = -1;
     const iconField = document.createElement('vscode-icon');
     iconField.setAttribute('name', 'symbol-string');
     toField.appendChild(iconField);
@@ -346,6 +351,7 @@ class ExtNumber extends ExtValue {
     const decreaseButton = document.createElement('button');
     decreaseButton.classList.add('inside-compact');
     decreaseButton.classList.add('autohide');
+    decreaseButton.tabIndex = -1;
     const decreaseIcon = document.createElement('vscode-icon');
     decreaseIcon.setAttribute('name', 'chevron-left');
     decreaseButton.appendChild(decreaseIcon);
@@ -353,6 +359,7 @@ class ExtNumber extends ExtValue {
     const increaseButton = document.createElement('button');
     increaseButton.classList.add('inside-compact');
     increaseButton.classList.add('autohide');
+    increaseButton.tabIndex = -1;
     const increaseIcon = document.createElement('vscode-icon');
     increaseIcon.setAttribute('name', 'chevron-right');
     increaseButton.appendChild(increaseIcon);
@@ -520,6 +527,7 @@ class ExtGripper extends HTMLElement {
 
     // Initialize elements
     this.button.classList.add('compact-tall');
+    this.button.tabIndex = -1;
 
     const icon = document.createElement('vscode-icon');
     icon.setAttribute('name', 'gripper');

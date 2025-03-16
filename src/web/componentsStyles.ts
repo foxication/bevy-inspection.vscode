@@ -96,6 +96,7 @@ expandable.replaceSync(
       }
     }
     summary:focus {
+      background-color: var(--vscode-list-activeSelectionBackground);
       outline: none;
     }
     .details-content {
