@@ -514,7 +514,6 @@ class ExtGripper extends HTMLElement {
           for (const child of list.children) {
             if (child instanceof HTMLElement) child.style.removeProperty('top');
           }
-          element.remove();
           if (insertBefore instanceof HTMLElement) insertBefore.before(element);
           else list.appendChild(element);
         }
