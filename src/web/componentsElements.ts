@@ -430,8 +430,8 @@ class ExtBoolean extends ExtValue {
 class ExtGripper extends HTMLElement {
   private button = document.createElement('button');
 
-  public set indexed(element: HTMLElement) {
-    const list = element.parentElement;
+  public set indexed(draggable: HTMLElement) {
+    const list = draggable.parentElement;
     if (list === null) return;
 
     // Constants
@@ -442,14 +442,14 @@ class ExtGripper extends HTMLElement {
     this.button.onpointerdown = (eventDown) => {
       console.log('gripper in dragged');
       this.button.setPointerCapture(eventDown.pointerId);
-      element.style.zIndex = '1';
+      draggable.style.zIndex = '1';
 
       const initialClientY = eventDown.clientY;
-      const minOffset = -element.offsetTop;
-      const maxOffset = minOffset + list.offsetHeight - element.offsetHeight;
+      const minOffset = -draggable.offsetTop;
+      const maxOffset = minOffset + list.offsetHeight - draggable.offsetHeight;
 
-      let insertAfter: HTMLElement | null = element.previousElementSibling as HTMLElement;
-      let insertBefore: HTMLElement | null = element.nextElementSibling as HTMLElement;
+      let insertAfter: HTMLElement | null = draggable.previousElementSibling as HTMLElement;
+      let insertBefore: HTMLElement | null = draggable.nextElementSibling as HTMLElement;
       let elementOffset = 0;
 
       const moveBackTrigger = () => {
@@ -471,7 +471,7 @@ class ExtGripper extends HTMLElement {
           elementOffset += moveBackTrigger();
 
           [insertAfter, insertBefore] = [insertAfter.previousElementSibling as HTMLElement, insertAfter];
-          if (insertAfter === element) insertAfter = element.previousElementSibling as HTMLElement;
+          if (insertAfter === draggable) insertAfter = draggable.previousElementSibling as HTMLElement;
 
           change = 'back';
           console.log('index shifted back');
@@ -480,16 +480,16 @@ class ExtGripper extends HTMLElement {
           elementOffset += moveForwTrigger();
 
           [insertAfter, insertBefore] = [insertBefore, insertBefore.nextElementSibling as HTMLElement];
-          if (insertBefore === element) insertBefore = element.nextElementSibling as HTMLElement;
+          if (insertBefore === draggable) insertBefore = draggable.nextElementSibling as HTMLElement;
 
           change = 'forward';
           console.log('index shifted forward');
         }
         if (elementOffset < 0 && change === 'back' && insertBefore instanceof HTMLElement) {
-          insertBefore.style.top = (element.offsetHeight + gap).toString() + 'px';
+          insertBefore.style.top = (draggable.offsetHeight + gap).toString() + 'px';
         }
         if (elementOffset > 0 && change === 'forward' && insertAfter instanceof HTMLElement) {
-          insertAfter.style.top = (-element.offsetHeight - gap).toString() + 'px';
+          insertAfter.style.top = (-draggable.offsetHeight - gap).toString() + 'px';
         }
         if (elementOffset <= 0 && change === 'forward') {
           insertAfter?.style.removeProperty('top');
@@ -497,7 +497,7 @@ class ExtGripper extends HTMLElement {
         if (elementOffset >= 0 && change === 'back') {
           insertBefore?.style.removeProperty('top');
         }
-        element.style.top = position() + 'px';
+        draggable.style.top = position() + 'px';
       };
 
       this.button.onpointerup = () => {
@@ -507,15 +507,15 @@ class ExtGripper extends HTMLElement {
         this.button.onpointermove = null;
         this.button.onpointerup = null;
 
-        element.style.removeProperty('top');
-        element.style.removeProperty('z-index');
+        draggable.style.removeProperty('top');
+        draggable.style.removeProperty('z-index');
 
         if (elementOffset !== 0) {
           for (const child of list.children) {
             if (child instanceof HTMLElement) child.style.removeProperty('top');
           }
-          if (insertBefore instanceof HTMLElement) insertBefore.before(element);
-          else list.appendChild(element);
+          if (insertBefore instanceof HTMLElement) insertBefore.before(draggable);
+          else list.appendChild(draggable);
         }
       };
     };
