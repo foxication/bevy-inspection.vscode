@@ -120,6 +120,9 @@ class ExtDeclaration extends HTMLElement {
     }
 
     // Initialize elements
+    const background = document.createElement('div');
+    background.classList.add('background');
+
     const labelElement = document.createElement('label');
     labelElement.setAttribute('for', path);
     labelElement.textContent = hideLabel ? '' : label;
@@ -165,6 +168,7 @@ class ExtDeclaration extends HTMLElement {
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.declaration];
+    shadow.appendChild(background);
     shadow.appendChild(labelElement);
     shadow.appendChild(valueHolder);
   }
@@ -443,6 +447,7 @@ class ExtGripper extends HTMLElement {
       console.log('gripper in dragged');
       this.button.setPointerCapture(eventDown.pointerId);
       draggable.style.zIndex = '1';
+      draggable.setAttribute('dragging', '');
 
       const initialClientY = eventDown.clientY;
       const minOffset = -draggable.offsetTop;
@@ -509,6 +514,7 @@ class ExtGripper extends HTMLElement {
 
         draggable.style.removeProperty('top');
         draggable.style.removeProperty('z-index');
+        draggable.removeAttribute('dragging');
 
         if (elementOffset !== 0) {
           for (const child of list.children) {

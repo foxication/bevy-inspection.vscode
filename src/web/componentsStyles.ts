@@ -113,16 +113,31 @@ expandable.replaceSync(
   details[open] > summary .rotatable {
     transform: rotate(90deg);
   }
+  :host([dragging]) {
+    background-color: var(--vscode-sideBar-background);
+    
+    >details {
+      background-color: var(--vscode-list-hoverBackground);
+    }
+  }
 `)
 );
 export const declaration = new CSSStyleSheet();
 declaration.replaceSync(
   dontIndent(`
   :host {
+    background-color: var(--vscode-sideBar-background);
     column-gap: 8px;
     display: flex;
     position: relative;
     
+    .background {
+      height: 100%;
+      position: absolute;
+      width: 100%;
+      z-index: -1;
+    }
+
     label {
       flex: 3;
       line-height: 18px;
@@ -137,6 +152,9 @@ declaration.replaceSync(
       display: flex;
       align-items: center;
     }
+  }
+  :host([dragging]) > .background {
+    background-color: var(--vscode-list-hoverBackground);
   }
 `)
 );
