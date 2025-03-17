@@ -8,7 +8,6 @@ import {
   EntityElement,
 } from './hierarchyData';
 import { ConnectionList, EntityFocus } from './connection-list';
-import { ComponentsDataProvider } from './componentsData';
 
 // Context
 function areThereConnections(value: boolean) {
@@ -29,8 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
   const connections = new ConnectionList();
   const hierarchyData = new HierarchyDataProvider(connections);
   const hierarchyView = createHierarchyView(hierarchyData);
-  const componentsData = new ComponentsDataProvider(connections);
-  const componentsView = createComponentsView(context, componentsData, connections);
+  const componentsView = createComponentsView(context, connections);
 
   // Userspace commands
   context.subscriptions.push(
@@ -149,6 +147,5 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  connections.onFocusChanged(() => componentsData.update());
-  componentsData.onDidChangeTreeData(() => componentsView.update());
+  connections.onFocusChanged(() => componentsView.update());
 }

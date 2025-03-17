@@ -1,13 +1,8 @@
 import * as vscode from 'vscode';
-import { ComponentsDataProvider } from './componentsData';
 import { ConnectionList } from './connection-list';
 
-export function createComponentsView(
-  context: vscode.ExtensionContext,
-  componentsData: ComponentsDataProvider,
-  connections: ConnectionList
-) {
-  const componentsView = new ComponentsViewProvider(context.extensionUri, componentsData, connections);
+export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
+  const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('componentsView', componentsView, {
       webviewOptions: { retainContextWhenHidden: true },
@@ -17,13 +12,11 @@ export function createComponentsView(
 }
 
 export class ComponentsViewProvider implements vscode.WebviewViewProvider {
-  private data: ComponentsDataProvider;
   private connections: ConnectionList;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
 
-  constructor(extensionUri: vscode.Uri, data: ComponentsDataProvider, connections: ConnectionList) {
-    this.data = data;
+  constructor(extensionUri: vscode.Uri, connections: ConnectionList) {
     this.connections = connections;
     this.extensionUri = extensionUri;
   }
