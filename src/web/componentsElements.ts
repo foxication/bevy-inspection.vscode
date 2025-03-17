@@ -100,10 +100,7 @@ class ExtExpandable extends HTMLElement {
     this.content.setAttribute('indent', indent.toString());
     this.content.innerHTML = this.innerHTML;
     if (arrayRoot !== null) {
-      this.content.onReorder = () => {
-        console.log('reorder is called');
-        this.onReorder(arrayRoot);
-      };
+      this.content.onReorder = () => this.onReorder(arrayRoot);
     }
 
     // Detials
@@ -246,7 +243,6 @@ class ExtValue extends HTMLElement {
     this.id = path;
     entityData.set(path, this.lastValue);
     if (previous !== this.lastValue) onEntityDataChange(path);
-    else console.log(`${path} without changes`);
   }
 }
 class ExtString extends ExtValue {

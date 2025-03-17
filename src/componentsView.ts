@@ -69,7 +69,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage((data) => {
       switch (data.type) {
         case 'doNothing': {
-          console.log(data.log);
           break;
         }
       }
@@ -100,7 +99,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       .replace(new RegExp('__style__', 'g'), styleUri.toString())
       .replace(new RegExp('__nonce__', 'g'), getNonce());
 
-    console.log(result);
     return result;
   }
 }
