@@ -48,11 +48,8 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     const connection = this.connections.get(this.connections.focus.host);
     if (connection === undefined) return;
 
-    await connection.requestInspectionElementsSimple(this.connections.focus);
+    await connection.requestInspectionElements(this.connections.focus);
     const entityData = connection.getInspectionElementsSimple();
-
-    console.log(entityData);
-    console.log(Object.entries(entityData));
     if (entityData !== undefined) this.view.webview.postMessage({ cmd: 'update', data: entityData });
   }
 

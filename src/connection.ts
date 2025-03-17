@@ -1,14 +1,5 @@
 import * as vscode from 'vscode';
-import * as Elements from './elements';
-import {
-  EntityId,
-  BrpValue,
-  BrpError,
-  BevyRemoteProtocol,
-  TypePath,
-  ServerVersion,
-  BrpObject,
-} from 'bevy-remote-protocol';
+import { EntityId, BevyRemoteProtocol, TypePath, ServerVersion, BrpObject } from 'bevy-remote-protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import { EntityFocus } from './connection-list';
 
@@ -28,8 +19,7 @@ export class Connection {
   // Bevy data
   private registeredComponents: TypePath[] = [];
   private entityElements = new Map<EntityId, EntityElement>();
-  private inspectionElements: Elements.InspectionElement[] = [];
-  private inspectionElementsSimple: BrpObject = {};
+  private inspectionElements: BrpObject = {};
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -117,7 +107,7 @@ export class Connection {
     return status;
   }
 
-  public async requestInspectionElementsSimple(focus: EntityFocus): Promise<ProtocolResult> {
+  public async requestInspectionElements(focus: EntityFocus): Promise<ProtocolResult> {
     const listResponse = await this.protocol.list(focus.entityId).catch((e) => this.errorHandler(e));
     if (listResponse === 'disconnection') return 'disconnection';
     if (listResponse.result === undefined) return 'error';
@@ -126,107 +116,12 @@ export class Connection {
     if (getResponse === 'disconnection') return 'disconnection';
     if (getResponse.result === undefined) return 'error';
 
-    this.inspectionElementsSimple = getResponse.result.components;
+    this.inspectionElements = getResponse.result.components;
     return 'success';
-  }
-
-  public async requestInspectionElements(focus: EntityFocus | null): Promise<ProtocolResult> {
-    if (focus === null) {
-      this.entityElements.clear();
-      return 'success';
-    }
-
-    const listResponse = await this.protocol.list(focus.entityId).catch((e) => this.errorHandler(e));
-    if (listResponse === 'disconnection') {
-      return 'disconnection';
-    }
-    if (listResponse.result === undefined) {
-      return 'error';
-    }
-
-    const getResponse = await this.protocol.get(focus.entityId, listResponse.result).catch((e) => this.errorHandler(e));
-    if (getResponse === 'disconnection') {
-      return 'disconnection';
-    }
-    if (getResponse.result === undefined) {
-      return 'error';
-    }
-
-    // Parsing values
-    const parseValues = (obj: object, isParentArray = false): (Elements.NamedValueElement | Elements.AnyValue)[] => {
-      const elements: (Elements.NamedValueElement | Elements.AnyValue)[] = [];
-
-      for (const entry of Object.entries(obj) as [string, BrpValue][]) {
-        const name = entry[0];
-        const toParse = entry[1];
-
-        if (typeof toParse === 'object') {
-          if (toParse === null) {
-            elements.push(new Elements.NamedValueElement(name, [], 'NULL')); // null
-            continue;
-          }
-          if (Array.isArray(toParse)) {
-            elements.push(new Elements.NamedValueElement(name, parseValues(toParse, true))); // array...
-            continue;
-          }
-          elements.push(new Elements.NamedValueElement(name, parseValues(toParse))); // object...
-          continue;
-        }
-        if (isParentArray) {
-          elements.push(new Elements.AnyValue(toParse)); // array value
-          continue;
-        }
-        elements.push(new Elements.NamedValueElement(name, [], toParse)); // value
-      }
-      return elements;
-    };
-
-    // Parsing components
-    const componentTree = [];
-    for (const entry of Object.entries(getResponse.result.components) as [string, BrpValue][]) {
-      const typePath = entry[0];
-      const toParse = entry[1];
-
-      if (typeof toParse === 'object') {
-        if (toParse === null) {
-          componentTree.push(new Elements.ComponentAndChildren(typePath, [new Elements.AnyValue('NULL')])); // null
-          continue;
-        }
-        if (Array.isArray(toParse)) {
-          componentTree.push(new Elements.ComponentAndChildren(typePath, parseValues(toParse, true))); // array...
-          continue;
-        }
-        componentTree.push(new Elements.ComponentAndChildren(typePath, parseValues(toParse))); // object...
-        continue;
-      }
-      componentTree.push(new Elements.ComponentAndChildren(typePath, [new Elements.AnyValue(toParse)])); // value
-    }
-
-    // Parsing components (errors)
-    for (const entry of Object.entries(getResponse.result.errors) as [string, BrpError][]) {
-      const typePath = entry[0];
-      const toParse = entry[1];
-      const errorData = [
-        new Elements.NamedValueElement('code', [], toParse.code),
-        new Elements.NamedValueElement('message', [], toParse.message),
-      ];
-      if (toParse.data !== undefined && typeof toParse.data !== 'object') {
-        new Elements.NamedValueElement('message', [], toParse.data);
-      }
-      componentTree.push(new Elements.ComponentError(typePath, errorData));
-    }
-
-    // apply changes
-    this.inspectionElements = componentTree;
-    return 'success';
-  }
-
-  public getInspectionElements() {
-    return this.inspectionElements;
   }
 
   public getInspectionElementsSimple() {
-    return this.inspectionElementsSimple;
+    return this.inspectionElements;
   }
 
   public getSessionInfo(): string {
