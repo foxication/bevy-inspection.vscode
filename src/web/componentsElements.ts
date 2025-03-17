@@ -1,6 +1,7 @@
 import * as extStyles from './componentsStyles';
 import { entityData, onEntityDataChange } from './components';
-import { labelFromPath, RealValue } from './lib';
+import { labelFromPath } from './lib';
+import { BrpValue } from 'bevy-remote-protocol';
 
 // Initialization
 export function initExtElements() {
@@ -210,15 +211,15 @@ class ExtDeclaration extends HTMLElement {
   }
 }
 class ExtValue extends HTMLElement {
-  lastValue: RealValue = null;
+  lastValue: BrpValue = null;
 
-  get value(): RealValue {
+  get value(): BrpValue {
     if (!entityData.has(this.id)) console.error(`${this.id} => this path not in table`);
     this.lastValue = entityData.get(this.id) ?? null;
     return this.lastValue;
   }
 
-  set value(v: RealValue) {
+  set value(v: BrpValue) {
     if (!entityData.has(this.id)) {
       console.error(`${this.id} => this path not in table`);
       return;
@@ -245,7 +246,7 @@ class ExtValue extends HTMLElement {
     this.id = path;
     entityData.set(path, this.lastValue);
     if (previous !== this.lastValue) onEntityDataChange(path);
-    else console.log(`${path} without changes`)
+    else console.log(`${path} without changes`);
   }
 }
 class ExtString extends ExtValue {

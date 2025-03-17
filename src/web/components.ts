@@ -1,9 +1,10 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { initExtElements } from './componentsElements';
-import { JsonObject, JsonValue, labelFromPath, RealValue } from './lib';
+import { labelFromPath } from './lib';
+import { BrpObject, BrpValue } from 'bevy-remote-protocol';
 
 // Entity Values
-export const entityData = new Map<string, RealValue>();
+export const entityData = new Map<string, BrpValue>();
 export function onEntityDataChange(path?: string) {
   if (path !== undefined && entityData.has(path)) {
     console.log(`${path} is set to ${entityData.get(path)}`);
@@ -42,7 +43,7 @@ initExtElements();
       idLabel.textContent = entityId.toString();
     }
   }
-  function loadComponents(data: JsonObject) {
+  function loadComponents(data: BrpObject) {
     const componentList = document.querySelector('.component-list');
     if (componentList === null) return 'failure';
     let entityLabel = document.querySelector('#entity-info-id')?.textContent ?? 'unknown';
@@ -51,12 +52,12 @@ initExtElements();
 
     componentList.innerHTML = '';
     for (const [componentLabel, componentValue] of Object.entries(data)) {
-      const component = parseElements(entityLabel + '/' + componentLabel, componentValue, true, true);
+      const component = parseElements(entityLabel + '/' + componentLabel, componentValue as BrpObject, true, true);
       if (component !== undefined) componentList.appendChild(component);
     }
     return 'success';
 
-    function parseElements(path: string, parsed: JsonValue, isIndexed = false, isComponent = false): HTMLElement {
+    function parseElements(path: string, parsed: BrpObject, isIndexed = false, isComponent = false): HTMLElement {
       // Declaration
       if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string' || parsed === null) {
         entityData.set(path, parsed);
@@ -91,7 +92,7 @@ initExtElements();
       }
       if (parsed !== null) {
         for (const [childLabel, childValue] of Object.entries(parsed)) {
-          const element = parseElements(path + '/' + childLabel, childValue);
+          const element = parseElements(path + '/' + childLabel, childValue as BrpObject);
           expandable.appendChild(element);
         }
         return expandable;
@@ -99,33 +100,4 @@ initExtElements();
       return document.createElement('ext-declaration');
     }
   }
-  const updateStatus = loadComponents({
-    'component::AllInputs': {
-      name: 'Alexa',
-      age: 0.314,
-      status: 'dead\nalive\nghost',
-      isHuman: true,
-      password: [1, 6, 2, 5, 6, 3],
-      favorite: ['ice cream', 'fox', 'sun', 'knifes'],
-      coin: [true, true, false, true, false],
-      emptyness: null,
-    },
-    'component::Nesting': {
-      world: {
-        russia: {
-          moscow: 'ulitsa Minskaya',
-        },
-      },
-    },
-    'component::DislabeledDeclaration': 'Hello, World!',
-    'component::DislabeledArray': ['Lorem', 'ipsum', 'dolor'],
-    'component::ArrayOfObjects': [
-      { name: 'Revolver', bullets: 12, damage: 80 },
-      { name: 'Bomb', bullets: 1, damage: 200 },
-      { name: 'Rocket Launcher', bullets: 4, damage: 120 },
-    ],
-    'component::AnotherArray': [{ hello: 'simple' }],
-  });
-  console.log(updateStatus ?? 'failure');
-  onEntityDataChange(); // log whole table
 })();

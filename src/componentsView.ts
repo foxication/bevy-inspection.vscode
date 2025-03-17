@@ -45,22 +45,22 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     if (this.view === undefined) {
       return;
     }
-    // this.view.webview.postMessage({ cmd: 'clear' });
     this.view.webview.postMessage({
       cmd: 'set_entity_info',
       host: this.connections.focus?.host ?? 'unknown',
       entityId: this.connections.focus?.entityId ?? 'unknown',
     });
 
-    // const children = this.data.getChildren();
-    // for (const child of children) {
-    //   if (child instanceof ComponentElement) {
-    //     this.view.webview.postMessage({ cmd: 'add_component' });
-    //     // child.
-    //     continue;
-    //   }
-    //   // other types of elements
-    // }
+    if (this.connections.focus === null) return;
+    const connection = this.connections.get(this.connections.focus.host);
+    if (connection === undefined) return;
+
+    await connection.requestInspectionElementsSimple(this.connections.focus);
+    const entityData = connection.getInspectionElementsSimple();
+
+    console.log(entityData);
+    console.log(Object.entries(entityData));
+    if (entityData !== undefined) this.view.webview.postMessage({ cmd: 'update', data: entityData });
   }
 
   public async resolveWebviewView(

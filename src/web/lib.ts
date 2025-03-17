@@ -1,7 +1,3 @@
-export type RealValue = string | number | boolean | null;
-export type JsonValue = RealValue | JsonObject | JsonValue[];
-export type JsonObject = { [key: string]: JsonValue };
-
 export function labelFromPath(path: string) {
   const labels = path.split('/');
   if (labels.length === 0) {

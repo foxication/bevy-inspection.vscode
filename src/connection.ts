@@ -1,12 +1,25 @@
 import * as vscode from 'vscode';
 import * as Elements from './elements';
-import { EntityId, BrpValue, BrpError, BevyRemoteProtocol, TypePath, ServerVersion } from 'bevy-remote-protocol';
+import {
+  EntityId,
+  BrpValue,
+  BrpError,
+  BevyRemoteProtocol,
+  TypePath,
+  ServerVersion,
+  BrpObject,
+} from 'bevy-remote-protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import { EntityFocus } from './connection-list';
 
 type ProtocolDisconnection = 'disconnection';
 type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
 export type NetworkStatus = 'offline' | 'online';
+
+// Inspection data
+// export type JsonValue = string | number | boolean | null;
+// export type JsonMap = { [key: string]: JsonAll };
+// export type JsonAll = JsonValue | JsonMap | JsonAll[];
 
 export class Connection {
   private protocol: BevyRemoteProtocol;
@@ -16,6 +29,7 @@ export class Connection {
   private registeredComponents: TypePath[] = [];
   private entityElements = new Map<EntityId, EntityElement>();
   private inspectionElements: Elements.InspectionElement[] = [];
+  private inspectionElementsSimple: BrpObject = {};
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -101,6 +115,19 @@ export class Connection {
     }
     status = await this.requestRegisteredComponents();
     return status;
+  }
+
+  public async requestInspectionElementsSimple(focus: EntityFocus): Promise<ProtocolResult> {
+    const listResponse = await this.protocol.list(focus.entityId).catch((e) => this.errorHandler(e));
+    if (listResponse === 'disconnection') return 'disconnection';
+    if (listResponse.result === undefined) return 'error';
+
+    const getResponse = await this.protocol.get(focus.entityId, listResponse.result).catch((e) => this.errorHandler(e));
+    if (getResponse === 'disconnection') return 'disconnection';
+    if (getResponse.result === undefined) return 'error';
+
+    this.inspectionElementsSimple = getResponse.result.components;
+    return 'success';
   }
 
   public async requestInspectionElements(focus: EntityFocus | null): Promise<ProtocolResult> {
@@ -196,6 +223,10 @@ export class Connection {
 
   public getInspectionElements() {
     return this.inspectionElements;
+  }
+
+  public getInspectionElementsSimple() {
+    return this.inspectionElementsSimple;
   }
 
   public getSessionInfo(): string {
