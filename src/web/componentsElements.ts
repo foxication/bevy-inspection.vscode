@@ -1,6 +1,6 @@
 import * as extStyles from './componentsStyles';
 import { entityData, onEntityDataChange } from './components';
-import { labelFromPath } from './lib';
+import { BrpStructurePath, deserializePath, doesValueObjectHas, labelFromPath, serializePath } from './lib';
 import { BrpValue } from 'bevy-remote-protocol';
 
 // Initialization
@@ -27,7 +27,8 @@ class ExtExpandable extends HTMLElement {
     const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
     const isIndexed = this.hasAttribute('indexed');
-    const arrayRoot = this.getAttribute('array');
+    let arrayRoot: BrpStructurePath | undefined = undefined;
+    if (this.hasAttribute('array')) arrayRoot = deserializePath(this.getAttribute('array') ?? '');
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
     // Detials.summary.indent
@@ -82,7 +83,7 @@ class ExtExpandable extends HTMLElement {
     // Details.summary.buttons
     const buttons = document.createElement('div');
     buttons.classList.add('buttons');
-    if (arrayRoot !== null) buttons.appendChild(appendButton);
+    if (arrayRoot !== undefined) buttons.appendChild(appendButton);
     if (isIndexed) buttons.appendChild(removeButton);
     if (isIndexed) buttons.appendChild(gripper);
 
@@ -99,7 +100,7 @@ class ExtExpandable extends HTMLElement {
     this.content.setAttribute('class', 'details-content');
     this.content.setAttribute('indent', indent.toString());
     this.content.innerHTML = this.innerHTML;
-    if (arrayRoot !== null) {
+    if (arrayRoot !== undefined) {
       this.content.onReorder = () => this.onReorder(arrayRoot);
     }
 
@@ -114,7 +115,7 @@ class ExtExpandable extends HTMLElement {
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
     shadow.appendChild(details);
   }
-  public onReorder(root: string) {
+  public onReorder(root: BrpStructurePath) {
     let index = 0;
     for (const child of this.content.children) {
       if (child instanceof ExtExpandable) console.error(`not implemented`);
@@ -130,7 +131,7 @@ class ExtDeclaration extends HTMLElement {
   connectedCallback() {
     if (this.shadowRoot !== null) return;
 
-    const path = this.getAttribute('path') ?? '';
+    const path = deserializePath(this.getAttribute('path') ?? '');
     const hideLabel = this.hasAttribute('hide-label');
     const isIndexed = this.hasAttribute('indexed');
 
@@ -138,7 +139,7 @@ class ExtDeclaration extends HTMLElement {
     const background = document.createElement('div');
     background.classList.add('background');
 
-    this.label.setAttribute('for', path);
+    this.label.setAttribute('for', serializePath(path));
     this.label.textContent = hideLabel ? '' : labelFromPath(path);
 
     const valueHolder = document.createElement('div');
@@ -158,28 +159,28 @@ class ExtDeclaration extends HTMLElement {
     switch (typeof entityData.get(path)) {
       case 'number': {
         this.value = document.createElement('ext-number') as ExtNumber;
-        this.value.id = path;
+        this.value.id = serializePath(path);
         valueHolder.appendChild(this.value);
         break;
       }
 
       case 'boolean': {
         this.value = document.createElement('ext-boolean') as ExtBoolean;
-        this.value.id = path;
+        this.value.id = serializePath(path);
         valueHolder.appendChild(this.value);
         break;
       }
 
       case 'string': {
         this.value = document.createElement('ext-string') as ExtString;
-        this.value.id = path;
+        this.value.id = serializePath(path);
         valueHolder.appendChild(this.value);
         break;
       }
 
       default: {
         this.value = document.createElement('ext-string') as ExtString;
-        this.value.id = path;
+        this.value.id = serializePath(path);
         this.value.setAttribute('disabled', '');
         valueHolder.appendChild(this.value);
       }
@@ -194,15 +195,15 @@ class ExtDeclaration extends HTMLElement {
     shadow.appendChild(this.label);
     shadow.appendChild(valueHolder);
   }
-  changePath(root: string, index: number) {
-    const path = root + '.' + index;
+  changePath(root: BrpStructurePath, index: number) {
+    const path = root.concat(index);
 
     // Skip conditions
     if (this.value === undefined) return;
-    if (this.getAttribute('path') === path) return;
+    if (this.getAttribute('path') === serializePath(path)) return;
 
     // Apply
-    this.setAttribute('path', path);
+    this.setAttribute('path', serializePath(path));
     if (this.label.textContent !== '') this.label.textContent = index.toString();
     this.value.changePath(path);
   }
@@ -211,17 +212,19 @@ class ExtValue extends HTMLElement {
   lastValue: BrpValue = null;
 
   get value(): BrpValue {
-    if (!entityData.has(this.id)) console.error(`${this.id} => this path not in table`);
-    this.lastValue = entityData.get(this.id) ?? null;
+    if (!doesValueObjectHas(entityData, deserializePath(this.id))) {
+      console.error(`${this.id} => this path not in table`);
+    }
+    this.lastValue = entityData.get(deserializePath(this.id)) ?? null;
     return this.lastValue;
   }
 
   set value(v: BrpValue) {
-    if (!entityData.has(this.id)) {
+    if (!doesValueObjectHas(entityData, deserializePath(this.id))) {
       console.error(`${this.id} => this path not in table`);
       return;
     }
-    const previous = entityData.get(this.id);
+    const previous = entityData.get(deserializePath(this.id));
     if (typeof v !== typeof previous) {
       console.error(`${this.id} => types of newValue and oldValue don't match`);
       return;
@@ -231,16 +234,16 @@ class ExtValue extends HTMLElement {
       return;
     }
     this.lastValue = v;
-    entityData.set(this.id, v);
-    if (previous !== v) onEntityDataChange(this.id);
+    entityData.set(deserializePath(this.id), v);
+    if (previous !== v) onEntityDataChange(deserializePath(this.id));
   }
-  changePath(path: string) {
+  changePath(path: BrpStructurePath) {
     const previous = entityData.get(path);
     if (previous === undefined) {
       console.error(`${path} doesn't exist on table`);
       return;
     }
-    this.id = path;
+    this.id = serializePath(path);
     entityData.set(path, this.lastValue);
     if (previous !== this.lastValue) onEntityDataChange(path);
   }

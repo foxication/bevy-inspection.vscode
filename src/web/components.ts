@@ -1,16 +1,12 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { initExtElements } from './componentsElements';
-import { labelFromPath } from './lib';
-import { BrpObject, BrpValue } from 'bevy-remote-protocol';
+import { BrpStructurePath, labelFromPath, serializePath } from './lib';
+import { BrpObject, BrpValueWrapped, TypePath } from 'bevy-remote-protocol';
 
 // Entity Values
-export const entityData = new Map<string, BrpValue>();
-export function onEntityDataChange(path?: string) {
-  if (path !== undefined && entityData.has(path)) {
-    console.log(`${path} is set to ${entityData.get(path)}`);
-    return;
-  }
-  console.log(entityData);
+export const entityData = new BrpValueWrapped(null);
+export function onEntityDataChange(path: (TypePath | number)[]) {
+  console.log(`${path.join('/')} is changed: ${entityData.get(path)}`);
 }
 
 initExtElements();
@@ -51,18 +47,18 @@ initExtElements();
     if (data === null) return 'success';
 
     componentList.innerHTML = '';
-    for (const [componentLabel, componentValue] of Object.entries(data)) {
-      const component = parseElements(entityLabel + '/' + componentLabel, componentValue as BrpObject, true, true);
+    for (const componentLabel of Object.keys(data)) {
+      const component = parseElements([entityLabel, componentLabel], true, true);
       if (component !== undefined) componentList.appendChild(component);
     }
     return 'success';
 
-    function parseElements(path: string, parsed: BrpObject, isIndexed = false, isComponent = false): HTMLElement {
+    function parseElements(path: BrpStructurePath, isIndexed = false, isComponent = false): HTMLElement {
+      const parsed = entityData.get(path);
       // Declaration
       if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string' || parsed === null) {
-        entityData.set(path, parsed);
         const declaration = document.createElement('ext-declaration');
-        declaration.setAttribute('path', path);
+        declaration.setAttribute('path', serializePath(path));
         if (isComponent) {
           declaration.setAttribute('hide-label', '');
           const wrapped = document.createElement('ext-expandable');
@@ -83,16 +79,16 @@ initExtElements();
       if (isIndexed) expandable.setAttribute('indexed', '');
 
       if (parsed instanceof Array) {
-        expandable.setAttribute('array', path);
+        expandable.setAttribute('array', serializePath(path));
         for (const childLabel of parsed.keys()) {
-          const element = parseElements(path + '.' + childLabel, parsed[childLabel], true);
+          const element = parseElements(path.concat(childLabel), true);
           expandable.appendChild(element);
         }
         return expandable;
       }
       if (parsed !== null) {
-        for (const [childLabel, childValue] of Object.entries(parsed)) {
-          const element = parseElements(path + '/' + childLabel, childValue as BrpObject);
+        for (const childLabel of Object.keys(parsed)) {
+          const element = parseElements(path.concat(childLabel));
           expandable.appendChild(element);
         }
         return expandable;

@@ -11,7 +11,7 @@ async function main() {
     minify: production,
     sourcemap: !production ? 'inline' : false,
     sourcesContent: false,
-    platform: 'node',
+    platform: 'browser',
     outfile: 'dist/webview-components.js',
     external: ['vscode'],
     logLevel: 'warning',
