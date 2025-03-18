@@ -7,7 +7,7 @@ async function main() {
   const ctxComponentsWebView = await esbuild.context({
     entryPoints: ['src/web/components.ts'],
     bundle: true,
-    format: 'esm',
+    format: 'cjs',
     minify: production,
     sourcemap: !production ? 'inline' : false,
     sourcesContent: false,

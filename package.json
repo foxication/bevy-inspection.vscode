@@ -92,7 +92,8 @@
 				{
 					"type": "webview",
 					"id": "componentsView",
-					"name": "Components"
+					"name": "Components",
+					"when": "extension.areThereConnections"
 				},
 				{
 					"id": "resourcesView",
