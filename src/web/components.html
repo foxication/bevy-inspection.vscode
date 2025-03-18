@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src __csp_source__; font-src __csp_source__; script-src 'nonce-__nonce__';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="__style__" />
+    <link rel="stylesheet" href="__codicons__" id="vscode-codicon-stylesheet" />
+    <script nonce="__nonce__" type="module" src="__elements__"></script>
+    <script nonce="__nonce__" type="module" src="__script__"></script>
+</head>
+
+<body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
+    <vscode-scrollable>
+        <div id="view-container">
+            <div id="section-entity-info">
+                <h3>Details</h3>
+                <ul id="entity-info">
+                    <li>
+                        <label class="info-label">Connection</label>
+                        <label id="entity-info-host"></label>
+                    </li>
+                    <li>
+                        <label class="info-label">Entity ID</label>
+                        <label id="entity-info-id"></label>
+                    </li>
+                </ul>
+            </div>
+            <div id="section-component-list">
+                <h3>Component List</h3>
+                <div class="component-list">
+                </div>
+            </div>
+            <!-- <div id="section-component-add">
+                <h3>Component Add</h3>
+                <div id="component-creation">
+                    <div id="component-creation-options">
+                        <ext-string value="component::custom::Person" disabled></ext-string>
+                        <vscode-button secondary>Select</vscode-button>
+                    </div>
+                    <ext-declaration path="340121/Name"></ext-declaration>
+                    <ext-declaration path="430599/Second Name"></ext-declaration>
+                    <ext-declaration path="012931/Birth year"></ext-declaration>
+                    <ext-declaration path="487000/Country"></ext-declaration>
+                    <div id="component-creation-confirmation">
+                        <vscode-button icon="plus">Add</vscode-button>
+                    </div>
+                </div>
+            </div> -->
+        </div>
+    </vscode-scrollable>
+</body>
+
+</html>

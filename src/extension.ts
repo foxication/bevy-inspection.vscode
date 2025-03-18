@@ -1,12 +1,17 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
-import { ComponentsProvider, createComponentsView, InspectionFocus } from './components';
-import { ClientElement, createEntitiesView, HierarchyProvider, EntityElement } from './hierarchy';
-import { ClientCollection } from './client-collection';
+import { createComponentsView } from './componentsView';
+import {
+  ConnectionElement,
+  createHierarchyView as createHierarchyView,
+  HierarchyDataProvider,
+  EntityElement,
+} from './hierarchyData';
+import { ConnectionList, EntityFocus } from './connection-list';
 
 // Context
-function areThereClients(value: boolean) {
-  vscode.commands.executeCommand('setContext', 'extension.areThereClients', value);
+function areThereConnections(value: boolean) {
+  vscode.commands.executeCommand('setContext', 'extension.areThereConnections', value);
 }
 
 async function debugLog() {
@@ -17,135 +22,130 @@ async function debugLog() {
 
 export function activate(context: vscode.ExtensionContext) {
   // Context
-  areThereClients(false);
+  areThereConnections(false);
 
-  // Extension
-  const clientCollection = new ClientCollection();
-  const entitiesProvider = new HierarchyProvider(clientCollection);
-  const entitiesView = createEntitiesView(entitiesProvider);
-  const componentsProvider = new ComponentsProvider(clientCollection);
-  const componentsView = createComponentsView(componentsProvider);
+  // Views
+  const connections = new ConnectionList();
+  const hierarchyData = new HierarchyDataProvider(connections);
+  const hierarchyView = createHierarchyView(hierarchyData);
+  const componentsView = createComponentsView(context, connections);
 
   // Userspace commands
   context.subscriptions.push(
     vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
-    vscode.commands.registerCommand('extension.addClient', () => clientCollection.tryCreateClient()),
-    vscode.commands.registerCommand('extension.reviveLastClient', () => clientCollection.tryCreateClient('last'))
+    vscode.commands.registerCommand('extension.addConnection', () => connections.tryCreateConnection()),
+    vscode.commands.registerCommand('extension.reconnectLast', () => connections.tryCreateConnection('last'))
   );
 
   // Extension only commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('extension.reviveClient', (element: ClientElement) =>
-      clientCollection.get(element.host)?.revive()
+    vscode.commands.registerCommand('extension.reconnect', (element: ConnectionElement) =>
+      connections.get(element.host)?.reconnect()
     ),
-    vscode.commands.registerCommand('extension.refreshWorld', (element: ClientElement | EntityElement) =>
-      clientCollection.get(element.host)?.updateEntitiesElements()
+    vscode.commands.registerCommand('extension.updateEntities', (element: ConnectionElement | EntityElement) =>
+      connections.get(element.host)?.requestEntityElements()
     ),
-    vscode.commands.registerCommand('extension.killClient', (element: ClientElement) =>
-      clientCollection.get(element.host)?.death()
+    vscode.commands.registerCommand('extension.disonnect', (element: ConnectionElement) =>
+      connections.get(element.host)?.disconnect()
     ),
-    vscode.commands.registerCommand('extension.forgotClient', (element: ClientElement) =>
-      clientCollection.removeClient(element.host)
+    vscode.commands.registerCommand('extension.removeConnection', (element: ConnectionElement) =>
+      connections.removeConnection(element.host)
     ),
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
-      clientCollection.get(element.host)?.destroyEntity(element)
+      connections.get(element.host)?.requestDestroyOfEntity(element)
     ),
     vscode.commands.registerCommand('extension.renameEntity', (element: EntityElement) =>
-      clientCollection.get(element.host)?.renameEntity(element)
+      connections.get(element.host)?.requestRenameOfEntity(element)
     )
   );
 
-  // Events
-  componentsProvider.onDidChangeTreeData(() => {
-    if (entitiesView.selection.length === 1) {
-      const selectedElement = entitiesView.selection[0];
-      if (selectedElement instanceof ClientElement) {
-        componentsView.title = 'Components';
-        componentsView.message = undefined;
-      }
-      if (selectedElement instanceof EntityElement) {
-        componentsView.title = 'Components of ' + (selectedElement.name ?? 'Entity');
-        componentsView.message = 'host:' + selectedElement.host + ' id: ' + selectedElement.id;
-      }
-    }
-    if (entitiesView.selection.length === 0) {
-      componentsView.title = 'Components';
-      componentsView.message = undefined;
-    }
-  });
-
-  entitiesProvider.onDidChangeTreeData(() => {});
-
-  entitiesView.onDidChangeSelection((event) => {
-    if (event.selection.length === 0) {
-      componentsProvider.update(null);
-    }
-    if (event.selection.length === 1) {
-      const selection = event.selection[0];
-      // ClientElement is skipped!
-      if (selection instanceof EntityElement) {
-        componentsProvider.update(new InspectionFocus(selection.host, selection.id));
-      }
-    }
-  });
-
-  clientCollection.onClientAdded((client) => {
+  // Events sorted by call order
+  connections.onAdded((connection) => {
     // Update views
-    entitiesView.description = undefined;
-    componentsView.description = undefined;
-    entitiesProvider.updateClients();
+    hierarchyView.description = undefined;
+    hierarchyData.updateConnections();
 
     // Set context
-    areThereClients(true);
+    areThereConnections(true);
 
     // Connect all events
-    client.onEntitiesUpdated((client) => {
-      entitiesProvider.updateInClient(client.getProtocol().url.host);
+    connection.onHierarchyUpdated((connection) => {
+      hierarchyData.updateInConnection(connection.getProtocol().url.host);
     });
 
-    client.onEntityDestroyed((destroyed) => {
+    connection.onEntityDestroyed((destroyed) => {
       if (destroyed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(destroyed.host)?.getElement(destroyed.childOf);
+      const scope = connections.get(destroyed.host)?.getById(destroyed.childOf);
       if (scope === undefined) {
         return;
       }
-      entitiesProvider.updateInScope(scope);
+      hierarchyData.updateInScope(scope);
     });
 
-    client.onEntityRenamed((renamed) => {
+    connection.onEntityRenamed((renamed) => {
       if (renamed.childOf === undefined) {
         return;
       }
-      const scope = clientCollection.get(renamed.host)?.getElement(renamed.childOf);
+      const scope = connections.get(renamed.host)?.getById(renamed.childOf);
       if (scope === undefined) {
         return;
       }
-      entitiesProvider.updateInScope(scope);
+      hierarchyData.updateInScope(scope);
     });
 
-    client.onDeath((client) => {
-      entitiesProvider.updateClients();
+    connection.onDisconnection((connection) => {
+      hierarchyData.updateConnections();
 
-      if (client.isInitialized) {
-        vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
-          if (reaction === 'Reconnect') {
-            clientCollection.tryCreateClient('last');
-          }
-        });
-      } else {
-        vscode.window.showInformationMessage('Bevy instance refused to connect');
+      vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
+        if (reaction === 'Reconnect') {
+          connections.tryCreateConnection('last');
+        }
+      });
+      if (connections.focus?.host === connection.getProtocol().url.host) {
+        componentsView.description = 'Disconnected';
       }
     });
 
-    client.onRevive(() => {
-      entitiesProvider.updateClients();
+    connection.onReconnection(() => {
+      hierarchyData.updateConnections();
+      if (connections.focus?.host === connection.getProtocol().url.host) {
+        componentsView.description = undefined;
+      }
     });
   });
-
-  clientCollection.onClientRemoved(() => {
-    areThereClients(clientCollection.all().length > 0);
-    entitiesProvider.updateClients();
+  connections.onAddError(() => {
+    vscode.window.showErrorMessage('Bevy instance refused to connect');
   });
+  connections.onRemoved(() => {
+    areThereConnections(connections.all().length > 0);
+    hierarchyData.updateConnections();
+  });
+
+  hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
+  hierarchyView.onDidChangeSelection((event) => {
+    switch (event.selection.length) {
+      // case 0: {
+      //   connections.updateFocus(null);
+      //   componentsView.title = undefined;
+      //   break;
+      // }
+      case 1: {
+        const selection = event.selection[0];
+        if (!(selection instanceof EntityElement)) {
+          break;
+        }
+        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') {
+          break;
+        }
+        connections.updateFocus(new EntityFocus(selection.host, selection.id));
+        componentsView.title = 'Components of ' + (selection.name ?? selection.id);
+        componentsView.description = undefined;
+        break;
+      }
+    }
+  });
+
+  connections.onFocusChanged(() => componentsView.update());
 }

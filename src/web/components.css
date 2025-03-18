@@ -1,0 +1,139 @@
+/* 
+ * Global
+ */
+
+html {
+  scrollbar-color: unset;
+}
+
+body {
+  padding: 0;
+  user-select: none;
+  color: var(--vscode-foreground);
+  overflow: hidden;
+}
+
+p {
+  margin: 0;
+}
+
+ul {
+  margin: 0;
+}
+
+h3 {
+  margin-block-start: 0;
+  margin-block-end: 6px;
+}
+
+/*
+ * Scrollable Style
+ */
+
+vscode-scrollable {
+  height: 100vh;
+  width: 100%;
+
+  vscode-tree:first-child {
+    margin-top: 0;
+  }
+
+  vscode-tree:last-child {
+    margin-bottom: 0;
+  }
+
+  #view-container {
+    margin: 14px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+}
+
+/*
+ * Entity Information Style
+ */
+
+ul#entity-info {
+  padding-left: 0;
+
+  li {
+    display: flex;
+
+    label {
+      flex: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+  }
+}
+
+/*
+ * Component List
+ */
+
+.component-list {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  row-gap: 4px;
+}
+
+#component-creation {
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+
+  #component-creation-options {
+    display: flex;
+    column-gap: 4px;
+
+    ext-string {
+      flex: auto;
+    }
+
+    vscode-button {
+      flex: none;
+    }
+  }
+
+  #component-creation-confirmation {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+/* 
+ * EXPERIMENTAL
+ */
+
+div#section-experimental {
+  display: flex;
+  flex-direction: column;
+  row-gap: 5px;
+  position: relative;
+  width: 100%;
+
+  .draggable {
+    width: 100%;
+    height: 40px;
+    background-color: lightgray;
+    display: flex;
+    position: relative;
+    border: 2px solid black;
+    box-sizing: border-box;
+
+    p {
+      margin: auto;
+    }
+
+    .dragHandle {
+      width: 20px;
+      height: 100%;
+      background-color: darkgray;
+    }
+  }
+}
