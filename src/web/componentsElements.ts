@@ -278,9 +278,7 @@ class ExtValue extends HTMLElement {
       console.error(`${this.id} => number is not finite`);
       return;
     }
-    this.lastValue = v;
-    entityData.set(this.path, v);
-    if (previous !== v) onEntityDataChange(this.path);
+    if (previous !== v) onEntityDataChange(this.path, v);
   }
 
   get valueAsString(): string {

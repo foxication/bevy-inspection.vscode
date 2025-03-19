@@ -1,11 +1,29 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { ExtExpandable, initExtElements } from './componentsElements';
 import { BrpStructure, TypePath } from 'bevy-remote-protocol/src/types';
+import { BrpValue } from 'bevy-remote-protocol';
+import { VSCodeMessage, WebviewMessage } from './lib';
+
+// VSCode Access
+const vscode = acquireVsCodeApi();
+function postWebviewMessage(message: WebviewMessage) {
+  vscode.postMessage(message);
+}
 
 // Entity Values
 export const entityData = new BrpStructure(null);
-export function onEntityDataChange(path: (TypePath | number)[]) {
-  console.log(`${path.join('/')} is changed: ${entityData.get(path)}`);
+export function onEntityDataChange(path: (TypePath | number)[], value: BrpValue) {
+  postWebviewMessage({
+    cmd: 'mutate_component',
+    data: {
+      component: path[0].toString(),
+      path: path
+        .slice(1)
+        .map((v) => '.' + v)
+        .join(''),
+      value: value,
+    },
+  });
 }
 
 initExtElements();
@@ -14,10 +32,9 @@ initExtElements();
 (function () {
   // Event listener
   window.addEventListener('message', (event) => {
-    const message = event.data;
+    const message = event.data as VSCodeMessage;
+    console.log(`recieved message: ${message.cmd}`);
     switch (message.cmd) {
-      case 'add_component':
-        break;
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
         break;

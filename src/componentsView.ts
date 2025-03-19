@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
+import { VSCodeMessage, WebviewMessage } from './web/lib';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
@@ -33,15 +34,20 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private postVSCodeMessage(message: VSCodeMessage) {
+    if (this.view === undefined) return;
+    this.view.webview.postMessage(message);
+  }
+
   // Called on componentsData.onDidChangeTreeData
   public async update() {
     if (this.view === undefined) {
       return;
     }
-    this.view.webview.postMessage({
+    this.postVSCodeMessage({
       cmd: 'set_entity_info',
       host: this.connections.focus?.host ?? 'unknown',
-      entityId: this.connections.focus?.entityId ?? 'unknown',
+      entityId: this.connections.focus?.entityId ?? 0,
     });
 
     if (this.connections.focus === null) return;
@@ -50,7 +56,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
     await connection.requestInspectionElements(this.connections.focus);
     const entityData = connection.getInspectionElementsSimple();
-    if (entityData !== undefined) this.view.webview.postMessage({ cmd: 'update', data: entityData });
+    if (entityData !== undefined) this.postVSCodeMessage({ cmd: 'update', data: entityData });
   }
 
   public async resolveWebviewView(
@@ -66,9 +72,14 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this.extensionUri],
     };
     this.view.webview.html = await this.getHtmlForWebview();
-    webviewView.webview.onDidReceiveMessage((data) => {
-      switch (data.type) {
-        case 'doNothing': {
+    webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => {
+      console.log(`received message: ${message.cmd}`);
+      switch (message.cmd) {
+        case 'mutate_component': {
+          console.log(message.data);
+          break;
+        }
+        case 'ready_for_watch': {
           break;
         }
       }
