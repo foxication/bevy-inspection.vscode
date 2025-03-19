@@ -17,6 +17,7 @@ buttons.replaceSync(
     background-color: transparent;
     border-radius: inherit;
     border: 0px;
+    color: var(--vscode-settings-textInputForeground, #cccccc);
     cursor: pointer;
     display: flex;
     flex: none;
@@ -32,6 +33,10 @@ buttons.replaceSync(
   button.inside-compact {
     height: 24px;
     width: unset;
+  }
+  button.inside-wide {
+    height: 24px;
+    width: 100%;
   }
   button.compact-tall {
     height: 100%;

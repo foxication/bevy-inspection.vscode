@@ -510,25 +510,26 @@ class ExtBoolean extends ExtValue {
   connectedCallback() {
     if (this.shadowRoot !== null) return;
 
-    const isDisabled = this.hasAttribute('disabled');
-
-    // Initialize elements
-    const checkbox = document.createElement('vscode-checkbox');
-    if (isDisabled) checkbox.setAttribute('disabled', '');
-    if (this.value) {
-      checkbox.setAttribute('checked', '');
-    }
+    const checkbox = () => {
+      const element = document.createElement('button');
+      element.classList.add('inside-wide');
+      if (typeof this.value !== 'boolean') {
+        element.textContent = 'Not Boolean';
+      } else if (this.value === true) {
+        element.textContent = 'True';
+      } else {
+        element.textContent = 'False';
+      }
+      element.onclick = () => {
+        this.value = !this.value;
+      };
+      return element;
+    };
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [extStyles.hostIsContent, extStyles.wideCheckbox];
-    shadow.append(checkbox);
-
-    // Logics
-    const observer = new MutationObserver(() => {
-      this.value = checkbox.hasAttribute('checked');
-    });
-    observer.observe(checkbox, { attributes: true, attributeFilter: ['checked'] });
+    shadow.adoptedStyleSheets = [extStyles.input, extStyles.buttons];
+    shadow.append(checkbox());
   }
 }
 class ExtGripper extends HTMLElement {
