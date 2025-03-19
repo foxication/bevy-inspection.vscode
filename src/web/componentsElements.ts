@@ -22,7 +22,7 @@ export class ExtExpandable extends HTMLElement {
   path: BrpStructurePath = [];
 
   connectedCallback() {
-    if (this.shadowRoot !== null) console.error('shadow root already exists');
+    if (this.shadowRoot !== null) return;
 
     // Root scenario
     if (this.path.length === 0) {
@@ -193,7 +193,7 @@ export class ExtDeclaration extends HTMLElement {
   path: BrpStructurePath = [];
 
   connectedCallback() {
-    if (this.shadowRoot !== null) console.error('shadow root already exists');
+    if (this.shadowRoot !== null) return;
     if (this.path.length === 0) return;
     const hideLabel = this.path.length === 1;
     const inArray = entityData.get(this.path.slice(0, -1)) instanceof Array;
@@ -299,7 +299,7 @@ class ExtValue extends HTMLElement {
 }
 class ExtString extends ExtValue {
   connectedCallback() {
-    if (this.shadowRoot !== null) console.error('shadow root already exists');
+    if (this.shadowRoot !== null) return;
     const isDisabled = entityData.get(this.path) === null;
 
     const field = () => {
@@ -441,7 +441,7 @@ class ExtNumber extends ExtValue {
   }
 
   connectedCallback() {
-    if (this.shadowRoot !== null) console.error('shadow root already exists');
+    if (this.shadowRoot !== null) return;
 
     const isDisabled = this.hasAttribute('disabled');
 
@@ -516,7 +516,7 @@ class ExtNumber extends ExtValue {
 }
 class ExtBoolean extends ExtValue {
   connectedCallback() {
-    if (this.shadowRoot !== null) console.error('shadow root already exists');
+    if (this.shadowRoot !== null) return;
 
     const isDisabled = this.hasAttribute('disabled');
 
@@ -622,7 +622,7 @@ class ExtGripper extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.shadowRoot !== null) console.error('shadow root already exists');
+    if (this.shadowRoot !== null) return;
 
     // Initialize elements
     this.button.classList.add('compact-tall');
