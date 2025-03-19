@@ -99,20 +99,20 @@ expandable.replaceSync(
       background-color: var(--vscode-list-activeSelectionBackground);
       outline: none;
     }
-    .details-content {
-      cursor: default;
-      display: flex;
-      flex-direction: column;
-      margin-top: 4px;
-      position: relative;
-      row-gap: 4px;
-    }
   }
   details:hover {
     cursor: pointer;
   }
   details[open] > summary .rotatable {
     transform: rotate(90deg);
+  }
+  .details-content {
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    margin-top: 4px;
+    position: relative;
+    row-gap: 4px;
   }
   :host([dragging]) {
     background-color: var(--vscode-sideBar-background);

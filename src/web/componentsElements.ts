@@ -30,6 +30,7 @@ export class ExtExpandable extends HTMLElement {
       for (const key of entityData.keys()) {
         const declaration = document.createElement('ext-expandable') as ExtDeclaration;
         declaration.path = [key];
+        this.content.classList.add('details-content');
         this.content.append(declaration);
       }
       // Create shadow DOM
@@ -119,7 +120,7 @@ export class ExtExpandable extends HTMLElement {
       return element;
     };
     const content = () => {
-      this.content.setAttribute('class', 'details-content');
+      this.content.classList.add('details-content');
       if (isArray) this.content.onReorder = () => this.onReorder(this.path);
 
       const declaration = (path: BrpStructurePath) => {
