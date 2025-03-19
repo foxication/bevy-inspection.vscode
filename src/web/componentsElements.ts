@@ -35,7 +35,7 @@ export class ExtExpandable extends HTMLElement {
       // Create shadow DOM
       const shadow = this.attachShadow({ mode: 'open' });
       shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
-      shadow.appendChild(this.content);
+      shadow.append(this.content);
       return;
     }
 
@@ -81,7 +81,7 @@ export class ExtExpandable extends HTMLElement {
         return removeIcon;
       };
       const element = document.createElement('button');
-      element.appendChild(removeIcon());
+      element.append(removeIcon());
       element.classList.add('autohide');
       element.tabIndex = -1;
       return element;
@@ -93,7 +93,7 @@ export class ExtExpandable extends HTMLElement {
         return element;
       };
       const element = document.createElement('button');
-      element.appendChild(appendIcon());
+      element.append(appendIcon());
       element.classList.add('autohide');
       element.tabIndex = -1;
       return element;
@@ -106,19 +106,16 @@ export class ExtExpandable extends HTMLElement {
     const buttons = () => {
       const element = document.createElement('div');
       element.classList.add('buttons');
-      if (isArray) element.appendChild(appendButton());
-      if (inArray) element.appendChild(removeButton());
-      if (inArray) element.appendChild(gripper());
+      if (isArray) element.append(appendButton());
+      if (inArray) element.append(removeButton(), gripper());
       return element;
     };
     const summary = () => {
       const element = document.createElement('summary');
       if (indentPx >= 0) element.append(indentation());
-      element.appendChild(chevron());
-      if (isComponent) element.appendChild(icon());
-      element.appendChild(labelElement());
-      element.appendChild(space());
-      element.appendChild(buttons());
+      element.append(chevron());
+      if (isComponent) element.append(icon());
+      element.append(labelElement(), space(), buttons());
       return element;
     };
     const content = () => {
@@ -141,7 +138,7 @@ export class ExtExpandable extends HTMLElement {
 
       // single value (for components)
       if (typeof children !== 'object' || children === null) {
-        this.content.appendChild(declaration(this.path));
+        this.content.append(declaration(this.path));
         return this.content;
       }
 
@@ -150,8 +147,8 @@ export class ExtExpandable extends HTMLElement {
         for (const key of children.keys()) {
           const path = this.path.concat(key);
           const child = entityData.get(path);
-          if (typeof child !== 'object' || child === null) this.content.appendChild(declaration(path));
-          else this.content.appendChild(expandable(path));
+          if (typeof child !== 'object' || child === null) this.content.append(declaration(path));
+          else this.content.append(expandable(path));
         }
         return this.content;
       }
@@ -160,23 +157,22 @@ export class ExtExpandable extends HTMLElement {
       for (const key of Object.keys(children)) {
         const path = this.path.concat(key);
         const child = entityData.get(path);
-        if (typeof child !== 'object' || child === null) this.content.appendChild(declaration(path));
-        else this.content.appendChild(expandable(path));
+        if (typeof child !== 'object' || child === null) this.content.append(declaration(path));
+        else this.content.append(expandable(path));
       }
       return this.content;
     };
     const details = () => {
       const element = document.createElement('details');
       element.setAttribute('open', '');
-      element.appendChild(summary());
-      element.appendChild(content());
+      element.append(summary(), content());
       return element;
     };
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
-    shadow.appendChild(details());
+    shadow.append(details());
   }
   public onReorder(root: BrpStructurePath) {
     let index = 0;
@@ -212,7 +208,7 @@ export class ExtDeclaration extends HTMLElement {
         return element;
       };
       const element = document.createElement('button');
-      element.appendChild(removeIcon());
+      element.append(removeIcon());
       element.classList.add('compact-tall');
       element.tabIndex = -1;
       return element;
@@ -229,33 +225,30 @@ export class ExtDeclaration extends HTMLElement {
         case 'number': {
           this.value = document.createElement('ext-number') as ExtNumber;
           this.value.path = this.path;
-          element.appendChild(this.value);
+          element.append(this.value);
           break;
         }
         case 'boolean': {
           this.value = document.createElement('ext-boolean') as ExtBoolean;
           this.value.path = this.path;
-          element.appendChild(this.value);
+          element.append(this.value);
           break;
         }
         default: {
           this.value = document.createElement('ext-string') as ExtString;
           this.value.path = this.path;
-          element.appendChild(this.value);
+          element.append(this.value);
           break;
         }
       }
-      if (inArray) element.appendChild(removeButton());
-      if (inArray) element.appendChild(gripper());
+      if (inArray) element.append(removeButton(), gripper());
       return element;
     };
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.declaration];
-    shadow.appendChild(background());
-    shadow.appendChild(this.label);
-    shadow.appendChild(valueHolder());
+    shadow.append(background(), this.label, valueHolder());
   }
 }
 class ExtValue extends HTMLElement {
@@ -370,7 +363,7 @@ class ExtString extends ExtValue {
       const element = document.createElement('button');
       element.classList.add('inside');
       element.tabIndex = -1;
-      element.appendChild(iconArea());
+      element.append(iconArea());
       return element;
     };
     const toField = () => {
@@ -382,7 +375,7 @@ class ExtString extends ExtValue {
       const element = document.createElement('button');
       element.classList.add('inArea', 'inside');
       element.tabIndex = -1;
-      element.appendChild(iconField());
+      element.append(iconField());
       return element;
     };
 
@@ -409,8 +402,8 @@ class ExtString extends ExtValue {
     const buttonCollection = () => {
       const element = document.createElement('div');
       element.classList.add('button-collection', 'autohide');
-      element.appendChild(toAreaButton);
-      element.appendChild(toFieldButton);
+      element.append(toAreaButton);
+      element.append(toFieldButton);
       return element;
     };
 
@@ -418,9 +411,9 @@ class ExtString extends ExtValue {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.input, extStyles.textArea];
 
-    shadow.appendChild(areaElement);
-    shadow.appendChild(fieldElement);
-    if (!isDisabled) shadow.appendChild(buttonCollection());
+    shadow.append(areaElement);
+    shadow.append(fieldElement);
+    if (!isDisabled) shadow.append(buttonCollection());
 
     // Set initial mode
     if (this.valueAsString.indexOf('\n') > -1) toAreaButton.onclick(new MouseEvent(''));
@@ -452,7 +445,7 @@ class ExtNumber extends ExtValue {
     decreaseButton.tabIndex = -1;
     const decreaseIcon = document.createElement('vscode-icon');
     decreaseIcon.setAttribute('name', 'chevron-left');
-    decreaseButton.appendChild(decreaseIcon);
+    decreaseButton.append(decreaseIcon);
 
     const increaseButton = document.createElement('button');
     increaseButton.classList.add('inside-compact');
@@ -460,7 +453,7 @@ class ExtNumber extends ExtValue {
     increaseButton.tabIndex = -1;
     const increaseIcon = document.createElement('vscode-icon');
     increaseIcon.setAttribute('name', 'chevron-right');
-    increaseButton.appendChild(increaseIcon);
+    increaseButton.append(increaseIcon);
 
     const input = document.createElement('input');
     input.setAttribute('type', 'text');
@@ -472,9 +465,9 @@ class ExtNumber extends ExtValue {
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.input];
-    if (!isDisabled) shadow.appendChild(decreaseButton);
-    shadow.appendChild(input);
-    if (!isDisabled) shadow.appendChild(increaseButton);
+    if (!isDisabled) shadow.append(decreaseButton);
+    shadow.append(input);
+    if (!isDisabled) shadow.append(increaseButton);
 
     // Logics of buttons
     decreaseButton.onclick = () => {
@@ -530,7 +523,7 @@ class ExtBoolean extends ExtValue {
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.hostIsContent, extStyles.wideCheckbox];
-    shadow.appendChild(checkbox);
+    shadow.append(checkbox);
 
     // Logics
     const observer = new MutationObserver(() => {
@@ -615,7 +608,7 @@ class ExtGripper extends HTMLElement {
         if (elementOffset === 0) return;
         for (const child of list.children) (child as HTMLElement)?.style.removeProperty('top');
         if (insertBefore instanceof HTMLElement) insertBefore.before(draggable);
-        else list.appendChild(draggable);
+        else list.append(draggable);
         list.onReorder();
       };
     };
@@ -630,11 +623,11 @@ class ExtGripper extends HTMLElement {
 
     const icon = document.createElement('vscode-icon');
     icon.setAttribute('name', 'gripper');
-    this.button.appendChild(icon);
+    this.button.append(icon);
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.hostIsContent];
-    shadow.appendChild(this.button);
+    shadow.append(this.button);
   }
 }
