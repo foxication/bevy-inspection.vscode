@@ -113,7 +113,7 @@ export class ExtExpandable extends HTMLElement {
     };
     const summary = () => {
       const element = document.createElement('summary');
-      if (indentPx >= 0) element.append(indentation());
+      if (indentPx > 0) element.append(indentation());
       element.append(chevron());
       if (isComponent) element.append(icon());
       element.append(labelElement(), space(), buttons());
