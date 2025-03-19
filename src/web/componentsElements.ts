@@ -22,101 +22,161 @@ export class ExtExpandable extends HTMLElement {
   path: BrpStructurePath = [];
 
   connectedCallback() {
-    console.log(`EXPANDABLE init ${this.path}`);
-
     if (this.shadowRoot !== null) return;
-    if (this.path.length === 0) return;
 
-    const label = this.path[this.path.length - 1].toString() ?? '';
-    const readableLabel = label.replace(/::/g, ' :: ');
-    const isComponent = this.hasAttribute('component');
-    const isIndexed = this.hasAttribute('indexed');
-    const arrayRoot = entityData.get(this.path) instanceof Array;
-    const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
+    // Root scenario
+    if (this.path.length === 0) {
+      // Create list of components
+      for (const key of entityData.keys()) {
+        const declaration = document.createElement('ext-expandable') as ExtDeclaration;
+        declaration.path = [key];
+        this.content.append(declaration);
+      }
+      // Create shadow DOM
+      const shadow = this.attachShadow({ mode: 'open' });
+      shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
+      shadow.appendChild(this.content);
+      return;
+    }
 
-    // Detials.summary.indent
+    const label = (this.path[this.path.length - 1].toString() ?? '').replace(/::/g, ' :: ');
+    const isComponent = this.path.length === 1;
+    const inArray = entityData.get(this.path.slice(0, -1)) || isComponent;
+    const isArray = entityData.get(this.path) instanceof Array;
+    const indent = Math.max(this.path.length - 1, 0);
+    const indentPx = Math.max(indent * 22 - 6, 0);
+
     const indentation = () => {
       const element = document.createElement('div');
-      element.style.width = indent.toString() + 'px';
+      element.style.width = indentPx.toString() + 'px';
       element.classList.add('indent');
       return element;
     };
-
-    // Detials.summary.chevron
-    const chevron = document.createElement('vscode-icon');
-    chevron.setAttribute('name', 'chevron-right');
-    chevron.setAttribute('class', 'rotatable');
-
-    // Detials.summary.label
-    const labelElement = document.createElement('span');
-    labelElement.textContent = readableLabel ?? '';
-
-    // Details.summary.icon
+    const chevron = () => {
+      const element = document.createElement('vscode-icon');
+      element.setAttribute('name', 'chevron-right');
+      element.setAttribute('class', 'rotatable');
+      return element;
+    };
+    const labelElement = () => {
+      const element = document.createElement('span');
+      element.textContent = label ?? '';
+      return element;
+    };
     const icon = () => {
       const element = document.createElement('vscode-icon');
       element.setAttribute('name', 'symbol-method');
       element.setAttribute('class', 'component-type-icon');
       return element;
     };
+    const space = () => {
+      const element = document.createElement('div');
+      element.classList.add('space');
+      return element;
+    };
+    const removeButton = () => {
+      const removeIcon = () => {
+        const removeIcon = document.createElement('vscode-icon');
+        removeIcon.setAttribute('name', 'trash');
+        return removeIcon;
+      };
+      const element = document.createElement('button');
+      element.appendChild(removeIcon());
+      element.classList.add('autohide');
+      element.tabIndex = -1;
+      return element;
+    };
+    const appendButton = () => {
+      const appendIcon = () => {
+        const element = document.createElement('vscode-icon');
+        element.setAttribute('name', 'expand-all');
+        return element;
+      };
+      const element = document.createElement('button');
+      element.appendChild(appendIcon());
+      element.classList.add('autohide');
+      element.tabIndex = -1;
+      return element;
+    };
+    const gripper = () => {
+      const element = document.createElement('ext-gripper') as ExtGripper;
+      element.indexed = this;
+      return element;
+    };
+    const buttons = () => {
+      const element = document.createElement('div');
+      element.classList.add('buttons');
+      if (isArray) element.appendChild(appendButton());
+      if (inArray) element.appendChild(removeButton());
+      if (inArray) element.appendChild(gripper());
+      return element;
+    };
+    const summary = () => {
+      const element = document.createElement('summary');
+      if (indentPx >= 0) element.append(indentation());
+      element.appendChild(chevron());
+      if (isComponent) element.appendChild(icon());
+      element.appendChild(labelElement());
+      element.appendChild(space());
+      element.appendChild(buttons());
+      return element;
+    };
+    const content = () => {
+      this.content.setAttribute('class', 'details-content');
+      if (isArray) this.content.onReorder = () => this.onReorder(this.path);
 
-    // Details.summary.space
-    const space = document.createElement('div');
-    space.classList.add('space');
+      const declaration = (path: BrpStructurePath) => {
+        const element = document.createElement('ext-declaration') as ExtDeclaration;
+        element.path = path;
+        return element;
+      };
+      const expandable = (path: BrpStructurePath) => {
+        const element = document.createElement('ext-expandable') as ExtExpandable;
+        element.path = path;
+        return element;
+      };
 
-    // Details.summary.buttons.remove
-    const removeIcon = document.createElement('vscode-icon');
-    removeIcon.setAttribute('name', 'trash');
-    const removeButton = document.createElement('button');
-    removeButton.appendChild(removeIcon);
-    removeButton.classList.add('autohide');
-    removeButton.tabIndex = -1;
+      const children = entityData.get(this.path);
+      if (children === undefined) return this.content;
 
-    // Details.summary.buttons.append
-    const appendIcon = document.createElement('vscode-icon');
-    appendIcon.setAttribute('name', 'expand-all');
-    const appendButton = document.createElement('button');
-    appendButton.appendChild(appendIcon);
-    appendButton.classList.add('autohide');
-    appendButton.tabIndex = -1;
+      // single value (for components)
+      if (typeof children !== 'object' || children === null) {
+        this.content.appendChild(declaration(this.path));
+        return this.content;
+      }
 
-    // Details.summary.buttons.gripper
-    const gripper = document.createElement('ext-gripper') as ExtGripper;
-    gripper.indexed = this;
+      // Array of expandables or declarations
+      if (children instanceof Array) {
+        for (const key of children.keys()) {
+          const path = this.path.concat(key);
+          const child = entityData.get(path);
+          if (typeof child !== 'object' || child === null) this.content.appendChild(declaration(path));
+          else this.content.appendChild(expandable(path));
+        }
+        return this.content;
+      }
 
-    // Details.summary.buttons
-    const buttons = document.createElement('div');
-    buttons.classList.add('buttons');
-    if (arrayRoot !== undefined) buttons.appendChild(appendButton);
-    if (isIndexed) buttons.appendChild(removeButton);
-    if (isIndexed) buttons.appendChild(gripper);
-
-    // Detials.summary
-    const summary = document.createElement('summary');
-    if (indent >= 0) summary.append(indentation());
-    summary.appendChild(chevron);
-    if (isComponent) summary.appendChild(icon());
-    summary.appendChild(labelElement);
-    summary.appendChild(space);
-    summary.appendChild(buttons);
-
-    // Detials.content
-    this.content.setAttribute('class', 'details-content');
-    this.content.setAttribute('indent', indent.toString());
-    this.content.replaceChildren(...this.children);
-    if (arrayRoot) this.content.onReorder = () => this.onReorder(this.path);
-
-    // Detials
-    const details = document.createElement('details');
-    details.setAttribute('open', '');
-    details.appendChild(summary);
-    details.appendChild(this.content);
+      // Named expandables or declarations (Object)
+      for (const key of Object.keys(children)) {
+        const path = this.path.concat(key);
+        const child = entityData.get(path);
+        if (typeof child !== 'object' || child === null) this.content.appendChild(declaration(path));
+        else this.content.appendChild(expandable(path));
+      }
+      return this.content;
+    };
+    const details = () => {
+      const element = document.createElement('details');
+      element.setAttribute('open', '');
+      element.appendChild(summary());
+      element.appendChild(content());
+      return element;
+    };
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
-    shadow.appendChild(details);
-
-    console.log(`EXPANDABLE end`);
+    shadow.appendChild(details());
   }
   public onReorder(root: BrpStructurePath) {
     let index = 0;
@@ -148,8 +208,6 @@ export class ExtDeclaration extends HTMLElement {
   }
 
   connectedCallback() {
-    console.log(`DECLARATION init ${this.path}`);
-
     if (this.shadowRoot !== null) return;
     if (this.path.length === 0) return;
 
@@ -214,8 +272,6 @@ export class ExtDeclaration extends HTMLElement {
     shadow.appendChild(background);
     shadow.appendChild(this.label);
     shadow.appendChild(valueHolder);
-
-    console.log('DECLARATION end');
   }
 }
 class ExtValue extends HTMLElement {

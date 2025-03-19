@@ -1,6 +1,6 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-import { ExtDeclaration, ExtExpandable, initExtElements } from './componentsElements';
-import { BrpObject, BrpStructure, BrpStructurePath, TypePath } from 'bevy-remote-protocol/src/types';
+import { ExtExpandable, initExtElements } from './componentsElements';
+import { BrpStructure, TypePath } from 'bevy-remote-protocol/src/types';
 
 // Entity Values
 export const entityData = new BrpStructure(null);
@@ -51,56 +51,9 @@ initExtElements();
     if (entityData.get() === null) return 'success';
     if (!(entityData.get() instanceof Object)) return 'failure'; // it's not map of components
 
-    for (const componentLabel of Object.keys(entityData.get() as BrpObject)) {
-      const component = parseElements([componentLabel], 0);
-      if (component !== undefined) componentList.appendChild(component);
-    }
+    const list = document.createElement('ext-expandable') as ExtExpandable;
+    list.path = [];
+    componentList.appendChild(list);
     return 'success';
-
-    function parseElements(path: BrpStructurePath, level: number): HTMLElement {
-      const parsed = entityData.get(path);
-      const isComponent = level === 0;
-      const isMovable = entityData.get(path.slice(0, -1)) instanceof Array || isComponent;
-
-      // Declaration
-      if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string' || parsed === null) {
-        const declaration = document.createElement('ext-declaration') as ExtDeclaration;
-        declaration.path = path;
-        if (isComponent) {
-          declaration.setAttribute('hide-label', '');
-          const wrapped = document.createElement('ext-expandable') as ExtExpandable;
-          wrapped.setAttribute('component', '');
-          wrapped.path = path;
-          if (isMovable) wrapped.setAttribute('indexed', '');
-          wrapped.appendChild(declaration);
-          return wrapped;
-        }
-        if (isMovable) declaration.setAttribute('indexed', '');
-        return declaration;
-      }
-
-      // Array OR NestedRecord
-      const expandable = document.createElement('ext-expandable') as ExtExpandable;
-      expandable.path = path;
-      if (isComponent) expandable.setAttribute('component', '');
-      if (isMovable) expandable.setAttribute('indexed', '');
-
-      if (parsed instanceof Array) {
-        expandable.path = path;
-        for (const childLabel of parsed.keys()) {
-          const element = parseElements(path.concat(childLabel), level + 1);
-          expandable.appendChild(element);
-        }
-        return expandable;
-      }
-      if (parsed !== null) {
-        for (const childLabel of Object.keys(parsed ?? {})) {
-          const element = parseElements(path.concat(childLabel), level + 1);
-          expandable.appendChild(element);
-        }
-        return expandable;
-      }
-      return document.createElement('ext-declaration');
-    }
   }
 })();
