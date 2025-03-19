@@ -190,88 +190,72 @@ export class ExtExpandable extends HTMLElement {
 export class ExtDeclaration extends HTMLElement {
   label = document.createElement('label') as HTMLElement;
   value: ExtValue | undefined;
-  _path: BrpStructurePath = [];
-
-  set path(changed: BrpStructurePath) {
-    // Set path
-    if (this._path === changed) return;
-    this._path = changed;
-    if (this.label.textContent !== '') this.label.textContent = labelFromPath(changed);
-
-    // Set value.path
-    if (this.value === undefined) return;
-    this.value.path = changed;
-  }
-
-  get path() {
-    return this._path;
-  }
+  path: BrpStructurePath = [];
 
   connectedCallback() {
     if (this.shadowRoot !== null) console.error('shadow root already exists');
     if (this.path.length === 0) return;
-
-    const hideLabel = this.hasAttribute('hide-label');
-    const isIndexed = this.hasAttribute('indexed');
-
-    // Initialize elements
-    const background = document.createElement('div');
-    background.classList.add('background');
+    const hideLabel = this.path.length === 1;
+    const inArray = entityData.get(this.path.slice(0, -1)) instanceof Array;
 
     this.label.textContent = hideLabel ? '' : labelFromPath(this.path);
 
-    const valueHolder = document.createElement('div');
-    valueHolder.classList.add('value');
-
-    // Details.summary.buttons.remove
-    const removeIcon = document.createElement('vscode-icon');
-    removeIcon.setAttribute('name', 'trash');
-    const removeButton = document.createElement('button');
-    removeButton.appendChild(removeIcon);
-    removeButton.classList.add('compact-tall');
-    removeButton.tabIndex = -1;
-
-    const gripper = document.createElement('ext-gripper') as ExtGripper;
-    gripper.indexed = this;
-
-    switch (typeof entityData.get(this.path)) {
-      case 'number': {
-        this.value = document.createElement('ext-number') as ExtNumber;
-        this.value.path = this.path;
-        valueHolder.appendChild(this.value);
-        break;
+    const background = () => {
+      const element = document.createElement('div');
+      element.classList.add('background');
+      return element;
+    };
+    const removeButton = () => {
+      const removeIcon = () => {
+        const element = document.createElement('vscode-icon');
+        element.name = 'trash';
+        return element;
+      };
+      const element = document.createElement('button');
+      element.appendChild(removeIcon());
+      element.classList.add('compact-tall');
+      element.tabIndex = -1;
+      return element;
+    };
+    const gripper = () => {
+      const element = document.createElement('ext-gripper') as ExtGripper;
+      element.indexed = this;
+      return element;
+    };
+    const valueHolder = () => {
+      const element = document.createElement('div');
+      element.classList.add('value');
+      switch (typeof entityData.get(this.path)) {
+        case 'number': {
+          this.value = document.createElement('ext-number') as ExtNumber;
+          this.value.path = this.path;
+          element.appendChild(this.value);
+          break;
+        }
+        case 'boolean': {
+          this.value = document.createElement('ext-boolean') as ExtBoolean;
+          this.value.path = this.path;
+          element.appendChild(this.value);
+          break;
+        }
+        default: {
+          this.value = document.createElement('ext-string') as ExtString;
+          this.value.path = this.path;
+          element.appendChild(this.value);
+          break;
+        }
       }
-
-      case 'boolean': {
-        this.value = document.createElement('ext-boolean') as ExtBoolean;
-        this.value.path = this.path;
-        valueHolder.appendChild(this.value);
-        break;
-      }
-
-      case 'string': {
-        this.value = document.createElement('ext-string') as ExtString;
-        this.value.path = this.path;
-        valueHolder.appendChild(this.value);
-        break;
-      }
-
-      default: {
-        this.value = document.createElement('ext-string') as ExtString;
-        this.value.path = this.path;
-        this.value.setAttribute('disabled', '');
-        valueHolder.appendChild(this.value);
-      }
-    }
-    if (isIndexed) valueHolder.appendChild(removeButton);
-    if (isIndexed) valueHolder.appendChild(gripper);
+      if (inArray) element.appendChild(removeButton());
+      if (inArray) element.appendChild(gripper());
+      return element;
+    };
 
     // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.declaration];
-    shadow.appendChild(background);
+    shadow.appendChild(background());
     shadow.appendChild(this.label);
-    shadow.appendChild(valueHolder);
+    shadow.appendChild(valueHolder());
   }
 }
 class ExtValue extends HTMLElement {
@@ -304,130 +288,143 @@ class ExtValue extends HTMLElement {
     entityData.set(this.path, v);
     if (previous !== v) onEntityDataChange(this.path);
   }
+
+  get valueAsString(): string {
+    const result = this.value;
+    if (typeof result !== 'object') return result.toString();
+    if (result === null) return 'NULL';
+    if (result instanceof Array) return '[ ARRAY ]';
+    return '{ OBJECT }';
+  }
 }
 class ExtString extends ExtValue {
   connectedCallback() {
     if (this.shadowRoot !== null) console.error('shadow root already exists');
+    const isDisabled = entityData.get(this.path) === null;
 
-    const placeholder = this.getAttribute('placeholder');
-    const isDisabled = this.hasAttribute('disabled');
+    const field = () => {
+      const element = document.createElement('input');
+      element.type = 'text';
+      element.disabled = isDisabled;
+      element.onfocus = () => {
+        this.setAttribute('focused', '');
+      };
+      element.onkeydown = (e) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          element.value = this.valueAsString;
+          element.blur();
+          e.preventDefault();
+        }
+        if (e.key === 'Enter') {
+          element.blur();
+        }
+      };
+      element.onchange = () => {
+        this.value = element.value;
+        element.blur();
+      };
+      element.onblur = () => {
+        element.value = this.valueAsString;
+        this.removeAttribute('focused');
+      };
+      return element;
+    };
+    const area = () => {
+      const element = document.createElement('textarea');
+      element.disabled = isDisabled;
+      element.rows = 5;
+      element.oninput = () => {
+        element.style.height = 'auto';
+        element.style.height = element.scrollHeight + 'px';
+      };
+      element.onfocus = () => {
+        this.setAttribute('focused', '');
+      };
+      element.onkeydown = (e) => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          element.value = this.valueAsString;
+          element.blur();
+          e.preventDefault();
+        }
+        if (e.ctrlKey && e.key === 'Enter') {
+          element.blur();
+        }
+      };
+      element.onchange = () => {
+        this.value = element.value;
+        element.blur();
+      };
+      element.onblur = () => {
+        element.value = this.valueAsString;
+        element.scrollTo(0, 0);
+        this.removeAttribute('focused');
+      };
+      return element;
+    };
+    const toArea = () => {
+      const iconArea = () => {
+        const element = document.createElement('vscode-icon');
+        element.setAttribute('name', 'list-selection');
+        return element;
+      };
+      const element = document.createElement('button');
+      element.classList.add('inside');
+      element.tabIndex = -1;
+      element.appendChild(iconArea());
+      return element;
+    };
+    const toField = () => {
+      const iconField = () => {
+        const element = document.createElement('vscode-icon');
+        element.name = 'symbol-string';
+        return element;
+      };
+      const element = document.createElement('button');
+      element.classList.add('inArea', 'inside');
+      element.tabIndex = -1;
+      element.appendChild(iconField());
+      return element;
+    };
 
-    // Initialize field input
-    const field = document.createElement('input');
-    field.setAttribute('type', 'text');
-    field.setAttribute('placeholder', placeholder ?? '');
-    if (isDisabled) field.setAttribute('disabled', '');
+    const areaElement = area();
+    const fieldElement = field();
+    const toAreaButton = toArea();
+    const toFieldButton = toField();
 
-    // Initialize area input
-    const area = document.createElement('textarea');
-    if (isDisabled) area.setAttribute('disabled', '');
-    area.setAttribute('rows', '5');
+    toAreaButton.onclick = () => {
+      areaElement.value = this.valueAsString;
+      areaElement.style.removeProperty('display');
+      toFieldButton.style.removeProperty('display');
+      fieldElement.style.display = 'none';
+      toAreaButton.style.display = 'none';
+    };
+    toFieldButton.onclick = () => {
+      fieldElement.value = this.valueAsString;
+      areaElement.style.display = 'none';
+      toFieldButton.style.display = 'none';
+      fieldElement.style.removeProperty('display');
+      toAreaButton.style.removeProperty('display');
+    };
 
-    // Initialize buttons
-    const toArea = document.createElement('button');
-    toArea.classList.add('inside');
-    toArea.tabIndex = -1;
-    const iconArea = document.createElement('vscode-icon');
-    iconArea.setAttribute('name', 'list-selection');
-    toArea.appendChild(iconArea);
-
-    const toField = document.createElement('button');
-    toField.classList.add('inArea');
-    toField.classList.add('inside');
-    toField.tabIndex = -1;
-    const iconField = document.createElement('vscode-icon');
-    iconField.setAttribute('name', 'symbol-string');
-    toField.appendChild(iconField);
-
-    const buttonCollection = document.createElement('div');
-    buttonCollection.classList.add('button-collection');
-    buttonCollection.classList.add('autohide');
-    buttonCollection.appendChild(toArea);
-    buttonCollection.appendChild(toField);
+    const buttonCollection = () => {
+      const element = document.createElement('div');
+      element.classList.add('button-collection', 'autohide');
+      element.appendChild(toAreaButton);
+      element.appendChild(toFieldButton);
+      return element;
+    };
 
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.input, extStyles.textArea];
 
-    shadow.appendChild(area);
-    shadow.appendChild(field);
-    if (!isDisabled) shadow.appendChild(buttonCollection);
-
-    // Switchers
-    toArea.onclick = () => {
-      area.value = (this.value as string) ?? 'NULL';
-
-      area.style.removeProperty('display');
-      toField.style.removeProperty('display');
-      field.style.display = 'none';
-      toArea.style.display = 'none';
-    };
-    toField.onclick = () => {
-      field.value = (this.value as string) ?? 'NULL';
-
-      area.style.display = 'none';
-      toField.style.display = 'none';
-      field.style.removeProperty('display');
-      toArea.style.removeProperty('display');
-    };
+    shadow.appendChild(areaElement);
+    shadow.appendChild(fieldElement);
+    if (!isDisabled) shadow.appendChild(buttonCollection());
 
     // Set initial mode
-    if (((this.value as string) ?? '').indexOf('\n') > -1) {
-      toArea.onclick(new MouseEvent(''));
-    } else {
-      toField.onclick(new MouseEvent(''));
-    }
-
-    // Logics of area
-    area.oninput = () => {
-      area.style.height = 'auto';
-      area.style.height = area.scrollHeight + 'px';
-    };
-    area.onfocus = () => {
-      this.setAttribute('focused', '');
-    };
-    area.onkeydown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        area.value = this.value as string;
-        area.blur();
-        e.preventDefault();
-      }
-      if (e.ctrlKey && e.key === 'Enter') {
-        area.blur();
-      }
-    };
-    area.onchange = () => {
-      this.value = area.value;
-      area.blur();
-    };
-    area.onblur = () => {
-      area.value = this.value as string;
-      area.scrollTo(0, 0);
-      this.removeAttribute('focused');
-    };
-
-    // Logics of field
-    field.onfocus = () => {
-      this.setAttribute('focused', '');
-    };
-    field.onkeydown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        field.value = this.value as string;
-        field.blur();
-        e.preventDefault();
-      }
-      if (e.key === 'Enter') {
-        field.blur();
-      }
-    };
-    field.onchange = () => {
-      this.value = field.value;
-      field.blur();
-    };
-    field.onblur = () => {
-      field.value = this.value as string;
-      this.removeAttribute('focused');
-    };
+    if (this.valueAsString.indexOf('\n') > -1) toAreaButton.onclick(new MouseEvent(''));
+    else toFieldButton.onclick(new MouseEvent(''));
   }
 }
 class ExtNumber extends ExtValue {
