@@ -1,10 +1,9 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-import { initExtElements } from './componentsElements';
-import { BrpStructurePath, labelFromPath, serializePath } from './lib';
-import { BrpObject, BrpValueWrapped, TypePath } from 'bevy-remote-protocol';
+import { ExtDeclaration, ExtExpandable, initExtElements } from './componentsElements';
+import { BrpObject, BrpStructure, BrpStructurePath, TypePath } from 'bevy-remote-protocol/src/types';
 
 // Entity Values
-export const entityData = new BrpValueWrapped(null);
+export const entityData = new BrpStructure(null);
 export function onEntityDataChange(path: (TypePath | number)[]) {
   console.log(`${path.join('/')} is changed: ${entityData.get(path)}`);
 }
@@ -23,7 +22,8 @@ initExtElements();
         setEntityInfo(message.host, message.entityId);
         break;
       case 'update':
-        loadComponents(message.data);
+        entityData.set([], message.data);
+        updateView();
         break;
     }
   });
@@ -39,56 +39,63 @@ initExtElements();
       idLabel.textContent = entityId.toString();
     }
   }
-  function loadComponents(data: BrpObject) {
+  function updateView(): 'success' | 'failure' {
     const componentList = document.querySelector('.component-list');
     if (componentList === null) return 'failure';
-    let entityLabel = document.querySelector('#entity-info-id')?.textContent ?? 'unknown';
-    if (entityLabel === '') entityLabel = 'unknown';
-    if (data === null) return 'success';
 
+    console.log('RECIEVED NEW DATA');
+    console.log(entityData.get());
+
+    // clear component list
     componentList.innerHTML = '';
-    for (const componentLabel of Object.keys(data)) {
-      const component = parseElements([entityLabel, componentLabel], true, true);
+    if (entityData.get() === null) return 'success';
+    if (!(entityData.get() instanceof Object)) return 'failure'; // it's not map of components
+
+    for (const componentLabel of Object.keys(entityData.get() as BrpObject)) {
+      const component = parseElements([componentLabel], 0);
       if (component !== undefined) componentList.appendChild(component);
     }
     return 'success';
 
-    function parseElements(path: BrpStructurePath, isIndexed = false, isComponent = false): HTMLElement {
+    function parseElements(path: BrpStructurePath, level: number): HTMLElement {
       const parsed = entityData.get(path);
+      const isComponent = level === 0;
+      const isMovable = entityData.get(path.slice(0, -1)) instanceof Array || isComponent;
+
       // Declaration
       if (typeof parsed === 'number' || typeof parsed === 'boolean' || typeof parsed === 'string' || parsed === null) {
-        const declaration = document.createElement('ext-declaration');
-        declaration.setAttribute('path', serializePath(path));
+        const declaration = document.createElement('ext-declaration') as ExtDeclaration;
+        declaration.path = path;
         if (isComponent) {
           declaration.setAttribute('hide-label', '');
-          const wrapped = document.createElement('ext-expandable');
+          const wrapped = document.createElement('ext-expandable') as ExtExpandable;
           wrapped.setAttribute('component', '');
-          wrapped.setAttribute('label', labelFromPath(path));
-          if (isIndexed) wrapped.setAttribute('indexed', '');
+          wrapped.path = path;
+          if (isMovable) wrapped.setAttribute('indexed', '');
           wrapped.appendChild(declaration);
           return wrapped;
         }
-        if (isIndexed) declaration.setAttribute('indexed', '');
+        if (isMovable) declaration.setAttribute('indexed', '');
         return declaration;
       }
 
       // Array OR NestedRecord
-      const expandable = document.createElement('ext-expandable');
-      expandable.setAttribute('label', labelFromPath(path));
+      const expandable = document.createElement('ext-expandable') as ExtExpandable;
+      expandable.path = path;
       if (isComponent) expandable.setAttribute('component', '');
-      if (isIndexed) expandable.setAttribute('indexed', '');
+      if (isMovable) expandable.setAttribute('indexed', '');
 
       if (parsed instanceof Array) {
-        expandable.setAttribute('array', serializePath(path));
+        expandable.path = path;
         for (const childLabel of parsed.keys()) {
-          const element = parseElements(path.concat(childLabel), true);
+          const element = parseElements(path.concat(childLabel), level + 1);
           expandable.appendChild(element);
         }
         return expandable;
       }
       if (parsed !== null) {
-        for (const childLabel of Object.keys(parsed)) {
-          const element = parseElements(path.concat(childLabel));
+        for (const childLabel of Object.keys(parsed ?? {})) {
+          const element = parseElements(path.concat(childLabel), level + 1);
           expandable.appendChild(element);
         }
         return expandable;

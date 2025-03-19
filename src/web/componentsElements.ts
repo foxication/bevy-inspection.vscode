@@ -1,7 +1,7 @@
 import * as extStyles from './componentsStyles';
 import { entityData, onEntityDataChange } from './components';
-import { BrpStructurePath, deserializePath, doesValueObjectHas, labelFromPath, serializePath } from './lib';
-import { BrpValue } from 'bevy-remote-protocol';
+import { labelFromPath } from './lib';
+import { BrpStructurePath, BrpValue } from 'bevy-remote-protocol/src/types';
 
 // Initialization
 export function initExtElements() {
@@ -17,18 +17,21 @@ export function initExtElements() {
 class ExtExpandableContent extends HTMLDivElement {
   onReorder = () => {};
 }
-class ExtExpandable extends HTMLElement {
+export class ExtExpandable extends HTMLElement {
   content = document.createElement('div') as ExtExpandableContent;
+  path: BrpStructurePath = [];
 
   connectedCallback() {
-    if (this.shadowRoot !== null) return;
+    console.log(`EXPANDABLE init ${this.path}`);
 
-    const label = this.getAttribute('label') ?? '';
+    if (this.shadowRoot !== null) return;
+    if (this.path.length === 0) return;
+
+    const label = this.path[this.path.length - 1].toString() ?? '';
     const readableLabel = label.replace(/::/g, ' :: ');
     const isComponent = this.hasAttribute('component');
     const isIndexed = this.hasAttribute('indexed');
-    let arrayRoot: BrpStructurePath | undefined = undefined;
-    if (this.hasAttribute('array')) arrayRoot = deserializePath(this.getAttribute('array') ?? '');
+    const arrayRoot = entityData.get(this.path) instanceof Array;
     const indent = parseInt(this.parentElement?.getAttribute('indent') ?? '-28') + 22;
 
     // Detials.summary.indent
@@ -99,10 +102,8 @@ class ExtExpandable extends HTMLElement {
     // Detials.content
     this.content.setAttribute('class', 'details-content');
     this.content.setAttribute('indent', indent.toString());
-    this.content.innerHTML = this.innerHTML;
-    if (arrayRoot !== undefined) {
-      this.content.onReorder = () => this.onReorder(arrayRoot);
-    }
+    this.content.replaceChildren(...this.children);
+    if (arrayRoot) this.content.onReorder = () => this.onReorder(this.path);
 
     // Detials
     const details = document.createElement('details');
@@ -114,24 +115,44 @@ class ExtExpandable extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [extStyles.buttons, extStyles.expandable];
     shadow.appendChild(details);
+
+    console.log(`EXPANDABLE end`);
   }
   public onReorder(root: BrpStructurePath) {
     let index = 0;
     for (const child of this.content.children) {
       if (child instanceof ExtExpandable) console.error(`not implemented`);
-      if (child instanceof ExtDeclaration) child.changePath(root, index);
+      if (child instanceof ExtDeclaration) child.path = root.concat(index);
       index += 1;
     }
   }
 }
-class ExtDeclaration extends HTMLElement {
+export class ExtDeclaration extends HTMLElement {
   label = document.createElement('label') as HTMLElement;
   value: ExtValue | undefined;
+  _path: BrpStructurePath = [];
+
+  set path(changed: BrpStructurePath) {
+    // Set path
+    if (this._path === changed) return;
+    this._path = changed;
+    if (this.label.textContent !== '') this.label.textContent = labelFromPath(changed);
+
+    // Set value.path
+    if (this.value === undefined) return;
+    this.value.path = changed;
+  }
+
+  get path() {
+    return this._path;
+  }
 
   connectedCallback() {
-    if (this.shadowRoot !== null) return;
+    console.log(`DECLARATION init ${this.path}`);
 
-    const path = deserializePath(this.getAttribute('path') ?? '');
+    if (this.shadowRoot !== null) return;
+    if (this.path.length === 0) return;
+
     const hideLabel = this.hasAttribute('hide-label');
     const isIndexed = this.hasAttribute('indexed');
 
@@ -139,8 +160,7 @@ class ExtDeclaration extends HTMLElement {
     const background = document.createElement('div');
     background.classList.add('background');
 
-    this.label.setAttribute('for', serializePath(path));
-    this.label.textContent = hideLabel ? '' : labelFromPath(path);
+    this.label.textContent = hideLabel ? '' : labelFromPath(this.path);
 
     const valueHolder = document.createElement('div');
     valueHolder.classList.add('value');
@@ -156,31 +176,31 @@ class ExtDeclaration extends HTMLElement {
     const gripper = document.createElement('ext-gripper') as ExtGripper;
     gripper.indexed = this;
 
-    switch (typeof entityData.get(path)) {
+    switch (typeof entityData.get(this.path)) {
       case 'number': {
         this.value = document.createElement('ext-number') as ExtNumber;
-        this.value.id = serializePath(path);
+        this.value.path = this.path;
         valueHolder.appendChild(this.value);
         break;
       }
 
       case 'boolean': {
         this.value = document.createElement('ext-boolean') as ExtBoolean;
-        this.value.id = serializePath(path);
+        this.value.path = this.path;
         valueHolder.appendChild(this.value);
         break;
       }
 
       case 'string': {
         this.value = document.createElement('ext-string') as ExtString;
-        this.value.id = serializePath(path);
+        this.value.path = this.path;
         valueHolder.appendChild(this.value);
         break;
       }
 
       default: {
         this.value = document.createElement('ext-string') as ExtString;
-        this.value.id = serializePath(path);
+        this.value.path = this.path;
         this.value.setAttribute('disabled', '');
         valueHolder.appendChild(this.value);
       }
@@ -194,37 +214,28 @@ class ExtDeclaration extends HTMLElement {
     shadow.appendChild(background);
     shadow.appendChild(this.label);
     shadow.appendChild(valueHolder);
-  }
-  changePath(root: BrpStructurePath, index: number) {
-    const path = root.concat(index);
 
-    // Skip conditions
-    if (this.value === undefined) return;
-    if (this.getAttribute('path') === serializePath(path)) return;
-
-    // Apply
-    this.setAttribute('path', serializePath(path));
-    if (this.label.textContent !== '') this.label.textContent = index.toString();
-    this.value.changePath(path);
+    console.log('DECLARATION end');
   }
 }
 class ExtValue extends HTMLElement {
   lastValue: BrpValue = null;
+  path: BrpStructurePath = [];
 
   get value(): BrpValue {
-    if (!doesValueObjectHas(entityData, deserializePath(this.id))) {
+    if (!entityData.has(this.path)) {
       console.error(`${this.id} => this path not in table`);
     }
-    this.lastValue = entityData.get(deserializePath(this.id)) ?? null;
+    this.lastValue = entityData.get(this.path) ?? null;
     return this.lastValue;
   }
 
   set value(v: BrpValue) {
-    if (!doesValueObjectHas(entityData, deserializePath(this.id))) {
+    if (!entityData.has(this.path)) {
       console.error(`${this.id} => this path not in table`);
       return;
     }
-    const previous = entityData.get(deserializePath(this.id));
+    const previous = entityData.get(this.path);
     if (typeof v !== typeof previous) {
       console.error(`${this.id} => types of newValue and oldValue don't match`);
       return;
@@ -234,18 +245,8 @@ class ExtValue extends HTMLElement {
       return;
     }
     this.lastValue = v;
-    entityData.set(deserializePath(this.id), v);
-    if (previous !== v) onEntityDataChange(deserializePath(this.id));
-  }
-  changePath(path: BrpStructurePath) {
-    const previous = entityData.get(path);
-    if (previous === undefined) {
-      console.error(`${path} doesn't exist on table`);
-      return;
-    }
-    this.id = serializePath(path);
-    entityData.set(path, this.lastValue);
-    if (previous !== this.lastValue) onEntityDataChange(path);
+    entityData.set(this.path, v);
+    if (previous !== v) onEntityDataChange(this.path);
   }
 }
 class ExtString extends ExtValue {
