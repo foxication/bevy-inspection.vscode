@@ -41,7 +41,7 @@ export class ExtExpandable extends HTMLElement {
 
     const label = (this.path[this.path.length - 1].toString() ?? '').replace(/::/g, ' :: ');
     const isComponent = this.path.length === 1;
-    const inArray = entityData.get(this.path.slice(0, -1)) || isComponent;
+    const inArray = entityData.get(this.path.slice(0, -1)) instanceof Array || isComponent;
     const isArray = entityData.get(this.path) instanceof Array;
     const indent = Math.max(this.path.length - 1, 0);
     const indentPx = Math.max(indent * 22 - 6, 0);
