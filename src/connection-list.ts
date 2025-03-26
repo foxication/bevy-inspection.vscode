@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, EntityId, BevyVersion } from './protocol';
+import { BevyRemoteProtocol, EntityId, BevyVersion, BevyVersions } from './protocol';
 import { Connection } from './connection';
 import { ConnectionElement } from './hierarchyData';
 
@@ -36,13 +36,13 @@ export class ConnectionList {
   // Events
   private addedEmitter = new vscode.EventEmitter<Connection>();
   readonly onAdded = this.addedEmitter.event;
-  
+
   private addErrorEmitter = new vscode.EventEmitter<void>();
   readonly onAddError = this.addErrorEmitter.event;
-  
+
   private removedEmitter = new vscode.EventEmitter<Connection>();
   readonly onRemoved = this.removedEmitter.event;
-  
+
   private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
 
@@ -62,15 +62,16 @@ export class ConnectionList {
       }
 
       // Input version
-      const versions = Object.keys(BevyVersion);
-      const versionString = await vscode.window.showQuickPick(versions, { canPickMany: false });
-      if (!versionString) {
+      const versions = BevyVersions;
+      const chosenVersion = (await vscode.window.showQuickPick(versions, { canPickMany: false })) as
+        | BevyVersion
+        | undefined;
+      if (chosenVersion === undefined) {
         return;
       }
-      const versionEnum = Object.values(BevyVersion)[Object.keys(BevyVersion).indexOf(versionString)];
 
       // Create new session
-      newConnection = new Connection(new URL(url), versionEnum);
+      newConnection = new Connection(new URL(url), chosenVersion);
     }
 
     // if such online connection already exists

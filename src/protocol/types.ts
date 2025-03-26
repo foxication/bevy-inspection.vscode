@@ -132,7 +132,8 @@ export type BrpListWatchResult = {
   removed: TypePath[];
 };
 
-export type BevyVersion = '0.15' | '0.16';
+export const BevyVersions = ['0.15', '0.16'] as const;
+export type BevyVersion = typeof BevyVersions[number];
 export type CommonTypePath = 'ChildOf' | 'Children' | 'Name';
 
 export type BrpRegistry = {
