@@ -13,6 +13,7 @@ import {
   BrpErrors,
   CommonTypePath,
   BrpMapOfComponents,
+  BrpRegistrySchema,
 } from './types';
 import { TextDecoder } from 'util';
 
@@ -378,7 +379,7 @@ export class BevyRemoteProtocol {
    * Undocumented: bevy/registry/schema
    */
 
-  public async registrySchema(): Promise<BrpResponse<object>> {
+  public async registrySchema(): Promise<BrpResponse<BrpRegistrySchema>> {
     return this.request('bevy/registry/schema', null);
   }
 

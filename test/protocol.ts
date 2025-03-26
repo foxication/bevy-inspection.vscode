@@ -430,7 +430,15 @@ export async function testRegistrySchema(protocol: BevyRemoteProtocol): Promise<
     },
   };
   assert.ok(response.result);
+
+  // Check if custom types are registered
   assert.deepEqual(response.result['server::Description'], expected['server::Description']);
   assert.deepEqual(response.result['server::FavoriteEntity'], expected['server::FavoriteEntity']);
   assert.deepEqual(response.result['server::LovelyOne'], expected['server::LovelyOne']);
+
+  // Check essential BrpRegistry fields
+  assert.strictEqual(response.result['server::Description'].typePath, 'server::Description');
+  assert.strictEqual(response.result['server::Description'].shortPath, 'Description');
+  assert.strictEqual(response.result['server::Description'].kind, 'TupleStruct');
+  assert.strictEqual(response.result['server::Description'].type, 'array');
 }

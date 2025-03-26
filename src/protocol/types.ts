@@ -134,3 +134,21 @@ export type BrpListWatchResult = {
 
 export type BevyVersion = '0.15' | '0.16';
 export type CommonTypePath = 'ChildOf' | 'Children' | 'Name';
+
+export type BrpRegistry = {
+  // Essential
+  typePath: TypePath;
+  shortPath: string;
+  kind: 'Enum' | 'Value' | 'Struct' | 'TupleStruct' | 'Tuple' | 'List';
+  type: 'object' | 'array' | 'uint' | 'int' | 'usize' | 'float';
+
+  // Optional
+  additionalProperties?: boolean;
+  crateName?: string;
+  items?: boolean;
+  modulePath?: string;
+  reflectTypes?: ('Serialize' | 'Deserialize' | 'Default' | 'Component' | 'Resource')[];
+  required?: string[];
+  properties?: { [key: string]: { type: { $ref: string } } };
+};
+export type BrpRegistrySchema = { [key: TypePath]: BrpRegistry };
