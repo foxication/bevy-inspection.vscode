@@ -78,7 +78,7 @@ export class BevyRemoteProtocol {
     };
   }
 
-  private async request<R>(method: string, params: unknown): Promise<BrpResponse<R>> {
+  private async request<R>(method: string, params?: unknown): Promise<BrpResponse<R>> {
     // throws error if connection refused by url
     const fetched = await fetch(this.url, this.requestWrapper(method, params));
     return await JSON.parse(await fetched.text());
@@ -272,7 +272,7 @@ export class BevyRemoteProtocol {
    */
   public async list(entity?: EntityId): Promise<BrpResponse<TypePath[]>> {
     if (entity) return this.request('bevy/list', { entity });
-    return this.request('bevy/list', null);
+    return this.request('bevy/list');
   }
 
   /**
@@ -396,7 +396,7 @@ export class BevyRemoteProtocol {
    * - Items...
    */
   public async registrySchema(): Promise<BrpResponse<BrpRegistrySchema>> {
-    return this.request('bevy/registry/schema', null);
+    return this.request('bevy/registry/schema');
   }
 
   /**
