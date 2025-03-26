@@ -1,10 +1,14 @@
+import { entityData } from './components';
 import * as extStyles from './componentsStyles';
-import { entityData, onEntityDataChange } from './components';
-import { labelFromPath } from './lib';
+import { BrpPath, labelFromPath } from './lib';
 import { BrpStructurePath, BrpValue } from 'bevy-remote-protocol/src/types';
 
 // Initialization
-export function initExtElements() {
+let isExtElementsDefined = false;
+function defineExtElementsIfNotDefined() {
+  if (isExtElementsDefined) return;
+  isExtElementsDefined = true;
+
   customElements.define('ext-expandable', ExtExpandable);
   customElements.define('ext-declaration', ExtDeclaration);
   customElements.define('ext-string', ExtString);
@@ -13,11 +17,66 @@ export function initExtElements() {
   customElements.define('ext-gripper', ExtGripper);
 }
 
+export function createExpandableOfComponents(): ExtExpandable {
+  defineExtElementsIfNotDefined();
+
+  const element = document.createElement('ext-expandable') as ExtExpandable;
+  element.syncPath = [];
+  return element;
+}
+
+class ExtSync extends HTMLDivElement {
+  syncPath: BrpPath = [];
+  syncParent?: ExtSync;
+  syncChildren: Map<BrpPath, ExtSync> = new Map();
+  updateAsDeclaration: () => void = () => {};
+
+  sync() {
+    const synced = entityData.synced().get(this.syncPath);
+    const changed = entityData.changed().get(this.syncPath);
+
+    // Scenario: such element doesn't exist anymore
+    if (synced === undefined || changed === undefined) {
+      this.remove();
+      this.syncParent?.syncChildren.delete(this.syncPath);
+      entityData.synced().remove(this.syncPath);
+      return;
+    }
+
+    // Working with basic
+    if ((typeof synced !== 'object' || synced === null) && (typeof changed !== 'object' || changed === null)) {
+      // Scenario: no changes - skip
+      if (synced === changed) return;
+
+      // Scenario: mutated
+      this.updateAsDeclaration();
+      entityData.synced().set(this.syncPath, changed);
+    }
+
+    // Working with iterable
+    if (typeof synced === 'object' && synced !== null && typeof changed === 'object' && changed !== null) {
+      // Scenario: no changes - skip
+      const keysSynced = Object.keys(synced);
+      const keysChanged = Object.keys(changed);
+      if (keysSynced === keysChanged) return;
+
+      // TODO: Add elements...
+
+      // TODO: Remove elements...
+
+      // Scenario: mutated items
+      this.syncChildren.forEach((child) => child.sync());
+    }
+
+    // TODO: Different types...
+  }
+}
+
 // ExtElements
 class ExtExpandableContent extends HTMLDivElement {
   onReorder = () => {};
 }
-export class ExtExpandable extends HTMLElement {
+export class ExtExpandable extends ExtSync {
   content = document.createElement('div') as ExtExpandableContent;
   path: BrpStructurePath = [];
 
@@ -27,7 +86,7 @@ export class ExtExpandable extends HTMLElement {
     // Root scenario
     if (this.path.length === 0) {
       // Create list of components
-      for (const key of entityData.keys()) {
+      for (const key of Object.keys(entityData.changed(this.path) ?? {})) {
         const declaration = document.createElement('ext-expandable') as ExtDeclaration;
         declaration.path = [key];
         this.content.classList.add('details-content');
@@ -42,8 +101,8 @@ export class ExtExpandable extends HTMLElement {
 
     const label = (this.path[this.path.length - 1].toString() ?? '').replace(/::/g, ' :: ');
     const isComponent = this.path.length === 1;
-    const inArray = entityData.get(this.path.slice(0, -1)) instanceof Array || isComponent;
-    const isArray = entityData.get(this.path) instanceof Array;
+    const inArray = entityDataLive.get(this.path.slice(0, -1)) instanceof Array || isComponent;
+    const isArray = entityDataLive.get(this.path) instanceof Array;
     const indent = Math.max(this.path.length - 1, 0);
     const indentPx = Math.max(indent * 22 - 6, 0);
 
@@ -134,7 +193,7 @@ export class ExtExpandable extends HTMLElement {
         return element;
       };
 
-      const children = entityData.get(this.path);
+      const children = entityDataLive.get(this.path);
       if (children === undefined) return this.content;
 
       // single value (for components)
@@ -147,7 +206,7 @@ export class ExtExpandable extends HTMLElement {
       if (children instanceof Array) {
         for (const key of children.keys()) {
           const path = this.path.concat(key);
-          const child = entityData.get(path);
+          const child = entityDataLive.get(path);
           if (typeof child !== 'object' || child === null) this.content.append(declaration(path));
           else this.content.append(expandable(path));
         }
@@ -157,7 +216,7 @@ export class ExtExpandable extends HTMLElement {
       // Named expandables or declarations (Object)
       for (const key of Object.keys(children)) {
         const path = this.path.concat(key);
-        const child = entityData.get(path);
+        const child = entityDataLive.get(path);
         if (typeof child !== 'object' || child === null) this.content.append(declaration(path));
         else this.content.append(expandable(path));
       }
@@ -193,7 +252,7 @@ export class ExtDeclaration extends HTMLElement {
     if (this.shadowRoot !== null) return;
     if (this.path.length === 0) return;
     const hideLabel = this.path.length === 1;
-    const inArray = entityData.get(this.path.slice(0, -1)) instanceof Array;
+    const inArray = entityDataLive.get(this.path.slice(0, -1)) instanceof Array;
 
     this.label.textContent = hideLabel ? '' : labelFromPath(this.path);
 
@@ -222,7 +281,7 @@ export class ExtDeclaration extends HTMLElement {
     const valueHolder = () => {
       const element = document.createElement('div');
       element.classList.add('value');
-      switch (typeof entityData.get(this.path)) {
+      switch (typeof entityDataLive.get(this.path)) {
         case 'number': {
           this.value = document.createElement('ext-number') as ExtNumber;
           this.value.path = this.path;
@@ -257,19 +316,19 @@ class ExtValue extends HTMLElement {
   path: BrpStructurePath = [];
 
   get value(): BrpValue {
-    if (!entityData.has(this.path)) {
+    if (!entityDataLive.has(this.path)) {
       console.error(`${this.id} => this path not in table`);
     }
-    this.lastValue = entityData.get(this.path) ?? null;
+    this.lastValue = entityDataLive.get(this.path) ?? null;
     return this.lastValue;
   }
 
   set value(v: BrpValue) {
-    if (!entityData.has(this.path)) {
+    if (!entityDataLive.has(this.path)) {
       console.error(`${this.id} => this path not in table`);
       return;
     }
-    const previous = entityData.get(this.path);
+    const previous = entityDataLive.get(this.path);
     if (typeof v !== typeof previous) {
       console.error(`${this.id} => types of newValue and oldValue don't match`);
       return;
@@ -292,7 +351,7 @@ class ExtValue extends HTMLElement {
 class ExtString extends ExtValue {
   connectedCallback() {
     if (this.shadowRoot !== null) return;
-    const isDisabled = entityData.get(this.path) === null;
+    const isDisabled = entityDataLive.get(this.path) === null;
 
     const field = () => {
       const element = document.createElement('input');

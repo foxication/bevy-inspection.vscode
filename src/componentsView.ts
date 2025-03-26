@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web/lib';
+import { BrpObject } from 'bevy-remote-protocol';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
@@ -76,7 +77,21 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       console.log(`received message: ${message.cmd}`);
       switch (message.cmd) {
         case 'mutate_component': {
+          const component = message.data.component;
+          const path = message.data.path;
+          const value = message.data.value;
           console.log(message.data);
+
+          if (path !== '') return;
+          if (this.connections.focus === null) return;
+          const connection = this.connections.get(this.connections.focus.host);
+          const protocol = connection?.getProtocol();
+          if (protocol === undefined) return;
+
+          const sending: BrpObject = {};
+          sending[component] = value;
+          console.log(sending);
+          protocol.insert(this.connections.focus.entityId, sending);
           break;
         }
         case 'ready_for_watch': {

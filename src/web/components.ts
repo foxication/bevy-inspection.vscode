@@ -1,8 +1,7 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-import { ExtExpandable, initExtElements } from './componentsElements';
-import { BrpStructure, TypePath } from 'bevy-remote-protocol/src/types';
-import { BrpValue } from 'bevy-remote-protocol';
-import { VSCodeMessage, WebviewMessage } from './lib';
+import { createExpandableOfComponents } from './componentsElements';
+import { BrpStructurePath, BrpValue } from 'bevy-remote-protocol/src/types';
+import { BrpStructureCustom, serializePath, VSCodeMessage, WebviewMessage } from './lib';
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
@@ -11,25 +10,46 @@ function postWebviewMessage(message: WebviewMessage) {
 }
 
 // Entity Values
-export const entityData = new BrpStructure(null);
-export function onEntityDataChange(path: (TypePath | number)[], value: BrpValue) {
-  postWebviewMessage({
-    cmd: 'mutate_component',
-    data: {
-      component: path[0].toString(),
-      path: path
-        .slice(1)
-        .map((v) => '.' + v)
-        .join(''),
-      value: value,
-    },
-  });
+export class EntityData {
+  private data: BrpStructureCustom = new BrpStructureCustom({});
+  private dataNext: BrpStructureCustom = new BrpStructureCustom({});
+
+  synced() {
+    return this.data;
+  }
+  changed() {
+    return this.dataNext;
+  }
+
+  requestUpdate(path: BrpStructurePath, value: BrpValue) {
+    const [component, serialized] = serializePath(path);
+    postWebviewMessage({
+      cmd: 'mutate_component',
+      data: {
+        component: component,
+        path: serialized,
+        value: value,
+      },
+    });
+  }
+
+  applyUpdate(path: BrpStructurePath, value: BrpValue) {
+    this.dataNext.set(path, value);
+  }
 }
 
-initExtElements();
+export const entityData = new EntityData();
 
 // Main script
 (function () {
+  const list = document.querySelector('.component-list') as HTMLDivElement;
+  if (list === null) {
+    console.error('.component-list is not found in DOM');
+    return;
+  }
+
+  const rootExpandable = createExpandableOfComponents();
+
   // Event listener
   window.addEventListener('message', (event) => {
     const message = event.data as VSCodeMessage;
@@ -39,8 +59,13 @@ initExtElements();
         setEntityInfo(message.host, message.entityId);
         break;
       case 'update':
-        entityData.set([], message.data);
-        updateView();
+        entityData.applyUpdate([], message.data);
+        rootExpandable.sync();
+        postWebviewMessage({ cmd: 'ready_for_watch' });
+        break;
+      case 'update_component':
+        entityData.applyUpdate([message.component], message.value);
+        rootExpandable.sync();
         break;
     }
   });
@@ -55,22 +80,5 @@ initExtElements();
     if (idLabel instanceof Element) {
       idLabel.textContent = entityId.toString();
     }
-  }
-  function updateView(): 'success' | 'failure' {
-    const componentList = document.querySelector('.component-list');
-    if (componentList === null) return 'failure';
-
-    console.log('RECIEVED NEW DATA');
-    console.log(entityData.get());
-
-    // clear component list
-    componentList.innerHTML = '';
-    if (entityData.get() === null) return 'success';
-    if (!(entityData.get() instanceof Object)) return 'failure'; // it's not map of components
-
-    const list = document.createElement('ext-expandable') as ExtExpandable;
-    list.path = [];
-    componentList.appendChild(list);
-    return 'success';
   }
 })();
