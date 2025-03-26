@@ -110,11 +110,7 @@ export class BevyRemoteProtocol {
   private async request<R>(method: string, params: unknown): Promise<BrpResponse<R>> {
     // throws error if connection refused by url
     const fetched = await fetch(this.url, this.requestWrapper(method, params));
-    const texted = await fetched.text();
-
-    console.log(texted);
-
-    return await JSON.parse(this.translateToInternal(texted));
+    return await JSON.parse(this.translateToInternal(await fetched.text()));
   }
 
   private async requestStream<R>(
