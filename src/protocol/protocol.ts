@@ -379,6 +379,22 @@ export class BevyRemoteProtocol {
    * Undocumented: bevy/registry/schema
    */
 
+  /**
+   * Export registry schema of all registered components and resources.
+   *
+   * `result`: A map of registries associating each full TypePath to its schema. Each registry
+   * contains information, such as:
+   * - TypePath
+   * - ShortPath
+   * - Kind
+   * - Type
+   *
+   * It may give you optional fields of information:
+   * - CrateName
+   * - ModulePath
+   * - Required
+   * - Items...
+   */
   public async registrySchema(): Promise<BrpResponse<BrpRegistrySchema>> {
     return this.request('bevy/registry/schema', null);
   }
