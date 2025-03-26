@@ -17,6 +17,7 @@ export type BrpErrors = { [key: TypePath]: BrpError };
 
 export type BrpValue = string | number | boolean | null | BrpValue[] | BrpObject;
 export type BrpObject = { [key: TypePath]: BrpValue };
+export type BrpMapOfComponents = { [key: TypePath]: BrpValue };
 
 export type BrpStructurePath = (TypePath | number)[];
 export class BrpStructure {
