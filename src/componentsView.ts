@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web/lib';
-import { BrpObject } from 'bevy-remote-protocol';
+import { BrpObject } from './protocol';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);

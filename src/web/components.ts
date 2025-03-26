@@ -1,6 +1,6 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-import { createExpandableOfComponents } from './componentsElements';
-import { BrpStructurePath, BrpValue } from 'bevy-remote-protocol/src/types';
+// import { createExpandableOfComponents } from './componentsElements';
+import { BrpStructurePath, BrpValue } from '../protocol';
 import { BrpStructureCustom, serializePath, VSCodeMessage, WebviewMessage } from './lib';
 
 // VSCode Access
@@ -33,9 +33,9 @@ export class EntityData {
     });
   }
 
-  applyUpdate(path: BrpStructurePath, value: BrpValue) {
-    this.dataNext.set(path, value);
-  }
+  // applyUpdate(path: BrpStructurePath, value: BrpValue) {
+  //   this.dataNext.set(path, value);
+  // }
 }
 
 export const entityData = new EntityData();
@@ -48,7 +48,7 @@ export const entityData = new EntityData();
     return;
   }
 
-  const rootExpandable = createExpandableOfComponents();
+  // const rootExpandable = createExpandableOfComponents();
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -59,13 +59,13 @@ export const entityData = new EntityData();
         setEntityInfo(message.host, message.entityId);
         break;
       case 'update':
-        entityData.applyUpdate([], message.data);
-        rootExpandable.sync();
+        // entityData.applyUpdate([], message.data);
+        // rootExpandable.sync();
         postWebviewMessage({ cmd: 'ready_for_watch' });
         break;
       case 'update_component':
-        entityData.applyUpdate([message.component], message.value);
-        rootExpandable.sync();
+        // entityData.applyUpdate([message.component], message.value);
+        // rootExpandable.sync();
         break;
     }
   });

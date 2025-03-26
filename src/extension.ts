@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, ServerVersion } from 'bevy-remote-protocol';
+import { BevyRemoteProtocol, ServerVersion } from './protocol';
 import { createComponentsView } from './componentsView';
 import {
   ConnectionElement,

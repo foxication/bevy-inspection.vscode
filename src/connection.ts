@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EntityId, BevyRemoteProtocol, TypePath, ServerVersion, BrpObject } from 'bevy-remote-protocol';
+import { EntityId, BevyRemoteProtocol, TypePath, ServerVersion, BrpObject } from './protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import { EntityFocus } from './connection-list';
 

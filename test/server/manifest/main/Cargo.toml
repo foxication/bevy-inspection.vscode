@@ -1,0 +1,15 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "server"
+path = "../../src/main.rs"
+
+[dependencies]
+bevy = { git = "https://github.com/bevyengine/bevy.git", default-features = false, features = [
+    "bevy_remote",
+    "serialize",
+] }
+serde = "1.0.217"

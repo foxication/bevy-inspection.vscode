@@ -1,4 +1,4 @@
-import { TypePath } from 'bevy-remote-protocol';
+import { TypePath } from './protocol';
 
 // Add more element classes for componentsView
 

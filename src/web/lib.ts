@@ -1,4 +1,4 @@
-import { TypePath, BrpObject, BrpValue, BrpStructurePath } from 'bevy-remote-protocol/src/types';
+import { TypePath, BrpObject, BrpValue, BrpStructurePath } from '../protocol';
 
 export function labelFromPath(path: BrpStructurePath): string {
   if (path.length > 0) return path[path.length - 1].toString();
@@ -161,6 +161,6 @@ export class BrpStructureCustom {
   private static removeBrpValue(value: BrpValue, path: BrpPath = []): void {
     if (path.length === 0) return;
     if (value !== 'object') return;
-    if (path.length === 1) delete value[path[0].default()];
+    // if (path.length === 1) delete value[path[0].default()];
   }
 }

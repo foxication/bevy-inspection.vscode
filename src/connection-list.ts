@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, EntityId, ServerVersion } from 'bevy-remote-protocol';
+import { BevyRemoteProtocol, EntityId, ServerVersion } from './protocol';
 import { Connection } from './connection';
 import { ConnectionElement } from './hierarchyData';
 
