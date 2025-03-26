@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EntityId, ServerVersion } from './protocol';
+import { EntityId, BevyVersion } from './protocol';
 import { ConnectionList } from './connection-list';
 import { NetworkStatus } from './connection';
 
@@ -14,10 +14,10 @@ export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
 
 export class ConnectionElement {
   host: string;
-  version: ServerVersion;
+  version: BevyVersion;
   network: NetworkStatus;
 
-  constructor(host: string, version: ServerVersion, network: NetworkStatus) {
+  constructor(host: string, version: BevyVersion, network: NetworkStatus) {
     this.host = host;
     this.version = version;
     this.network = network;

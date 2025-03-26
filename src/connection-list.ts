@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, EntityId, ServerVersion } from './protocol';
+import { BevyRemoteProtocol, EntityId, BevyVersion } from './protocol';
 import { Connection } from './connection';
 import { ConnectionElement } from './hierarchyData';
 
@@ -62,12 +62,12 @@ export class ConnectionList {
       }
 
       // Input version
-      const versions = Object.keys(ServerVersion);
+      const versions = Object.keys(BevyVersion);
       const versionString = await vscode.window.showQuickPick(versions, { canPickMany: false });
       if (!versionString) {
         return;
       }
-      const versionEnum = Object.values(ServerVersion)[Object.keys(ServerVersion).indexOf(versionString)];
+      const versionEnum = Object.values(BevyVersion)[Object.keys(BevyVersion).indexOf(versionString)];
 
       // Create new session
       newConnection = new Connection(new URL(url), versionEnum);

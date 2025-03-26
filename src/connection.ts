@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EntityId, BevyRemoteProtocol, TypePath, ServerVersion, BrpObject } from './protocol';
+import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject } from './protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import { EntityFocus } from './connection-list';
 
@@ -33,7 +33,7 @@ export class Connection {
   private reconnectionEmitter = new vscode.EventEmitter<Connection>();
   readonly onReconnection = this.reconnectionEmitter.event;
 
-  constructor(url: URL, version: ServerVersion) {
+  constructor(url: URL, version: BevyVersion) {
     this.network = 'offline';
     this.protocol = new BevyRemoteProtocol(url, version);
   }

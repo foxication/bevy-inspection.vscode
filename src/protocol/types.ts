@@ -131,8 +131,5 @@ export type BrpListWatchResult = {
   removed: TypePath[];
 };
 
-export enum ServerVersion {
-  IGNORE = 'IGNORE',
-  V0_15 = '0.15',
-  V0_16 = '0.16',
-}
+export type BevyVersion = '0.15' | '0.16';
+export type CommonTypePath = 'ChildOf' | 'Children' | 'Name';

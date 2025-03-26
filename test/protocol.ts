@@ -6,15 +6,15 @@ import {
   BrpGetWatchStrictResult,
   BrpListWatchResult,
   BrpValue,
-  ServerVersion,
+  BevyVersion,
 } from '../src/protocol/types';
 import { ChildProcessWithoutNullStreams, spawn, spawnSync } from 'child_process';
 import { BevyRemoteProtocol } from '../src/protocol/protocol';
 
-testWithServer('test/server/manifest/v0.15/Cargo.toml', ServerVersion.V0_15);
-testWithServer('test/server/manifest/main/Cargo.toml', ServerVersion.V0_16);
+testWithServer('test/server/manifest/v0.15/Cargo.toml', '0.15');
+testWithServer('test/server/manifest/main/Cargo.toml', '0.16');
 
-export function testWithServer(manifestPath: string, version: ServerVersion) {
+export function testWithServer(manifestPath: string, version: BevyVersion) {
   test(`testing ${manifestPath}`, async (t) => {
     let isCompiled = false;
     await t.test('server compilation', async () => {
@@ -38,7 +38,7 @@ export function testWithServer(manifestPath: string, version: ServerVersion) {
 
     const protocol = new BevyRemoteProtocol(BevyRemoteProtocol.DEFAULT_URL, version);
 
-    const is0x15 = protocol.serverVersion === ServerVersion.V0_15;
+    const is0x15 = protocol.serverVersion === '0.15';
     // const isV0_16 = protocol.serverVersion === ServerVersion.V0_16;
 
     let isConnected = false;
@@ -68,6 +68,7 @@ export function testWithServer(manifestPath: string, version: ServerVersion) {
       await t.test('get+watch (strict)', async () => testGetWatchStrict(protocol));
       await t.test('list+watch', async () => testListWatch(protocol));
       await t.test('list+watch (all)', { todo: true }, async () => {});
+      await t.test('registry_schema', { skip: is0x15 }, async () => testRegistrySchema(protocol));
     });
 
     isTestFinished = true;
@@ -78,7 +79,7 @@ export function testWithServer(manifestPath: string, version: ServerVersion) {
 export async function testGet(protocol: BevyRemoteProtocol): Promise<void> {
   const reference0x15 = {
     components: {
-      'bevy_ecs::name::Name': 'Parent Node',
+      [protocol.commonTypePaths('Name')]: 'Parent Node',
       'server::FavoriteEntity': null,
       'server::Position': {
         x: 0,
@@ -89,10 +90,11 @@ export async function testGet(protocol: BevyRemoteProtocol): Promise<void> {
     },
     errors: {},
   };
+
   const reference0x16 = {
     components: {
-      'bevy_ecs::hierarchy::Children': [],
-      'bevy_ecs::name::Name': 'Parent Node',
+      [protocol.commonTypePaths('Children')]: [],
+      [protocol.commonTypePaths('Name')]: 'Parent Node',
       'server::FavoriteEntity': null,
       'server::Position': {
         x: 0,
@@ -113,42 +115,42 @@ export async function testGet(protocol: BevyRemoteProtocol): Promise<void> {
   assert.ok(typePaths);
 
   // get
-  if (protocol.serverVersion === ServerVersion.V0_15) {
+  if (protocol.serverVersion === '0.15') {
     const res = await protocol.get(
       entity,
       typePaths.filter((value) => {
-        return value !== 'bevy_ecs::hierarchy::Children';
+        return value !== protocol.commonTypePaths('Children');
       })
     );
     assert.ifError(res.error);
     assert.deepEqual(res.result, reference0x15);
   }
-  if (protocol.serverVersion === ServerVersion.V0_16) {
+  if (protocol.serverVersion === '0.16') {
     const res = await protocol.get(entity, typePaths);
     assert.ifError(res.error);
     assert.ok(res.result);
-    if ('bevy_ecs::hierarchy::Children' in res.result.components) {
-      res.result.components['bevy_ecs::hierarchy::Children'] = [];
+    if (protocol.commonTypePaths('Children') in res.result.components) {
+      res.result.components[protocol.commonTypePaths('Children')] = [];
     }
     assert.deepEqual(res.result, reference0x16);
   }
 
   // get (strict)
-  if (protocol.serverVersion === ServerVersion.V0_15) {
+  if (protocol.serverVersion === '0.15') {
     const res = await protocol.getStrict(
       entity,
       typePaths.filter((value) => {
-        return value !== 'bevy_ecs::hierarchy::Children';
+        return value !== protocol.commonTypePaths('Children');
       })
     );
     assert.ifError(res.error);
     assert.deepEqual(res.result, reference0x15.components);
   }
-  if (protocol.serverVersion === ServerVersion.V0_16) {
+  if (protocol.serverVersion === '0.16') {
     const res = await protocol.getStrict(entity, typePaths);
     assert.ifError(res.error);
     assert.ok(res.result);
-    if ('bevy_ecs::hierarchy::Children' in res.result) res.result['bevy_ecs::hierarchy::Children'] = [];
+    if (protocol.commonTypePaths('Children') in res.result) res.result[protocol.commonTypePaths('Children')] = [];
     assert.deepEqual(res.result, reference0x16.components);
   }
 }
@@ -179,21 +181,24 @@ export async function testListEntity(protocol: BevyRemoteProtocol): Promise<void
   assert.ok(entity);
 
   const response = await protocol.list(entity);
-  assert.deepEqual(response.result?.sort(), [
-    'bevy_ecs::hierarchy::Children',
-    'bevy_ecs::name::Name',
-    'server::FavoriteEntity',
-    'server::Position',
-    'server::Shape',
-  ]);
+  assert.deepEqual(
+    response.result?.sort(),
+    [
+      protocol.commonTypePaths('Children'),
+      protocol.commonTypePaths('Name'),
+      'server::FavoriteEntity',
+      'server::Position',
+      'server::Shape',
+    ].sort()
+  );
 }
 
 export async function testListAll(protocol: BevyRemoteProtocol): Promise<void> {
   const response = await protocol.list();
   assert.ifError(response.error);
-  if (protocol.serverVersion === ServerVersion.V0_15) {
+  if (protocol.serverVersion === '0.15') {
     assert.deepEqual(response.result?.sort(), [
-      'bevy_ecs::name::Name',
+      protocol.commonTypePaths('Name'),
       'server::Description',
       'server::ExistenceTime',
       'server::FavoriteEntity',
@@ -202,11 +207,11 @@ export async function testListAll(protocol: BevyRemoteProtocol): Promise<void> {
       'server::Shape',
     ]);
   }
-  if (protocol.serverVersion === ServerVersion.V0_16) {
+  if (protocol.serverVersion === '0.16') {
     assert.deepEqual(response.result?.sort(), [
       'bevy_ecs::hierarchy::ChildOf',
-      'bevy_ecs::hierarchy::Children',
-      'bevy_ecs::name::Name',
+      protocol.commonTypePaths('Children'),
+      protocol.commonTypePaths('Name'),
       'server::Description',
       'server::ExistenceTime',
       'server::FavoriteEntity',
@@ -222,40 +227,49 @@ export async function testInsertThenRemove(protocol: BevyRemoteProtocol): Promis
   assert.ok(entity);
 
   let resTypes = await protocol.list(entity);
-  assert.deepEqual(resTypes.result?.sort(), [
-    'bevy_ecs::hierarchy::Children',
-    'bevy_ecs::name::Name',
-    'server::FavoriteEntity',
-    'server::Position',
-    'server::Shape',
-  ]);
+  assert.deepEqual(
+    resTypes.result?.sort(),
+    [
+      protocol.commonTypePaths('Children'),
+      protocol.commonTypePaths('Name'),
+      'server::FavoriteEntity',
+      'server::Position',
+      'server::Shape',
+    ].sort()
+  );
 
   let resNull = await protocol.insert(entity, { 'server::Description': 'Testing insertion and removing' });
   assert.ifError(resNull.result);
   assert.ifError(resNull.error);
 
   resTypes = await protocol.list(entity);
-  assert.deepEqual(resTypes.result?.sort(), [
-    'bevy_ecs::hierarchy::Children',
-    'bevy_ecs::name::Name',
-    'server::Description',
-    'server::FavoriteEntity',
-    'server::Position',
-    'server::Shape',
-  ]);
+  assert.deepEqual(
+    resTypes.result?.sort(),
+    [
+      protocol.commonTypePaths('Children'),
+      protocol.commonTypePaths('Name'),
+      'server::Description',
+      'server::FavoriteEntity',
+      'server::Position',
+      'server::Shape',
+    ].sort()
+  );
 
   resNull = await protocol.remove(entity, ['server::Description']);
   assert.ifError(resNull.result);
   assert.ifError(resNull.error);
 
   resTypes = await protocol.list(entity);
-  assert.deepEqual(resTypes.result?.sort(), [
-    'bevy_ecs::hierarchy::Children',
-    'bevy_ecs::name::Name',
-    'server::FavoriteEntity',
-    'server::Position',
-    'server::Shape',
-  ]);
+  assert.deepEqual(
+    resTypes.result?.sort(),
+    [
+      protocol.commonTypePaths('Children'),
+      protocol.commonTypePaths('Name'),
+      'server::FavoriteEntity',
+      'server::Position',
+      'server::Shape',
+    ].sort()
+  );
 }
 
 export async function testSpawnThenDestroy(protocol: BevyRemoteProtocol): Promise<void> {
@@ -263,7 +277,7 @@ export async function testSpawnThenDestroy(protocol: BevyRemoteProtocol): Promis
   assert.ok(lengthBefore);
 
   const spawnRes = await protocol.spawn({
-    'bevy_ecs::name::Name': 'Newborn Node',
+    [protocol.commonTypePaths('Name')]: 'Newborn Node',
     'server::Description': 'just created node by brp.spawn()',
     'server::Position': {
       x: 5,
@@ -293,12 +307,12 @@ export async function testReparent(protocol: BevyRemoteProtocol): Promise<void> 
   protocol.reparent([child0, child1], parent);
 
   const response = await protocol.query({
-    components: ['bevy_ecs::hierarchy::Children'],
+    components: [protocol.commonTypePaths('Children')],
     filterWith: ['server::FavoriteEntity'],
   });
   assert.ok(response.result);
 
-  const children: BrpValue = response.result[0].components['bevy_ecs::hierarchy::Children'];
+  const children: BrpValue = response.result[0].components[protocol.commonTypePaths('Children')];
   assert.ok(Array.isArray(children) && children.every((item) => typeof item === 'number'));
   assert.ok(children.includes(child0));
   assert.ok(children.includes(child1));
@@ -378,4 +392,45 @@ export async function testListWatchAll(protocol: BevyRemoteProtocol): Promise<vo
   // TODO: register new component
   await promise;
   // TODO: clear changes
+}
+
+export async function testRegistrySchema(protocol: BevyRemoteProtocol): Promise<void> {
+  const response = await protocol.registrySchema();
+  const expected = {
+    'server::Description': {
+      crateName: 'server',
+      items: false,
+      kind: 'TupleStruct',
+      modulePath: 'server',
+      prefixItems: [{ type: { $ref: '#/$defs/alloc::string::String' } }],
+      reflectTypes: ['Component', 'Serialize', 'Deserialize'],
+      shortPath: 'Description',
+      type: 'array',
+      typePath: 'server::Description',
+    },
+    'server::FavoriteEntity': {
+      additionalProperties: false,
+      crateName: 'server',
+      kind: 'Struct',
+      modulePath: 'server',
+      reflectTypes: ['Component', 'Serialize', 'Deserialize'],
+      shortPath: 'FavoriteEntity',
+      type: 'object',
+      typePath: 'server::FavoriteEntity',
+    },
+    'server::LovelyOne': {
+      additionalProperties: false,
+      crateName: 'server',
+      kind: 'Struct',
+      modulePath: 'server',
+      reflectTypes: ['Component', 'Serialize', 'Deserialize'],
+      shortPath: 'LovelyOne',
+      type: 'object',
+      typePath: 'server::LovelyOne',
+    },
+  };
+  assert.ok(response.result);
+  assert.deepEqual(response.result['server::Description'], expected['server::Description']);
+  assert.deepEqual(response.result['server::FavoriteEntity'], expected['server::FavoriteEntity']);
+  assert.deepEqual(response.result['server::LovelyOne'], expected['server::LovelyOne']);
 }

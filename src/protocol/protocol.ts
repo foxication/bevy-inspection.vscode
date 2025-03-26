@@ -9,46 +9,22 @@ import {
   BrpGetWatchResult,
   BrpGetWatchStrictResult,
   BrpListWatchResult,
-  ServerVersion,
+  BevyVersion,
   BrpObject,
   BrpErrors,
+  CommonTypePath,
 } from './types';
 import { TextDecoder } from 'util';
 
-function reverseMap(map: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const key in map) {
-    const value = map[key];
-    result[value] = key;
-  }
-  return result;
-}
-
-function collectMaps(maps: Array<Record<string, string>>) {
-  const collection: Record<string, string> = {};
-  for (const map of maps) {
-    for (const key in map) {
-      collection[key] = map[key];
-    }
-  }
-  return collection;
-}
-
 export class BevyRemoteProtocol {
   static DEFAULT_URL = new URL('http://127.0.0.1:15702');
-  static INTERNAL_TO_V0_15: Record<string, string> = {
-    'bevy_ecs::hierarchy::Children': 'bevy_hierarchy::components::children::Children',
-    'bevy_ecs::name::Name': 'bevy_core::name::Name',
-  };
-  static INTERNAL_TO_V0_16: Record<string, string> = {};
-  static ANY_TO_INTERNAL = collectMaps([reverseMap(this.INTERNAL_TO_V0_15), reverseMap(this.INTERNAL_TO_V0_16)]);
 
   private static decoder = new TextDecoder();
   private id: number;
   public url: URL;
-  public serverVersion: ServerVersion;
+  public serverVersion: BevyVersion;
 
-  constructor(url: URL, version: ServerVersion) {
+  constructor(url: URL, version: BevyVersion) {
     this.id = 0;
     this.url = url;
     this.serverVersion = version;
@@ -58,34 +34,30 @@ export class BevyRemoteProtocol {
     return this.id++; // starting from 0
   }
 
-  private translateToInternal(message: string): string {
-    const table = (() => {
-      if (this.serverVersion === ServerVersion.IGNORE) return {};
-      return BevyRemoteProtocol.ANY_TO_INTERNAL;
-    })();
+  public commonTypePaths(short: CommonTypePath) {
+    switch (this.serverVersion) {
+      case '0.15':
+        switch (short) {
+          case 'ChildOf':
+            return 'bevy_ecs::hierarchy::ChildOf';
+          case 'Children':
+            return 'bevy_hierarchy::components::children::Children';
+          case 'Name':
+            return 'bevy_core::name::Name';
+        }
+        break;
 
-    for (const search in table) {
-      message = message.replace(new RegExp(search, 'g'), table[search]);
+      case '0.16':
+        switch (short) {
+          case 'ChildOf':
+            return 'bevy_ecs::hierarchy::ChildOf';
+          case 'Children':
+            return 'bevy_ecs::hierarchy::Children';
+          case 'Name':
+            return 'bevy_ecs::name::Name';
+        }
+        break;
     }
-    return message;
-  }
-
-  private translateToSpecificVersion(message: string): string {
-    const table = (() => {
-      switch (this.serverVersion) {
-        case ServerVersion.V0_15:
-          return BevyRemoteProtocol.INTERNAL_TO_V0_15;
-        case ServerVersion.V0_16:
-          return BevyRemoteProtocol.INTERNAL_TO_V0_16;
-        default:
-          return {}; // ignore
-      }
-    })();
-
-    for (const search in table) {
-      message = message.replace(new RegExp(search, 'g'), table[search]);
-    }
-    return message;
   }
 
   private requestWrapper(rpcMethod: string, rpcParams: unknown, signal?: AbortSignal): RequestInit {
@@ -95,14 +67,12 @@ export class BevyRemoteProtocol {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: this.translateToSpecificVersion(
-        JSON.stringify({
-          jsonrpc: '2.0',
-          id: this.nextId(),
-          method: rpcMethod,
-          params: rpcParams,
-        })
-      ),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: this.nextId(),
+        method: rpcMethod,
+        params: rpcParams,
+      }),
       signal,
     };
   }
@@ -110,7 +80,7 @@ export class BevyRemoteProtocol {
   private async request<R>(method: string, params: unknown): Promise<BrpResponse<R>> {
     // throws error if connection refused by url
     const fetched = await fetch(this.url, this.requestWrapper(method, params));
-    return await JSON.parse(this.translateToInternal(await fetched.text()));
+    return await JSON.parse(await fetched.text());
   }
 
   private async requestStream<R>(
@@ -128,9 +98,8 @@ export class BevyRemoteProtocol {
       const reader = response.body.getReader();
       while (true) {
         const { done, value } = await reader.read();
-        const decoded: string = BevyRemoteProtocol.decoder.decode(value);
-        const translated = this.translateToInternal(decoded);
-        const parsed = JSON.parse(translated.slice(decoded.indexOf('{')));
+        const decoded = BevyRemoteProtocol.decoder.decode(value);
+        const parsed = JSON.parse(decoded.substring(decoded.indexOf('{')));
         if (parsed.result) observer(parsed.result);
         if (done) break;
       }
@@ -385,4 +354,35 @@ export class BevyRemoteProtocol {
     if (entity) return this.requestStream('bevy/list+watch', { entity }, signal, observer);
     return this.requestStream('bevy/list+watch', null, signal, observer);
   }
+  /**
+   * Undocumented: bevy/get_resource
+   */
+
+  /**
+   * Undocumented: bevy/insert_resource
+   */
+
+  /**
+   * Undocumented: bevy/remove_resource
+   */
+
+  /**
+   * Undocumented: bevy/mutate_resource
+   */
+
+  /**
+   * Undocumented: bevy/list_resources
+   */
+
+  /**
+   * Undocumented: bevy/registry/schema
+   */
+
+  public async registrySchema(): Promise<BrpResponse<object>> {
+    return this.request('bevy/registry/schema', null);
+  }
+
+  /**
+   * Undocumented: rpc.discover
+   */
 }

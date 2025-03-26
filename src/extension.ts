@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, ServerVersion } from './protocol';
+import { BevyRemoteProtocol, BevyVersion } from './protocol';
 import { createComponentsView } from './componentsView';
 import {
   ConnectionElement,
@@ -15,7 +15,7 @@ function areThereConnections(value: boolean) {
 }
 
 async function debugLog() {
-  const protocol = new BevyRemoteProtocol(BevyRemoteProtocol.DEFAULT_URL, ServerVersion.V0_16);
+  const protocol = new BevyRemoteProtocol(BevyRemoteProtocol.DEFAULT_URL, BevyVersion.V0_16);
   console.log('COMPONENTS:');
   console.log((await protocol.list())?.result);
 }
