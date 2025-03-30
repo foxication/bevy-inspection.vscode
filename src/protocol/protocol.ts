@@ -14,6 +14,7 @@ import {
   CommonTypePath,
   BrpComponentRegistry,
   BrpRegistrySchema,
+  BrpValue,
 } from './types';
 import { TextDecoder } from 'util';
 
@@ -187,7 +188,9 @@ export class BevyRemoteProtocol {
     has?: TypePath[];
     filterWith?: TypePath[];
     filterWithout?: TypePath[];
-  }): Promise<BrpResponse<[{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]>> {
+  }): Promise<
+    BrpResponse<[{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]>
+  > {
     return this.request('bevy/query', {
       data: { components, option, has },
       filter: { with: filterWith, without: filterWithout },
@@ -243,6 +246,26 @@ export class BevyRemoteProtocol {
    */
   public async insert(entity: EntityId, components: BrpComponentRegistry): Promise<BrpResponse<null>> {
     return this.request('bevy/insert', { entity, components });
+  }
+
+  /**
+   * Mutate a field in a component.
+   *
+   * `params`:
+   * - `entity`: The ID of the entity with the component to mutate.
+   * - `component`: The component’s fully-qualified type name.
+   * - `path`: The path of the field within the component. See `GetPath` for more information on formatting this string.
+   * - `value`: The value to insert at `path`.
+   *
+   * `result`: null.
+   */
+  public async mutateComponent(
+    entity: EntityId,
+    component: TypePath,
+    path: string,
+    value: BrpValue
+  ): Promise<BrpResponse<null>> {
+    return this.request('bevy/mutate_component', { entity, component, path, value });
   }
 
   /**
