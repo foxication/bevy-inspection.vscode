@@ -1,6 +1,28 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-import { VSCodeMessage, WebviewMessage } from './lib';
 import { DataSyncManager } from './sync';
+import { BrpValue, BrpComponentRegistry, TypePath } from '../protocol';
+
+type WebviewMessage =
+  | {
+      cmd: 'mutate_component';
+      data: {
+        component: string;
+        path: string;
+        value: BrpValue;
+      };
+    }
+  | {
+      cmd: 'ready_for_watch';
+    };
+
+type VSCodeMessage =
+  | {
+      cmd: 'set_entity_info';
+      host: string;
+      entityId: number;
+    }
+  | { cmd: 'update'; data: BrpComponentRegistry }
+  | { cmd: 'update_component'; component: TypePath; value: BrpValue };
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
