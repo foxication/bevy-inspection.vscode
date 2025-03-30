@@ -1,44 +1,12 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
-// import { createExpandableOfComponents } from './componentsElements';
-import { BrpStructurePath, BrpValue } from '../protocol';
-import { BrpStructureCustom, serializePath, VSCodeMessage, WebviewMessage } from './lib';
+import { VSCodeMessage, WebviewMessage } from './lib';
+import { DataSyncManager } from './sync';
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
 function postWebviewMessage(message: WebviewMessage) {
   vscode.postMessage(message);
 }
-
-// Entity Values
-export class EntityData {
-  private data: BrpStructureCustom = new BrpStructureCustom({});
-  private dataNext: BrpStructureCustom = new BrpStructureCustom({});
-
-  synced() {
-    return this.data;
-  }
-  changed() {
-    return this.dataNext;
-  }
-
-  requestUpdate(path: BrpStructurePath, value: BrpValue) {
-    const [component, serialized] = serializePath(path);
-    postWebviewMessage({
-      cmd: 'mutate_component',
-      data: {
-        component: component,
-        path: serialized,
-        value: value,
-      },
-    });
-  }
-
-  // applyUpdate(path: BrpStructurePath, value: BrpValue) {
-  //   this.dataNext.set(path, value);
-  // }
-}
-
-export const entityData = new EntityData();
 
 // Main script
 (function () {
@@ -47,8 +15,7 @@ export const entityData = new EntityData();
     console.error('.component-list is not found in DOM');
     return;
   }
-
-  // const rootExpandable = createExpandableOfComponents();
+  const components = new DataSyncManager({}, {});
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -59,13 +26,13 @@ export const entityData = new EntityData();
         setEntityInfo(message.host, message.entityId);
         break;
       case 'update':
-        // entityData.applyUpdate([], message.data);
-        // rootExpandable.sync();
+        components.mapOfComponents = message.data;
+        components.sync();
         postWebviewMessage({ cmd: 'ready_for_watch' });
         break;
       case 'update_component':
-        // entityData.applyUpdate([message.component], message.value);
-        // rootExpandable.sync();
+        components.mapOfComponents[message.component] = message.value;
+        components.sync();
         break;
     }
   });

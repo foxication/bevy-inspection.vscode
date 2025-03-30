@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { VSCodeMessage, WebviewMessage } from './web/lib';
+import { VSCodeMessage, WebviewMessage } from './web-components/lib';
 import { BrpObject } from './protocol';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
@@ -106,8 +106,8 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       return '';
     }
     const webview = this.view.webview;
-    const htmlUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web', 'components.html'));
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web', 'components.css'));
+    const htmlUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'main.html'));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'main.css'));
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js'));
     const elementsUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode-elements', 'elements', 'dist', 'bundled.js')

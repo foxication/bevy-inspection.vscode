@@ -1,76 +1,56 @@
 import assert from 'assert';
 import test from 'node:test';
-import { short, BrpStructure } from '../src/protocol';
+import { isBrpArray, isBrpIterable, isBrpObject, isPrimitive, short } from '../src/protocol';
 
 test('short TypePath', () => {
   assert.strictEqual(short('Crypto'), 'Crypto');
   assert.strictEqual(short('bevy_ecs::something::Crypto'), 'Crypto');
   assert.strictEqual(short('bevy_ecs::something::Crypto<hell::Satan>'), 'Crypto');
 });
-test('BrpValueWrapped methods', () => {
-  // basic
-  assert.strictEqual(new BrpStructure(1).get(), 1);
-  assert.strictEqual(new BrpStructure('hello').get(), 'hello');
-  assert.strictEqual(new BrpStructure(true).get(), true);
-  assert.strictEqual(new BrpStructure(null).get(), null);
 
-  // objects
-  const data0 = new BrpStructure({ word1: 'hello', word2: 'world' });
-  assert.deepStrictEqual(data0.get(), { word1: 'hello', word2: 'world' });
-  assert.strictEqual(data0.get(['word1']), 'hello');
-  assert.strictEqual(data0.get(['word2']), 'world');
+test('isPrimitive & isBrpIterable & isBrpObject & isBrpArray', () => {
+  const _string = 'hello';
+  const _number = 123123;
+  const _float = 213.1231;
+  const _null = null;
+  const _brpObject1 = {};
+  const _brpObject2 = { something: 123 };
+  const _array1 = [];
+  const _array2 = [1, 12, 123];
 
-  // arrays
-  const data1 = new BrpStructure(['hello', 'world']);
-  assert.deepStrictEqual(data1.get(), ['hello', 'world']);
-  assert.strictEqual(data1.get([0]), 'hello');
-  assert.strictEqual(data1.get([1]), 'world');
+  assert.strictEqual(isPrimitive(_string), true);
+  assert.strictEqual(isPrimitive(_number), true);
+  assert.strictEqual(isPrimitive(_float), true);
+  assert.strictEqual(isPrimitive(_null), true);
+  assert.strictEqual(isPrimitive(_brpObject1), false);
+  assert.strictEqual(isPrimitive(_brpObject2), false);
+  assert.strictEqual(isPrimitive(_array1), false);
+  assert.strictEqual(isPrimitive(_array2), false);
 
-  // hybrid
-  assert.strictEqual(new BrpStructure({ person: [0, 1, 2, 3, 4, 5] }).get(['person', 1]), 1);
-  assert.strictEqual(new BrpStructure([0, 1, { person: 'Vladimir' }, 3, 4, 5]).get([2, 'person']), 'Vladimir');
+  assert.strictEqual(isBrpIterable(_string), false);
+  assert.strictEqual(isBrpIterable(_number), false);
+  assert.strictEqual(isBrpIterable(_float), false);
+  assert.strictEqual(isBrpIterable(_null), false);
+  assert.strictEqual(isBrpIterable(_brpObject1), true);
+  assert.strictEqual(isBrpIterable(_brpObject2), true);
+  assert.strictEqual(isBrpIterable(_array1), true);
+  assert.strictEqual(isBrpIterable(_array2), true);
 
-  // mutation
-  const data2 = new BrpStructure({ first: 'Hello,', middle: 'cruel', last: 'world!' });
-  data2.set(['middle'], 'fantasy');
-  assert.deepStrictEqual(data2.get(), { first: 'Hello,', middle: 'fantasy', last: 'world!' });
+  assert.strictEqual(isBrpObject(_string), false);
+  assert.strictEqual(isBrpObject(_number), false);
+  assert.strictEqual(isBrpObject(_float), false);
+  assert.strictEqual(isBrpObject(_null), false);
+  assert.strictEqual(isBrpObject(_brpObject1), true);
+  assert.strictEqual(isBrpObject(_brpObject2), true);
+  assert.strictEqual(isBrpObject(_array1), false);
+  assert.strictEqual(isBrpObject(_array2), false);
 
-  data2.set(['middle'], ['f', 'u', 'n']);
-  assert.deepStrictEqual(data2.get(), { first: 'Hello,', middle: ['f', 'u', 'n'], last: 'world!' });
-
-  const data3 = new BrpStructure(null);
-  data3.set([], { description: 'replaced' });
-  assert.deepStrictEqual(data3.get(), { description: 'replaced' });
-
-  const data4 = new BrpStructure(null);
-  data4.set(undefined, { info: 'replaced' });
-  assert.deepStrictEqual(data4.get(), { info: 'replaced' });
-
-  // don't change input data
-  const data5 = new BrpStructure({ hello: 'some', cruel: 'things', world: 'hide' });
-  const path = ['hello'];
-  data5.has(path);
-  data5.get(path);
-  data5.set(path, 'all');
-  assert.deepStrictEqual(path, ['hello']);
-
-  // has
-  const data6 = new BrpStructure({
-    hello: { hello: 'glad to see' },
-    world: { first: 'everything', second: 'universe' },
-  });
-  assert.ok(data6.has(['hello']));
-  assert.ok(data6.has(['world']));
-  assert.ok(data6.has(['world', 'second']));
-
-  assert.strictEqual(data6.has(['some']), false);
-  assert.strictEqual(data6.has(['world', 'third']), false);
-
-  // keys
-  assert.deepStrictEqual(data2.keys(), ['first', 'middle', 'last']);
-  assert.deepStrictEqual(data2.keys(['middle']), [0, 1, 2]);
-
-  // values
-  assert.deepStrictEqual(data2.values(), ['Hello,', ['f', 'u', 'n'], 'world!']);
-  assert.deepStrictEqual(data2.values(['middle']), ['f', 'u', 'n']);
+  assert.strictEqual(isBrpArray(_string), false);
+  assert.strictEqual(isBrpArray(_number), false);
+  assert.strictEqual(isBrpArray(_float), false);
+  assert.strictEqual(isBrpArray(_null), false);
+  assert.strictEqual(isBrpArray(_brpObject1), false);
+  assert.strictEqual(isBrpArray(_brpObject2), false);
+  assert.strictEqual(isBrpArray(_array1), true);
+  assert.strictEqual(isBrpArray(_array2), true);
 });

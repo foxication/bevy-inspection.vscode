@@ -12,7 +12,7 @@ import {
   BevyVersion,
   BrpErrors,
   CommonTypePath,
-  BrpMapOfComponents,
+  BrpComponentRegistry,
   BrpRegistrySchema,
 } from './types';
 import { TextDecoder } from 'util';
@@ -130,7 +130,7 @@ export class BevyRemoteProtocol {
   public async get(
     entity: EntityId,
     components: TypePath[]
-  ): Promise<BrpResponse<{ components: BrpMapOfComponents; errors: BrpErrors }>> {
+  ): Promise<BrpResponse<{ components: BrpComponentRegistry; errors: BrpErrors }>> {
     return this.request('bevy/get', { entity, components, strict: false });
   }
 
@@ -147,7 +147,7 @@ export class BevyRemoteProtocol {
    *
    * `result`: A map associating each type name to its value on the requested entity.
    */
-  public async getStrict(entity: EntityId, components: TypePath[]): Promise<BrpResponse<BrpMapOfComponents>> {
+  public async getStrict(entity: EntityId, components: TypePath[]): Promise<BrpResponse<BrpComponentRegistry>> {
     return this.request('bevy/get', { entity, components, strict: true });
   }
 
@@ -187,7 +187,7 @@ export class BevyRemoteProtocol {
     has?: TypePath[];
     filterWith?: TypePath[];
     filterWithout?: TypePath[];
-  }): Promise<BrpResponse<[{ entity: EntityId; components: BrpMapOfComponents; has: { [key: TypePath]: boolean } }]>> {
+  }): Promise<BrpResponse<[{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]>> {
     return this.request('bevy/query', {
       data: { components, option, has },
       filter: { with: filterWith, without: filterWithout },
@@ -203,7 +203,7 @@ export class BevyRemoteProtocol {
    * `result`:
    * - `entity`: The ID of the newly spawned entity.
    */
-  public async spawn(components: BrpMapOfComponents): Promise<BrpResponse<{ entity: EntityId }>> {
+  public async spawn(components: BrpComponentRegistry): Promise<BrpResponse<{ entity: EntityId }>> {
     return this.request('bevy/spawn', { components });
   }
 
@@ -241,7 +241,7 @@ export class BevyRemoteProtocol {
    *
    * `result`: null.
    */
-  public async insert(entity: EntityId, components: BrpMapOfComponents): Promise<BrpResponse<null>> {
+  public async insert(entity: EntityId, components: BrpComponentRegistry): Promise<BrpResponse<null>> {
     return this.request('bevy/insert', { entity, components });
   }
 

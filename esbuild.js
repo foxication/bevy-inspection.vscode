@@ -5,7 +5,7 @@ const watch = process.argv.includes('--watch');
 
 async function main() {
   const ctxComponentsWebView = await esbuild.context({
-    entryPoints: ['src/web/components.ts'],
+    entryPoints: ['src/web-components/main.ts'],
     bundle: true,
     format: 'esm',
     minify: production,
