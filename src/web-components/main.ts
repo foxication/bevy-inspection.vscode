@@ -1,8 +1,8 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
-import { BrpValue, BrpComponentRegistry, TypePath } from '../protocol';
+import { BrpValue, BrpComponentRegistry, TypePath } from '../protocol/types';
 
-type WebviewMessage =
+export type WebviewMessage =
   | {
       cmd: 'mutate_component';
       data: {
@@ -15,7 +15,7 @@ type WebviewMessage =
       cmd: 'ready_for_watch';
     };
 
-type VSCodeMessage =
+export type VSCodeMessage =
   | {
       cmd: 'set_entity_info';
       host: string;

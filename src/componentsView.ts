@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { VSCodeMessage, WebviewMessage } from './web-components/lib';
+import { VSCodeMessage, WebviewMessage } from './web-components/main';
 import { BrpObject } from './protocol';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {

@@ -8,7 +8,7 @@ import {
   isPrimitive,
   TypePath,
   TypePathReference,
-} from '../protocol';
+} from '../protocol/types';
 
 type DataPathSegment = string | number | undefined;
 
