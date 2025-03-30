@@ -252,7 +252,7 @@ class SyncNode {
     }
     return access;
   }
-  public debugTree(level: number = 0): string {
+  public debugTree(level: number, filter?: TypePath[]): string {
     let result = '| '.repeat(level);
 
     const spaced = (s: string) => {
@@ -304,7 +304,17 @@ class SyncNode {
       result += 'ROOT:\n';
     }
 
-    this.children.forEach((child) => (result += child.debugTree(level + 1)));
+    this.children.forEach((child) => {
+      if (
+        this.data instanceof ComponentsData &&
+        filter !== undefined &&
+        !(child.data instanceof ComponentsData) &&
+        !filter.includes(child.data.typePath)
+      ) {
+        return;
+      }
+      result += child.debugTree(level + 1, filter);
+    });
     return result;
   }
   public sync() {} // TODO
@@ -318,8 +328,8 @@ export class DataSyncManager {
   sync() {
     this.root.sync();
   }
-  debugTree(): string {
-    return this.root.debugTree();
+  debugTree(filter?: TypePath[]): string {
+    return this.root.debugTree(0, filter);
   }
 }
 

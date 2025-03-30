@@ -54,6 +54,7 @@ test('components synchronization', async (t: TestContext) => {
   t.assert.ok(componentRegistry);
   if (componentErrors !== undefined) console.log(JSON.stringify(componentErrors));
 
+  // Initial data
   const syncManager = new DataSyncManager(componentRegistry, registrySchema);
   const result = syncManager.debugTree();
   const expectedResult =
@@ -97,6 +98,15 @@ test('components synchronization', async (t: TestContext) => {
 | | VALUE+SERDE      4 --> u128 = 4\n\
 | ENUM+SERDE         server_all_types::WindowMode --> server_all_types::WindowMode = {"Window":[512,256]}\n';
   t.assert.strictEqual(result, expectedResult);
+
+  // Data modification
+  protocol.mutateComponent(entity, 'server_all_types::Collections', '.sequences[2]', 10);
+  const getResponse1 = await protocol.get(entity, ['server_all_types::Collections']);
+  t.assert.ok(getResponse1.result);
+  syncManager.mapOfComponents['server_all_types::Collections'] =
+    getResponse1.result.components['server_all_types::Collections'];
+  syncManager.sync();
+  console.log(syncManager.debugTree(['server_all_types::Collections']));
 
   isTestFinished = true;
   server?.kill();
