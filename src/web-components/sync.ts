@@ -38,20 +38,12 @@ class EnumData {
       }
     }
   }
-  public variants(): readonly string[] {
+  public variantNames(): readonly string[] {
     return Object.keys(this.typePaths);
   }
   public childTypePath(variant: string = this.variant) {
     return this.typePaths[variant];
   }
-  // public variantsNames(registry: BrpRegistrySchema): TypePath[] {
-  //   return (
-  //     registry[this.typePath].oneOf?.map((variant) => {
-  //       if (typeof variant === 'string') return variant;
-  //       return variant.shortPath;
-  //     }) ?? []
-  //   );
-  // }
 }
 
 class TupleData {
