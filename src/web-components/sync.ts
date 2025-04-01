@@ -78,11 +78,13 @@ class StructData {
 
 class MapData {
   constructor(public readonly schema: BrpSchema) {}
-  get properties(): readonly { property: string; typePath: TypePath }[] {
-    return (this.schema.required ?? []).map((name) => {
-      if (this.schema.properties === undefined) return { property: name, typePath: '()' };
-      return { property: name, typePath: resolveTypePathFromRef(this.schema.properties[name]) };
-    });
+  get keyTypePath(): TypePath {
+    if (this.schema.keyType === undefined) return '()';
+    return resolveTypePathFromRef(this.schema.keyType);
+  }
+  get valueTypePath(): TypePath {
+    if (this.schema.valueType === undefined) return '()';
+    return resolveTypePathFromRef(this.schema.valueType);
   }
   // TODO: set()
   // TODO: insert()
@@ -217,8 +219,12 @@ class SyncNode {
         break;
       case 'Map':
         this.data = new MapData(schema);
-        for (const { property, typePath: childTypePath } of this.data.properties) {
-          this.children.push(new SyncNode(this.source, [...path, property], childTypePath));
+        if (!isBrpObject(access)) {
+          console.error(`Error in parsing: ${path} is not a map`);
+          break;
+        }
+        for (const key of Object.keys(access)) {
+          this.children.push(new SyncNode(this.source, [...path, key], this.data.valueTypePath));
         }
         break;
     }
