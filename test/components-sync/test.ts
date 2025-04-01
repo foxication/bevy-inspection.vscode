@@ -128,8 +128,6 @@ test('components synchronization', async (t: TestContext) => {
       await assertEqualComponents([gameStateTypePath], 'sync-enum-2');
       await mutate(gameStateTypePath, '', 'Playing');
       await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
-
-      // Check all modifications
     });
   });
   isTestFinished = true;
