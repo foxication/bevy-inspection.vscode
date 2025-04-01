@@ -38,9 +38,13 @@ fn main() {
 fn setup(mut commands: Commands) {
     let mut hash_map = HashMap::new();
     hash_map.insert("First".to_string(), 73682 as i32);
+    hash_map.insert("Second".to_string(), 5882 as i32);
+    hash_map.insert("Third".to_string(), 34234 as i32);
 
     let mut hash_set = HashSet::new();
-    hash_set.insert(73682 as i32);
+    hash_set.insert(7368 as i32);
+    hash_set.insert(1232 as i32);
+    hash_set.insert(2324 as i32);
 
     commands.spawn(Name::new("Named Entity"));
     commands.spawn((
