@@ -358,7 +358,7 @@ class SyncNode {
     this.children.forEach((child) => child.sync());
 
     // Extend List
-    if (this.data instanceof ListData) {
+    if (this.data instanceof ListData || this.data instanceof SetData) {
       if (!isBrpArray(access)) {
         console.error(`Error in parsing: ${this.path} is not an array`);
       }

@@ -104,7 +104,7 @@ test('components synchronization', async (t: TestContext) => {
       const personTypePath = 'server_all_types::Person';
       const gameStateTypePath = 'server_all_types::GameState';
 
-      // Serialized value modification
+      // Serialized
       await mutate(collectionsTypePath, '.sequences.array[2]', 3000000);
       await mutate(collectionsTypePath, '.sequences.vec[1]', 2000000);
       await mutate(collectionsTypePath, '.sequences.vec_deque[1]', 5000000);
@@ -116,18 +116,24 @@ test('components synchronization', async (t: TestContext) => {
       await mutate(personTypePath, '.name', 'Mr. Night');
       await assertEqualComponents([collectionsTypePath, personTypePath], 'sync-mutation');
 
-      // List length modification
+      // List
       await mutate(collectionsTypePath, '.sequences.vec', [10, 20, 30, 40, 50, 60, 70]);
       await mutate(collectionsTypePath, '.sequences.vec_deque', [200]); // unsupported
       await assertEqualComponents([collectionsTypePath], 'sync-list-length');
 
-      // Enum modification
+      // Enum
       await mutate(gameStateTypePath, '', 'Pause');
       await assertEqualComponents([gameStateTypePath], 'sync-enum-1');
       await mutate(gameStateTypePath, '', { Loading: 123 });
       await assertEqualComponents([gameStateTypePath], 'sync-enum-2');
       await mutate(gameStateTypePath, '', 'Playing');
       await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
+
+      // Set
+      await mutate(collectionsTypePath, '.sets.hash_set', [1, 2, 3, 4, 5]);
+      await assertEqualComponents([collectionsTypePath], 'sync-set-1');
+      await mutate(collectionsTypePath, '.sets.hash_set', [6]); // unsupported
+      await assertEqualComponents([collectionsTypePath], 'sync-set-2');
     });
   });
   isTestFinished = true;
