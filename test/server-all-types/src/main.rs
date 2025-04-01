@@ -3,9 +3,12 @@
 
 use bevy::{
     app::ScheduleRunnerPlugin,
-    platform_support::{collections::{HashMap, HashSet}, hash::RandomState},
+    platform_support::{
+        collections::{HashMap, HashSet},
+        hash::RandomState,
+    },
     prelude::*,
-    remote::{http::RemoteHttpPlugin, RemotePlugin},
+    remote::{RemotePlugin, http::RemoteHttpPlugin},
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, time::Duration};
@@ -58,6 +61,7 @@ fn setup(mut commands: Commands) {
         WindowMode::Window(512, 256),
         Collections {
             sequences: Sequences {
+                array: [1, 2, 3, 4, 5],
                 vec: vec![1, 2, 3],
                 vec_deque: VecDeque::from([4, 5, 6]),
             },
@@ -173,6 +177,7 @@ struct Collections {
 
 #[derive(Reflect)]
 struct Sequences {
+    array: [i32; 5],
     vec: Vec<i32>,
     vec_deque: VecDeque<i32>,
     // linked_list: LinkedList<i32>,
