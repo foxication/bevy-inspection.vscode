@@ -1,6 +1,6 @@
 import { test, TestContext } from 'node:test';
-import { DataSyncManager } from '../src/web-components/sync';
-import { BevyRemoteProtocol } from '../src/protocol';
+import { DataSyncManager } from '../../src/web-components/sync';
+import { BevyRemoteProtocol } from '../../src/protocol';
 import { ChildProcessWithoutNullStreams, spawn, spawnSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 
@@ -52,26 +52,37 @@ test('components synchronization', async (t: TestContext) => {
     const componentNames = (await protocol.list(entity)).result;
     t.assert.ok(componentNames);
 
-    const assertEqualOrCreateFile = (actual: object | string, filename: string) => {
+    const assertEqualOrCreateFile = (actual: object | string, name: string) => {
+      if (typeof actual === 'string') {
+        const filename = 'test/components-sync/' + name + '.txt';
+        if (existsSync(filename)) {
+          const expected = readFileSync(filename).toString('utf8');
+          t.assert.strictEqual(actual, expected);
+          return;
+        }
+        writeFileSync(filename, actual);
+        console.log(`New test file created: ${filename}`);
+        return;
+      }
+      const filename = 'test/components-sync/' + name + '.json';
       if (existsSync(filename)) {
         const expected = readFileSync(filename).toString('utf8');
-        if (typeof actual === 'string') t.assert.strictEqual(actual, expected);
-        else t.assert.deepStrictEqual(actual, JSON.parse(expected));
-      } else {
-        writeFileSync(filename, typeof actual === 'string' ? actual : JSON.stringify(actual));
-        console.log(`New test file created: ${filename}`);
+        t.assert.deepStrictEqual(actual, JSON.parse(expected));
+        return;
       }
+      writeFileSync(filename, JSON.stringify(actual));
+      console.log(`New test file created: ${filename}`);
     };
 
     let getResponse = await protocol.get(entity, componentNames);
-    assertEqualOrCreateFile(getResponse.result ?? {}, 'test/sync-get-response.json');
+    assertEqualOrCreateFile(getResponse.result ?? {}, 'sync-get-response');
     const componentRegistry = getResponse.result?.components;
     t.assert.ok(componentRegistry);
 
     // Render debug tree
     const syncManager = new DataSyncManager(componentRegistry, registrySchema);
     const treeResult = syncManager.debugTree();
-    assertEqualOrCreateFile(treeResult, 'test/sync-initial-tree.txt');
+    assertEqualOrCreateFile(treeResult, 'sync-initial-tree');
 
     // Value modification
     const mutatedComponent = 'server_all_types::Collections';
@@ -87,7 +98,7 @@ test('components synchronization', async (t: TestContext) => {
 
     syncManager.mapOfComponents[mutatedComponent] = getResponse.result.components[mutatedComponent];
     syncManager.sync();
-    assertEqualOrCreateFile(syncManager.debugTree([mutatedComponent]), 'test/sync-mutated-tree.txt');
+    assertEqualOrCreateFile(syncManager.debugTree([mutatedComponent]), 'sync-mutated-tree');
 
     // Array insert
 
