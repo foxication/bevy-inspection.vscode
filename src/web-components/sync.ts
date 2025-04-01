@@ -136,7 +136,7 @@ class SyncNode {
       return;
     }
 
-    // Error scenarios
+    // Get schema
     if (typePath === undefined) {
       console.error(`Error: ${path} has undefined typePath`);
       this.data = undefined;
@@ -295,28 +295,35 @@ class SyncNode {
 
     return spaced(treeSegment) + ' ' + description + '\n' + after;
   }
-  public sync(path: DataPathSegment[]) {
-    // Set data
-    const access = this.access(path);
-    if (this.data instanceof ComponentsData) {
-      for (const childTypePath of this.data.componentNames) {
-        this.children.forEach((child) => child.sync([...path, childTypePath]));
-      }
-      return;
-    }
+  public sync() {
+    const access = this.access(this.path);
+
+    // Sync Serialized
     if (this.data instanceof SerializedData) {
       if (this.data.value === access) return;
-      console.log(`Updating ${path} = ${this.data.value}`);
+      console.log(`Update: ${this.path} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`);
       this.data.value = access;
     }
-    if (this.data instanceof EnumData && typeof access === 'string') {
-      if (this.data.variant === access) return;
-      console.log(`Updating ${path} = ${this.data.variant}`);
-      this.data.variant = access;
-    }
-    // if (this.data instanceof EnumData && isBrpObject(access)) {}
 
-    this.children.forEach((child) => child.sync(path));
+    // Sync Enum
+    if (this.data instanceof EnumData) {
+      if (typeof access === 'string') {
+        const variant = this.data.schema.typePath + '::' + access;
+        if (this.data.variant === variant) return;
+        console.log(`Update: ${this.path} = ${this.data.variant} --> ${variant}`);
+        this.data.variant = variant;
+      } else if (isBrpObject(access) && Object.keys(access).length === 1) {
+        const variant = this.data.schema.typePath + '::' + Object.keys(access)[0];
+        if (this.data.variant === variant) return;
+        console.log(`Update: ${this.path} = ${this.data.variant} --> ${variant}`);
+        this.data.variant = variant;
+      } else {
+        console.log(`Error in parsing EnumData: ${this.path}`);
+      }
+    }
+
+    // Sync children
+    this.children.forEach((child) => child.sync());
   }
 }
 
@@ -326,7 +333,7 @@ export class DataSyncManager {
     this.root = new SyncNode(this, [], undefined);
   }
   sync() {
-    this.root.sync([]);
+    this.root.sync();
   }
   debugTree(filter?: TypePath[]): string {
     return this.root.debugTree(0, filter);

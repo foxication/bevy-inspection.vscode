@@ -40,9 +40,11 @@ test('components synchronization', async (t: TestContext) => {
       }
     });
 
+    // Receive registry schema
     const registrySchema = (await protocol.registrySchema()).result;
     t.assert.ok(registrySchema);
 
+    // Receive all components of special entity
     const queryResponse = await protocol.query({ filterWith: ['server_all_types::Special'] });
     t.assert.ok(queryResponse.result);
     const entity = queryResponse.result[0].entity;
