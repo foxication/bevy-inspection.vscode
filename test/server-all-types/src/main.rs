@@ -5,7 +5,7 @@ use bevy::{
     app::ScheduleRunnerPlugin,
     platform_support::{
         collections::{HashMap, HashSet},
-        hash::RandomState,
+        hash::FixedHasher,
     },
     prelude::*,
     remote::{RemotePlugin, http::RemoteHttpPlugin},
@@ -36,12 +36,12 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    let mut hash_map = HashMap::new();
+    let mut hash_map = HashMap::with_hasher(FixedHasher::default());
     hash_map.insert("First".to_string(), 73682 as i32);
     hash_map.insert("Second".to_string(), 5882 as i32);
     hash_map.insert("Third".to_string(), 34234 as i32);
 
-    let mut hash_set = HashSet::new();
+    let mut hash_set = HashSet::with_hasher(FixedHasher::default());
     hash_set.insert(7368 as i32);
     hash_set.insert(1232 as i32);
     hash_set.insert(2324 as i32);
@@ -189,12 +189,12 @@ struct Sequences {
 
 #[derive(Reflect)]
 struct Maps {
-    hash_map: HashMap<String, i32, RandomState>,
+    hash_map: HashMap<String, i32>,
     // b_tree_map: BTreeMap<String, i32>,
 }
 
 #[derive(Reflect)]
 struct Sets {
-    hash_set: HashSet<i32, RandomState>,
+    hash_set: HashSet<i32>,
     // b_tree_set: BTreeSet<i32>,
 }
