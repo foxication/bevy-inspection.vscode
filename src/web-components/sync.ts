@@ -5,7 +5,6 @@ import {
   BrpValue,
   isBrpArray,
   isBrpObject,
-  isPrimitive,
   TypePath,
   TypePathReference,
 } from '../protocol/types';
@@ -13,125 +12,82 @@ import {
 type DataPathSegment = string | number | undefined;
 
 class SerializedData {
-  public readonly kind: BrpSchema['kind'];
-  constructor(public readonly typePath: TypePath, public value: BrpValue, registrySchema: BrpRegistrySchema) {
-    this.kind = registrySchema[typePath].kind;
-  }
+  constructor(public readonly schema: BrpSchema, public value: BrpValue) {}
+  // TODO: set()
 }
 
 class EnumData {
-  private readonly typePaths: { [variantName: string]: undefined | TypePath } = {};
-  constructor(public readonly typePath: TypePath, public variant: TypePath, registrySchema: BrpRegistrySchema) {
-    const oneOf = registrySchema[typePath].oneOf;
-    if (oneOf === undefined) return;
-    for (const variant of oneOf) {
-      if (typeof variant === 'string') {
-        this.typePaths[variant] = undefined;
-        return;
-      }
-      if ('prefixItems' in variant) {
-        const prefixItems = variant.prefixItems;
-        if (prefixItems === undefined) this.typePaths[variant.shortPath] = undefined;
-        else this.typePaths[variant.shortPath] = resolveTypePathFromRef(prefixItems[0]);
-      } else {
-        this.typePaths[variant.shortPath] = undefined;
-      }
-    }
+  constructor(public readonly schema: BrpSchema, public variant: TypePath) {
+    if (!this.variantTypePaths.includes(variant)) console.error(`Error: variant ${variant} doesn't exist`);
   }
-  public variantNames(): readonly string[] {
-    return Object.keys(this.typePaths);
+  get variantName(): string {
+    const parent = this.schema.typePath + '::';
+    return this.variant.slice(parent.length);
   }
-  public childTypePath(variant: string = this.variant) {
-    return this.typePaths[variant];
+  get variantTypePaths(): readonly TypePath[] {
+    return (this.schema.oneOf ?? []).map((value) => {
+      if (typeof value === 'string') return this.schema.typePath + '::' + value;
+      return value.typePath;
+    });
   }
+  // TODO: set()
 }
 
 class TupleData {
-  public readonly fieldTypePaths: TypePath[] = [];
-  constructor(public readonly typePath: TypePath, registrySchema: BrpRegistrySchema) {
-    const prefix = registrySchema[typePath].prefixItems;
-    if (prefix === undefined) return;
-    for (const ref of prefix) {
-      this.fieldTypePaths.push(resolveTypePathFromRef(ref));
-    }
+  constructor(public readonly schema: BrpSchema) {}
+  get childTypePaths(): readonly TypePath[] {
+    return (this.schema.prefixItems ?? []).map((ref) => {
+      return resolveTypePathFromRef(ref);
+    });
   }
-}
-
-class TupleStructData {
-  public readonly fieldTypePaths: TypePath[] = [];
-  constructor(public readonly typePath: TypePath, registrySchema: BrpRegistrySchema) {
-    const prefix = registrySchema[typePath].prefixItems;
-    if (prefix === undefined) return;
-    for (const ref of prefix) {
-      this.fieldTypePaths.push(resolveTypePathFromRef(ref));
-    }
-  }
+  // TODO: set()
 }
 
 class ArrayData {
-  public readonly childTypePath;
-  constructor(public readonly typePath: TypePath, registrySchema: BrpRegistrySchema) {
-    const items = registrySchema[typePath].items;
-    if (items === false || items === undefined) {
-      this.childTypePath = '()';
-      return;
-    }
-    this.childTypePath = resolveTypePathFromRef(items);
+  constructor(public readonly schema: BrpSchema) {}
+  get childTypePath(): TypePath {
+    if (typeof this.schema.items !== 'object') return '()';
+    return resolveTypePathFromRef(this.schema.items);
   }
+  // TODO: set()
+  // TODO: insert()
+  // TODO: append()
+  // TODO: remove()
 }
 
 class SetData {
-  public readonly childTypePath;
-  constructor(public readonly typePath: TypePath, registrySchema: BrpRegistrySchema) {
-    const items = registrySchema[typePath].items;
-    if (items === false || items === undefined) {
-      this.childTypePath = '()';
-      return;
-    }
-    this.childTypePath = resolveTypePathFromRef(items);
+  constructor(public readonly schema: BrpSchema) {}
+  get childTypePath(): TypePath {
+    if (typeof this.schema.items !== 'object') return '()';
+    return resolveTypePathFromRef(this.schema.items);
   }
+  // TODO: append()
+  // TODO: remove()
 }
 
 class StructData {
-  private fields: { [fieldName: string]: TypePath } = {};
-
-  constructor(public readonly typePath: TypePath, registrySchema: BrpRegistrySchema) {
-    const schema = registrySchema[typePath];
-
-    if (schema.required === undefined) return;
-    for (const fieldName of schema.required) {
-      this.fields[fieldName] = typePathFromSchema(registrySchema, typePath, fieldName);
-    }
+  constructor(public readonly schema: BrpSchema) {}
+  get properties(): readonly { property: string; typePath: TypePath }[] {
+    return (this.schema.required ?? []).map((name) => {
+      if (this.schema.properties === undefined) return { property: name, typePath: '()' };
+      return { property: name, typePath: resolveTypePathFromRef(this.schema.properties[name]) };
+    });
   }
-
-  public fieldNames(): readonly string[] {
-    return Object.keys(this.fields);
-  }
-
-  public childTypePath(fieldName: string): TypePath {
-    return this.fields[fieldName];
-  }
+  // TODO: set()
 }
 
 class MapData {
-  private fields: { [fieldName: string]: TypePath } = {};
-
-  constructor(public readonly typePath: TypePath, registrySchema: BrpRegistrySchema) {
-    const schema = registrySchema[typePath];
-
-    if (schema.required === undefined) return;
-    for (const fieldName of schema.required) {
-      this.fields[fieldName] = typePathFromSchema(registrySchema, typePath, fieldName);
-    }
+  constructor(public readonly schema: BrpSchema) {}
+  get properties(): readonly { property: string; typePath: TypePath }[] {
+    return (this.schema.required ?? []).map((name) => {
+      if (this.schema.properties === undefined) return { property: name, typePath: '()' };
+      return { property: name, typePath: resolveTypePathFromRef(this.schema.properties[name]) };
+    });
   }
-
-  public fieldNames(): readonly string[] {
-    return Object.keys(this.fields);
-  }
-
-  public childTypePath(fieldName: string): TypePath {
-    return this.fields[fieldName];
-  }
+  // TODO: set()
+  // TODO: insert()
+  // TODO: append()
+  // TODO: remove()
 }
 
 class ComponentsData {
@@ -143,93 +99,128 @@ class ComponentsData {
 // }
 
 class SyncNode {
-  private pathSegment: DataPathSegment;
-  private data:
-    | SerializedData // single
-    | EnumData
-    | TupleData // collection
-    | TupleStructData
-    | ArrayData // ordered collection
-    | SetData
-    | StructData // mapped collection
-    | MapData
-    | ComponentsData;
-  // private visual: Visual; // TODO
+  private source: DataSyncManager;
+  private path: DataPathSegment[];
   private children: SyncNode[] = [];
+  private data:
+    | SerializedData
+    | EnumData
+    | TupleData
+    | ArrayData
+    | SetData
+    | StructData
+    | MapData
+    | ComponentsData
+    | undefined;
+  // private visual: Visual; // TODO
 
-  constructor(private source: DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
-    this.pathSegment = path[path.length - 1];
+  constructor(source: DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
+    this.source = source;
+    this.path = path;
 
-    // Set data
     const access = this.access(path);
-    if (path.length === 0 && isBrpObject(access)) {
+
+    // ComponentsData
+    if (path.length === 0) {
+      if (!isBrpObject(access)) {
+        console.error(`Error: ${path} is not an BrpObject`);
+        this.data = undefined;
+        return;
+      }
       this.data = new ComponentsData(Object.keys(access));
       for (const childTypePath of this.data.componentNames) {
-        this.children.push(new SyncNode(this.source, [...path, childTypePath], childTypePath));
+        this.children.push(new SyncNode(source, [...path, childTypePath], childTypePath));
       }
-    } else if (typePath !== undefined && source.registrySchema[typePath].reflectTypes?.includes('Serialize')) {
-      this.data = new SerializedData(typePath, access, source.registrySchema);
-    } else if (typePath !== undefined) {
-      const kind = source.registrySchema[typePath].kind;
-      switch (kind) {
-        case 'Value':
-          this.data = new SerializedData(typePath, access, source.registrySchema);
+      return;
+    }
+
+    // Error scenarios
+    if (typePath === undefined) {
+      console.error(`Error: ${path} has undefined typePath`);
+      this.data = undefined;
+      return;
+    }
+    const schema = getSchemaRecursively(typePath, source.registrySchema);
+    if (schema === undefined) {
+      console.error(`Error: schema for ${path} is not found`);
+      this.data = undefined;
+      return;
+    }
+
+    // SerializedData
+    if (schema.reflectTypes?.includes('Serialize')) {
+      this.data = new SerializedData(schema, access);
+      return;
+    }
+
+    // Parsing
+    switch (schema.kind) {
+      case 'Value':
+        console.error(`Error: value ${path} is not serializable`);
+        this.data = undefined;
+        break;
+      case 'Enum':
+        if (typeof access === 'string') {
+          const variant = schema.typePath + '::' + access;
+          this.data = new EnumData(schema, variant);
           break;
-        case 'Enum':
-          if (isPrimitive(access)) {
-            this.data = new EnumData(typePath, (access ?? '').toString(), source.registrySchema);
-            break;
-          }
-          if (access.length === 1) {
-            this.data = new EnumData(typePath, Object.keys(access)[0], source.registrySchema);
-            this.children.push(new SyncNode(this.source, [...path, this.data.variant], this.data.childTypePath()));
-            break;
-          }
-          this.data = new SerializedData(typePath, access, source.registrySchema);
+        }
+        if (isBrpObject(access) && Object.keys(access).length >= 1) {
+          const variant = schema.typePath + '::' + Object.keys(access)[0];
+          this.data = new EnumData(schema, variant);
+          this.children.push(new SyncNode(this.source, [...path, this.data.variantName], this.data.variant));
           break;
-        case 'Tuple':
-          this.data = new TupleData(typePath, source.registrySchema);
-          if (this.data.fieldTypePaths.length === 1) {
-            this.children.push(new SyncNode(this.source, [...path], this.data.fieldTypePaths[0]));
-            break;
-          }
-          for (const item of (access as BrpValue[]).keys()) {
-            this.children.push(new SyncNode(this.source, [...path, item], this.data.fieldTypePaths[item]));
-          }
+        }
+        console.error(`Error in parsing enum: ${access}`);
+        this.data = undefined;
+        break;
+      case 'Tuple':
+      case 'TupleStruct': {
+        this.data = new TupleData(schema);
+        if (this.data.childTypePaths.length === 1) {
+          this.children.push(new SyncNode(this.source, [...path, undefined], this.data.childTypePaths[0]));
           break;
-        case 'TupleStruct':
-          this.data = new TupleStructData(typePath, source.registrySchema);
-          if (this.data.fieldTypePaths.length === 1) {
-            this.children.push(new SyncNode(this.source, [...path, undefined], this.data.fieldTypePaths[0]));
-            break;
-          }
-          for (const item of (access as BrpValue[]).keys()) {
-            this.children.push(new SyncNode(this.source, [...path, item], this.data.fieldTypePaths[item]));
-          }
-          break;
-        case 'Array':
-        case 'List':
-          this.data = new ArrayData(typePath, source.registrySchema);
-          for (const item of (access as BrpValue[]).keys()) {
-            this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
-          }
-          break;
-        case 'Set':
-          this.data = new SetData(typePath, source.registrySchema);
-          break;
-        case 'Struct':
-          this.data = new StructData(typePath, source.registrySchema);
-          for (const fieldName of this.data.fieldNames()) {
-            this.children.push(new SyncNode(this.source, [...path, fieldName], this.data.childTypePath(fieldName)));
-          }
-          break;
-        case 'Map':
-          this.data = new MapData(typePath, source.registrySchema);
-          break;
+        }
+        let index = 0;
+        for (const childTypePath of this.data.childTypePaths) {
+          this.children.push(new SyncNode(this.source, [...path, index], childTypePath));
+          index++;
+        }
+        break;
       }
-    } else {
-      console.error(`Error in ExtSync.constructor(): ${access} is unknown`);
-      this.data = new SerializedData(typePath ?? '()', access, source.registrySchema);
+      case 'Array':
+      case 'List':
+        this.data = new ArrayData(schema);
+        if (!isBrpArray(access)) {
+          console.error(`Error in parsing: ${path} is not an array`);
+          break;
+        }
+        for (const item of access.keys()) {
+          this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
+        }
+        break;
+      case 'Set':
+        this.data = new SetData(schema);
+        if (!isBrpArray(access)) {
+          console.error(`Error in parsing: ${path} is not a set`);
+          break;
+        }
+        for (const item of access.keys()) {
+          this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
+        }
+        break;
+      case 'Struct':
+        this.data = new StructData(schema);
+        for (const { property, typePath: childTypePath } of this.data.properties) {
+          this.children.push(new SyncNode(this.source, [...path, property], childTypePath));
+        }
+        break;
+      case 'Map':
+        this.data = new MapData(schema);
+        for (const { property, typePath: childTypePath } of this.data.properties) {
+          this.children.push(new SyncNode(this.source, [...path, property], childTypePath));
+        }
+        break;
     }
   }
   public access(path: DataPathSegment[]): BrpValue {
@@ -247,77 +238,80 @@ class SyncNode {
         access = access[key];
         continue;
       }
-      console.error('Error in ExtSync.access(): parsing fail');
+      console.error('Error in ExtSync.access(): tried to parse ' + JSON.stringify(path));
       return null;
     }
     return access;
   }
   public debugTree(level: number, filter?: TypePath[]): string {
-    let result = '| '.repeat(level);
-
+    const pathSegment = this.path.length >= 1 ? this.path[this.path.length - 1] : undefined;
     const spaced = (s: string) => {
-      const width = 20;
-      return s + ' '.repeat(width - s.length) + ' ';
+      const width = 30;
+      return s + ' '.repeat(Math.max(width - s.length, 0));
     };
 
+    // Set treeSegment
+    let treeSegment = '| '.repeat(level);
+    if (this.data instanceof ComponentsData) treeSegment += 'COMPONENTS:';
+    else treeSegment += pathSegment ?? '...';
+
+    // Set description
+    let description = '';
+    if (this.data === undefined) {
+      description += '__parsing_error__';
+      return spaced(treeSegment) + ' ' + description + '\n'; // Parsing error
+    }
+    if (!(this.data instanceof ComponentsData)) description += this.data.schema.kind;
+    if (this.data instanceof SerializedData) description += '+Serde';
+    if (!(this.data instanceof ComponentsData)) {
+      description += ' --> ';
+      description += this.data.schema.typePath;
+    }
     if (this.data instanceof SerializedData) {
-      result += this.data.kind.toUpperCase() + '+SERDE';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath} = ${JSON.stringify(this.data.value)}\n`;
+      description += ' = ';
+      description += JSON.stringify(this.data.value);
     }
     if (this.data instanceof EnumData) {
-      result += 'ENUM        ';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath} = ${this.data.variant}\n`;
-    }
-    if (this.data instanceof TupleData) {
-      result += 'TUPLE       ';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath}:\n`;
-    }
-    if (this.data instanceof TupleStructData) {
-      result += 'TUPLE_STRUCT';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath}:\n`;
-    }
-    if (this.data instanceof ArrayData) {
-      result += 'ARRAY       ';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath}:\n`;
-    }
-    if (this.data instanceof SetData) {
-      result += 'SET         ';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath}:\n`;
-    }
-    if (this.data instanceof StructData) {
-      result += 'STRUCT      ';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath}:\n`;
-    }
-    if (this.data instanceof MapData) {
-      result += 'MAP         ';
-      result = spaced(result);
-      result += `${this.pathSegment ?? 'X'} --> ${this.data.typePath}:\n`;
-    }
-    if (this.data instanceof ComponentsData) {
-      result += 'ROOT:\n';
+      description += '/';
+      description += JSON.stringify(this.data.variantName);
     }
 
+    // Set after
+    let after = '';
     this.children.forEach((child) => {
-      if (
+      const toSkip =
         this.data instanceof ComponentsData &&
         filter !== undefined &&
         !(child.data instanceof ComponentsData) &&
-        !filter.includes(child.data.typePath)
-      ) {
-        return;
-      }
-      result += child.debugTree(level + 1, filter);
+        !filter.includes(child.data?.schema.typePath ?? '');
+
+      if (!toSkip) after += child.debugTree(level + 1, filter);
     });
-    return result;
+    return spaced(treeSegment) + ' ' + description + '\n' + after;
   }
-  public sync() {} // TODO
+  public sync(path: DataPathSegment[]) {
+    // Set data
+    const access = this.access(path);
+    if (this.data instanceof ComponentsData) {
+      for (const childTypePath of this.data.componentNames) {
+        this.children.forEach((child) => child.sync([...path, childTypePath]));
+      }
+      return;
+    }
+    if (this.data instanceof SerializedData) {
+      if (this.data.value === access) return;
+      console.log(`Updating ${path} = ${this.data.value}`);
+      this.data.value = access;
+    }
+    if (this.data instanceof EnumData && typeof access === 'string') {
+      if (this.data.variant === access) return;
+      console.log(`Updating ${path} = ${this.data.variant}`);
+      this.data.variant = access;
+    }
+    // if (this.data instanceof EnumData && isBrpObject(access)) {}
+
+    this.children.forEach((child) => child.sync(path));
+  }
 }
 
 export class DataSyncManager {
@@ -326,7 +320,7 @@ export class DataSyncManager {
     this.root = new SyncNode(this, [], undefined);
   }
   sync() {
-    this.root.sync();
+    this.root.sync([]);
   }
   debugTree(filter?: TypePath[]): string {
     return this.root.debugTree(0, filter);
@@ -337,58 +331,29 @@ function resolveTypePathFromRef(ref: TypePathReference): TypePath {
   return ref.type.$ref.slice('#/$defs/'.length);
 }
 
-// function typePathFromStruct(registrySchema: BrpRegistrySchema, parent: TypePath, fieldName: string): TypePath {
-//   const properties = registrySchema[parent].properties;
-//   if (properties !== undefined) return resolveTypePathFromRef(properties[fieldName]);
-//   return '()';
-// }
-// function typePathFromStructSerializedAsArray(
-//   registrySchema: BrpRegistrySchema,
-//   parent: TypePath,
-//   fieldName: number
-// ): TypePath {
-//   const properties = registrySchema[parent].properties;
-//   if (properties !== undefined) {
-//     return resolveTypePathFromRef(properties[Object.keys(properties)[fieldName]]);
-//   }
-//   return '()';
-// }
-// function typePathInTupleStruct(registrySchema: BrpRegistrySchema, parent: TypePath, fieldName: number) {
-//   const prefixItems = registrySchema[parent].prefixItems;
-//   if (prefixItems !== undefined) {
-//     return resolveTypePathFromRef(prefixItems[fieldName]);
-//   }
-//   return '()';
-// }
+function getSchemaRecursively(typePath: TypePath, registrySchema: BrpRegistrySchema): BrpSchema | undefined {
+  // TypePath
+  if (Object.keys(registrySchema).includes(typePath)) return registrySchema[typePath];
 
-function typePathFromSchema(registrySchema: BrpRegistrySchema, parent: TypePath, fieldName: string | number): TypePath {
-  const fun = () => {
-    let result = '()';
-    const schema = registrySchema[parent];
-    if (schema === undefined) return result;
-
-    const items = registrySchema[parent].items;
-    if (items !== false && items !== undefined) {
-      result = resolveTypePathFromRef(items);
-    }
-
-    const properties = registrySchema[parent].properties;
-    if (properties !== undefined && typeof fieldName === 'string') {
-      result = resolveTypePathFromRef(properties[fieldName]);
-    }
-    if (properties !== undefined && typeof fieldName === 'number') {
-      result = resolveTypePathFromRef(properties[Object.keys(properties)[fieldName]]);
-    }
-
-    const prefixItems = registrySchema[parent].prefixItems;
-    if (prefixItems !== undefined && typeof fieldName === 'number') {
-      result = resolveTypePathFromRef(prefixItems[Math.min(fieldName, prefixItems.length - 1)]);
-    }
-
-    return result;
-  };
-
-  const result = fun();
-  if (result === '()') console.error(`Error in typePathFromSchema(): unknown TypePath in ${parent}`);
+  // TypePath as part of Enum
+  const splittedPath = typePath.split('::');
+  if (splittedPath.length < 2) {
+    console.error(`SerializedData Error in making splittedPath from: ${typePath}`);
+    return undefined;
+  }
+  const shortPath = '::' + splittedPath[splittedPath.length - 1];
+  const parentTypePath = typePath.slice(0, typePath.length - shortPath.length);
+  if (!Object.keys(registrySchema).includes(parentTypePath)) {
+    console.error(`SerializedData Error - enumTypePath doesn't exist: ${parentTypePath}`);
+    return undefined;
+  }
+  const result = registrySchema[parentTypePath].oneOf?.find((value) => {
+    if (typeof value === 'string') return false;
+    return value.typePath === typePath && Object.keys(value).includes('kind');
+  }) as BrpSchema | undefined;
+  if (result === undefined) {
+    console.error(`SerializedData Error - schema of ${parentTypePath} doesn't include: ${typePath}`);
+    return undefined;
+  }
   return result;
 }

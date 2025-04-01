@@ -3,15 +3,12 @@
 
 use bevy::{
     app::ScheduleRunnerPlugin,
-    platform_support::collections::{HashMap, HashSet},
+    platform_support::{collections::{HashMap, HashSet}, hash::RandomState},
     prelude::*,
-    remote::{RemotePlugin, http::RemoteHttpPlugin},
+    remote::{http::RemoteHttpPlugin, RemotePlugin},
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
-    time::Duration,
-};
+use std::{collections::VecDeque, time::Duration};
 
 fn main() {
     App::new()
@@ -36,6 +33,12 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
+    let mut hash_map = HashMap::new();
+    hash_map.insert("First".to_string(), 73682 as i32);
+
+    let mut hash_set = HashSet::new();
+    hash_set.insert(73682 as i32);
+
     commands.spawn(Name::new("Named Entity"));
     commands.spawn((
         Name::new("All Components"),
@@ -58,7 +61,8 @@ fn setup(mut commands: Commands) {
                 vec: vec![1, 2, 3],
                 vec_deque: VecDeque::from([4, 5, 6]),
             },
-            maps: Maps {},
+            maps: Maps { hash_map: hash_map },
+            sets: Sets { hash_set: hash_set },
         },
     ));
 }
@@ -163,7 +167,7 @@ enum WindowMode {
 struct Collections {
     sequences: Sequences,
     maps: Maps,
-    // sets: Sets,
+    sets: Sets,
     // binary_heap: BinaryHeap<i32>,
 }
 
@@ -176,12 +180,12 @@ struct Sequences {
 
 #[derive(Reflect)]
 struct Maps {
-    // hash_map: HashMap<String, i32>,
+    hash_map: HashMap<String, i32, RandomState>,
     // b_tree_map: BTreeMap<String, i32>,
 }
 
-// #[derive(Reflect)]
-// struct Sets {
-//     // hash_set: HashSet<i32>,
-//     b_tree_set: BTreeSet<i32>,
-// }
+#[derive(Reflect)]
+struct Sets {
+    hash_set: HashSet<i32, RandomState>,
+    // b_tree_set: BTreeSet<i32>,
+}
