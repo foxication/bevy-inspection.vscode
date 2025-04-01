@@ -1,5 +1,5 @@
 import { test, TestContext } from 'node:test';
-import { DataSyncManager } from '../../src/web-components/sync';
+import { DataPathSegment, DataSyncManager } from '../../src/web-components/sync';
 import { BevyRemoteProtocol, BrpValue, TypePath } from '../../src/protocol';
 import { ChildProcessWithoutNullStreams, spawn, spawnSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -73,26 +73,26 @@ test('components synchronization', async (t: TestContext) => {
       t.assert.ok(entity);
 
       const assertEqualComponents = async (
-        componentTypePaths: TypePath[],
+        direction: DataPathSegment[],
         title: string,
         toLogResponse: boolean = false
       ) => {
         t.assert.ok(entity);
-        t.assert.ok(componentTypePaths);
+        t.assert.ok(componentNames);
         t.assert.ok(syncManager);
+        if (typeof direction[0] !== 'string') t.assert.fail("filter doesn't include componentName");
 
         // Apply changes
-        const getResponse = await protocol.get(entity, componentTypePaths);
-        for (const componentTypePath of componentTypePaths) {
-          syncManager.mapOfComponents[componentTypePath] = getResponse.result?.components[componentTypePath] ?? {};
-        }
+        const componentTypePath = direction[0];
+        const getResponse = await protocol.get(entity, [componentTypePath]);
+        syncManager.mapOfComponents[componentTypePath] = getResponse.result?.components[componentTypePath] ?? {};
         if (toLogResponse) console.log(inspect(getResponse.result, false, null, true));
 
         // Update tree
         syncManager.sync();
 
         // Check`
-        assertEqualOrCreateFile(t, syncManager.debugTree(componentTypePaths), title);
+        assertEqualOrCreateFile(t, syncManager.debugTree(direction), title);
       };
       const mutate = async (componentTypePath: TypePath, path: string, value: BrpValue) => {
         t.assert.ok(entity);
@@ -113,13 +113,14 @@ test('components synchronization', async (t: TestContext) => {
       await mutate(collectionsTypePath, '.tuples.0.2', 200);
       await mutate(collectionsTypePath, '.tuples.1.4', -300);
       await mutate(collectionsTypePath, '.tuples.1.4', -300);
+      await assertEqualComponents([collectionsTypePath], 'sync-mutation-1');
       await mutate(personTypePath, '.name', 'Mr. Night');
-      await assertEqualComponents([collectionsTypePath, personTypePath], 'sync-mutation');
+      await assertEqualComponents([personTypePath], 'sync-mutation-2');
 
       // List
       await mutate(collectionsTypePath, '.sequences.vec', [10, 20, 30, 40, 50, 60, 70]);
       await mutate(collectionsTypePath, '.sequences.vec_deque', [200]); // unsupported
-      await assertEqualComponents([collectionsTypePath], 'sync-list-length');
+      await assertEqualComponents([collectionsTypePath, 'sequences'], 'sync-list-length');
 
       // Enum
       await mutate(gameStateTypePath, '', 'Pause');
@@ -131,9 +132,9 @@ test('components synchronization', async (t: TestContext) => {
 
       // Set
       await mutate(collectionsTypePath, '.sets.hash_set', [1, 2, 3, 4, 5]);
-      await assertEqualComponents([collectionsTypePath], 'sync-set-1');
+      await assertEqualComponents([collectionsTypePath, 'sets'], 'sync-set-1');
       await mutate(collectionsTypePath, '.sets.hash_set', [6]); // unsupported
-      await assertEqualComponents([collectionsTypePath], 'sync-set-2');
+      await assertEqualComponents([collectionsTypePath, 'sets'], 'sync-set-2');
     });
   });
   isTestFinished = true;

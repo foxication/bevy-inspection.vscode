@@ -9,7 +9,7 @@ import {
   TypePathReference,
 } from '../protocol/types';
 
-type DataPathSegment = string | number | undefined;
+export type DataPathSegment = string | number | undefined;
 
 class SerializedData {
   constructor(public readonly schema: BrpSchema, public value: BrpValue) {}
@@ -268,7 +268,7 @@ class SyncNode {
     }
     return access;
   }
-  public debugTree(level: number, filter?: TypePath[]): string {
+  public debugTree(level: number, direction: DataPathSegment[]): string {
     const pathSegment = this.path.length >= 1 ? this.path[this.path.length - 1] : undefined;
     const spaced = (s: string) => {
       const width = 45;
@@ -303,13 +303,16 @@ class SyncNode {
     // Set after
     let after = '';
     this.children.forEach((child) => {
-      const toSkip =
-        this.data instanceof ComponentsData &&
-        filter !== undefined &&
-        !(child.data instanceof ComponentsData) &&
-        !filter.includes(child.data?.schema.typePath ?? '');
-
-      if (!toSkip) after += child.debugTree(level + 1, filter);
+      const childPathSegment = child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
+      const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
+      if (childPathSegment === undefined) {
+        after += child.debugTree(level + 1, direction);
+        return;
+      }
+      if (directionPathSegment === childPathSegment || directionPathSegment === undefined) {
+        after += child.debugTree(level + 1, direction.slice(1));
+        return;
+      }
     });
 
     return spaced(treeSegment) + ' ' + description + '\n' + after;
@@ -382,8 +385,8 @@ export class DataSyncManager {
   sync() {
     this.root.sync();
   }
-  debugTree(filter?: TypePath[]): string {
-    return this.root.debugTree(0, filter);
+  debugTree(direction: DataPathSegment[] = []): string {
+    return this.root.debugTree(0, direction);
   }
 }
 

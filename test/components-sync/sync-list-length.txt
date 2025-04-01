@@ -19,24 +19,3 @@ COMPONENTS:
 | | | | 0                                     Value+Serde(i32) = 200
 | | | | 1                                     Value+Serde(i32) = 5000000
 | | | | 2                                     Value+Serde(i32) = 3
-| | maps                                      Struct(server_all_types::Maps)
-| | | hash_map                                Map(bevy_platform_support::collections::HashMap<alloc::string::String, i32, bevy_platform_support::hash::FixedHasher>)
-| | | | First                                 Value+Serde(i32) = 1
-| | | | Second                                Value+Serde(i32) = 2
-| | | | Third                                 Value+Serde(i32) = 3
-| | sets                                      Struct(server_all_types::Sets)
-| | | hash_set                                Set(bevy_platform_support::collections::HashSet<i32, bevy_platform_support::hash::FixedHasher>)
-| | | | 0                                     Value+Serde(i32) = 3
-| | | | 1                                     Value+Serde(i32) = 1
-| | | | 2                                     Value+Serde(i32) = 2
-| | tuples                                    Tuple(((i32, i32, i32), server_all_types::SignedIntegers))
-| | | 0                                       Tuple((i32, i32, i32))
-| | | | 0                                     Value+Serde(i32) = 1
-| | | | 1                                     Value+Serde(i32) = 2
-| | | | 2                                     Value+Serde(i32) = 200
-| | | 1                                       TupleStruct(server_all_types::SignedIntegers)
-| | | | 0                                     Value+Serde(i8) = 1
-| | | | 1                                     Value+Serde(i16) = 2
-| | | | 2                                     Value+Serde(i32) = 3
-| | | | 3                                     Value+Serde(i64) = 4
-| | | | 4                                     Value+Serde(i128) = -300

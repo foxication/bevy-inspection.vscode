@@ -36,10 +36,3 @@ COMPONENTS:
 | | | | 2                                     Value+Serde(i32) = 3
 | | | | 3                                     Value+Serde(i64) = 4
 | | | | 4                                     Value+Serde(i128) = -300
-| server_all_types::Person                    Struct(server_all_types::Person)
-| | name                                      Value+Serde(alloc::string::String) = "Mr. Night"
-| | friends                                   Value+Serde(u32) = 4
-| | birth_date                                Tuple((u8, u8, u32))
-| | | 0                                       Value+Serde(u8) = 1
-| | | 1                                       Value+Serde(u8) = 1
-| | | 2                                       Value+Serde(u32) = 2000

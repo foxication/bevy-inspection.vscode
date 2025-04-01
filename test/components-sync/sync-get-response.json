@@ -1,1 +1,84 @@
-{"components":{"bevy_ecs::name::Name":"All Components","server_all_types::Collections":{"maps":{"hash_map":{"First":1,"Second":2,"Third":3}},"sequences":{"array":[1,2,3,4,5],"vec":[1,2,3],"vec_deque":[1,2,3]},"sets":{"hash_set":[3,1,2]},"tuples":[[1,2,3],[1,2,3,4,5]]},"server_all_types::GameDifficulty":{"Hard":{"enemies":4}},"server_all_types::GameState":"Playing","server_all_types::Person":{"birth_date":[1,1,2000],"friends":4,"name":"David"},"server_all_types::SingleValue":138,"server_all_types::SingleValueSerialized":28,"server_all_types::Special":{},"server_all_types::WindowMode":{"Window":[512,256]}},"errors":{"server_all_types::UnregisteredType":{"code":-23402,"message":"Unknown component type: `server_all_types::UnregisteredType`"}}}
+{
+    "components": {
+        "bevy_ecs::name::Name": "All Components",
+        "server_all_types::Collections": {
+            "maps": {
+                "hash_map": {
+                    "First": 1,
+                    "Second": 2,
+                    "Third": 3
+                }
+            },
+            "sequences": {
+                "array": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "vec": [
+                    1,
+                    2,
+                    3
+                ],
+                "vec_deque": [
+                    1,
+                    2,
+                    3
+                ]
+            },
+            "sets": {
+                "hash_set": [
+                    3,
+                    1,
+                    2
+                ]
+            },
+            "tuples": [
+                [
+                    1,
+                    2,
+                    3
+                ],
+                [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ]
+            ]
+        },
+        "server_all_types::GameDifficulty": {
+            "Hard": {
+                "enemies": 4
+            }
+        },
+        "server_all_types::GameState": "Playing",
+        "server_all_types::Person": {
+            "birth_date": [
+                1,
+                1,
+                2000
+            ],
+            "friends": 4,
+            "name": "David"
+        },
+        "server_all_types::SingleValue": 138,
+        "server_all_types::SingleValueSerialized": 28,
+        "server_all_types::Special": {},
+        "server_all_types::WindowMode": {
+            "Window": [
+                512,
+                256
+            ]
+        }
+    },
+    "errors": {
+        "server_all_types::UnregisteredType": {
+            "code": -23402,
+            "message": "Unknown component type: `server_all_types::UnregisteredType`"
+        }
+    }
+}
