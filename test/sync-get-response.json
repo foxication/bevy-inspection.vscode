@@ -34,7 +34,23 @@
                     1232,
                     7368
                 ]
-            }
+            },
+            "tuples": [
+                [
+                    0,
+                    -1,
+                    2,
+                    -3,
+                    4
+                ],
+                [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ]
+            ]
         },
         "server_all_types::GameDifficulty": {
             "Hard": {
@@ -51,23 +67,9 @@
             "friends": 4,
             "name": "David"
         },
-        "server_all_types::SignedIntegers": [
-            0,
-            -1,
-            2,
-            -3,
-            4
-        ],
         "server_all_types::SingleValue": 138,
         "server_all_types::SingleValueSerialized": 28,
         "server_all_types::Special": {},
-        "server_all_types::UnsignedIntegers": [
-            0,
-            1,
-            2,
-            3,
-            4
-        ],
         "server_all_types::WindowMode": {
             "Window": [
                 512,

@@ -26,6 +26,19 @@ COMPONENTS:
 | | | | 0                                     Value+Serde(i32) = 2324
 | | | | 1                                     Value+Serde(i32) = 1232
 | | | | 2                                     Value+Serde(i32) = 7368
+| | tuples                                    Tuple((server_all_types::SignedIntegers, server_all_types::UnsignedIntegers))
+| | | 0                                       TupleStruct(server_all_types::SignedIntegers)
+| | | | 0                                     Value+Serde(i8) = 0
+| | | | 1                                     Value+Serde(i16) = -1
+| | | | 2                                     Value+Serde(i32) = 2
+| | | | 3                                     Value+Serde(i64) = -3
+| | | | 4                                     Value+Serde(i128) = 4
+| | | 1                                       TupleStruct(server_all_types::UnsignedIntegers)
+| | | | 0                                     Value+Serde(u8) = 0
+| | | | 1                                     Value+Serde(u16) = 1
+| | | | 2                                     Value+Serde(u32) = 2
+| | | | 3                                     Value+Serde(u64) = 3
+| | | | 4                                     Value+Serde(u128) = 4
 | server_all_types::GameDifficulty            Enum(server_all_types::GameDifficulty)/"Hard"
 | | Hard                                      Struct(server_all_types::GameDifficulty::Hard)
 | | | enemies                                 Value+Serde(u32) = 4
@@ -37,22 +50,10 @@ COMPONENTS:
 | | | 0                                       Value+Serde(u8) = 4
 | | | 1                                       Value+Serde(u8) = 8
 | | | 2                                       Value+Serde(u32) = 1998
-| server_all_types::SignedIntegers            TupleStruct(server_all_types::SignedIntegers)
-| | 0                                         Value+Serde(i8) = 0
-| | 1                                         Value+Serde(i16) = -1
-| | 2                                         Value+Serde(i32) = 2
-| | 3                                         Value+Serde(i64) = -3
-| | 4                                         Value+Serde(i128) = 4
 | server_all_types::SingleValue               TupleStruct(server_all_types::SingleValue)
 | | ...                                       Value+Serde(f32) = 138
 | server_all_types::SingleValueSerialized     TupleStruct+Serde(server_all_types::SingleValueSerialized) = 28
 | server_all_types::Special                   Struct(server_all_types::Special)
-| server_all_types::UnsignedIntegers          TupleStruct(server_all_types::UnsignedIntegers)
-| | 0                                         Value+Serde(u8) = 0
-| | 1                                         Value+Serde(u16) = 1
-| | 2                                         Value+Serde(u32) = 2
-| | 3                                         Value+Serde(u64) = 3
-| | 4                                         Value+Serde(u128) = 4
 | server_all_types::WindowMode                Enum(server_all_types::WindowMode)/"Window"
 | | Window                                    Tuple(server_all_types::WindowMode::Window)
 | | | 0                                       Value+Serde(u32) = 512

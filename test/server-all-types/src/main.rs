@@ -18,8 +18,6 @@ fn main() {
         .register_type::<Special>()
         .register_type::<SingleValue>()
         .register_type::<SingleValueSerialized>()
-        .register_type::<SignedIntegers>()
-        .register_type::<UnsignedIntegers>()
         .register_type::<Person>()
         .register_type::<GameState>()
         .register_type::<GameDifficulty>()
@@ -53,8 +51,6 @@ fn setup(mut commands: Commands) {
         UnregisteredType,
         SingleValue(138.0),
         SingleValueSerialized(28.0),
-        SignedIntegers(0, -1, 2, -3, 4),
-        UnsignedIntegers(0, 1, 2, 3, 4),
         Person {
             name: String::from("David"),
             friends: 4,
@@ -71,6 +67,10 @@ fn setup(mut commands: Commands) {
             },
             maps: Maps { hash_map: hash_map },
             sets: Sets { hash_set: hash_set },
+            tuples: (
+                SignedIntegers(0, -1, 2, -3, 4),
+                UnsignedIntegers(0, 1, 2, 3, 4),
+            ),
         },
     ));
 }
@@ -133,14 +133,6 @@ struct SingleValueSerialized(f32);
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-struct SignedIntegers(i8, i16, i32, i64, i128);
-
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-struct UnsignedIntegers(u8, u16, u32, u64, u128);
-
-#[derive(Component, Reflect)]
-#[reflect(Component)]
 struct Person {
     name: String,
     friends: u32,
@@ -176,6 +168,7 @@ struct Collections {
     sequences: Sequences,
     maps: Maps,
     sets: Sets,
+    tuples: (SignedIntegers, UnsignedIntegers),
     // binary_heap: BinaryHeap<i32>,
 }
 
@@ -198,3 +191,9 @@ struct Sets {
     hash_set: HashSet<i32>,
     // b_tree_set: BTreeSet<i32>,
 }
+
+#[derive(Reflect)]
+struct SignedIntegers(i8, i16, i32, i64, i128);
+
+#[derive(Reflect)]
+struct UnsignedIntegers(u8, u16, u32, u64, u128);
