@@ -264,8 +264,7 @@ class SyncNode {
     if (!(this.data instanceof ComponentsData)) description += this.data.schema.kind;
     if (this.data instanceof SerializedData) description += '+Serde';
     if (!(this.data instanceof ComponentsData)) {
-      description += ' --> ';
-      description += this.data.schema.typePath;
+      description += '(' + this.data.schema.typePath + ')';
     }
     if (this.data instanceof SerializedData) {
       description += ' = ';
@@ -287,6 +286,7 @@ class SyncNode {
 
       if (!toSkip) after += child.debugTree(level + 1, filter);
     });
+
     return spaced(treeSegment) + ' ' + description + '\n' + after;
   }
   public sync(path: DataPathSegment[]) {
