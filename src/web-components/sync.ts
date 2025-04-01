@@ -252,7 +252,7 @@ class SyncNode {
   public debugTree(level: number, filter?: TypePath[]): string {
     const pathSegment = this.path.length >= 1 ? this.path[this.path.length - 1] : undefined;
     const spaced = (s: string) => {
-      const width = 30;
+      const width = 45;
       return s + ' '.repeat(Math.max(width - s.length, 0));
     };
 
