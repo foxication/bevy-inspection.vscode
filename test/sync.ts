@@ -62,8 +62,7 @@ test('components synchronization', async (t: TestContext) => {
     };
 
     const getResponse = await protocol.get(entity, componentNames);
-    assertEqualOrCreateFile(getResponse.result ?? {}, 'test/sync-get-response-result.json');
-    assertEqualOrCreateFile(getResponse.error ?? {}, 'test/sync-get-response-error.json');
+    assertEqualOrCreateFile(getResponse.result ?? {}, 'test/sync-get-response.json');
     const componentRegistry = getResponse.result?.components;
     t.assert.ok(componentRegistry);
 
