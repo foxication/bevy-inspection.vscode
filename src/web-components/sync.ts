@@ -50,6 +50,15 @@ class ArrayData {
     return resolveTypePathFromRef(this.schema.items);
   }
   // TODO: set()
+}
+
+class ListData {
+  constructor(public readonly schema: BrpSchema) {}
+  get childTypePath(): TypePath {
+    if (typeof this.schema.items !== 'object') return '()';
+    return resolveTypePathFromRef(this.schema.items);
+  }
+  // TODO: set()
   // TODO: insert()
   // TODO: append()
   // TODO: remove()
@@ -109,6 +118,7 @@ class SyncNode {
     | EnumData
     | TupleData
     | ArrayData
+    | ListData
     | SetData
     | StructData
     | MapData
@@ -191,8 +201,17 @@ class SyncNode {
         break;
       }
       case 'Array':
-      case 'List':
         this.data = new ArrayData(schema);
+        if (!isBrpArray(access)) {
+          console.error(`Error in parsing: ${path} is not an array`);
+          break;
+        }
+        for (const item of access.keys()) {
+          this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
+        }
+        break;
+      case 'List':
+        this.data = new ListData(schema);
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not an array`);
           break;
@@ -310,20 +329,48 @@ class SyncNode {
       if (typeof access === 'string') {
         const variant = this.data.schema.typePath + '::' + access;
         if (this.data.variant === variant) return;
-        console.log(`Update: ${this.path} = ${this.data.variant} --> ${variant}`);
+        console.log(`Update: ${this.path} = ${this.data.variant} --> ${access}`);
         this.data.variant = variant;
+        this.children = [];
       } else if (isBrpObject(access) && Object.keys(access).length === 1) {
         const variant = this.data.schema.typePath + '::' + Object.keys(access)[0];
         if (this.data.variant === variant) return;
-        console.log(`Update: ${this.path} = ${this.data.variant} --> ${variant}`);
+        console.log(`Update: ${this.path} = ${this.data.variant} --> ${JSON.stringify(access)}`);
         this.data.variant = variant;
+        this.children = [new SyncNode(this.source, [...this.path, this.data.variantName], variant)];
       } else {
         console.log(`Error in parsing EnumData: ${this.path}`);
       }
     }
 
+    // Shrink List
+    if (this.data instanceof ListData) {
+      if (!isBrpArray(access)) {
+        console.error(`Error in parsing: ${this.path} is not an array`);
+      }
+      if (isBrpArray(access) && this.children.length > access.length) {
+        this.children.length = access.length;
+        console.log(`Shrink: ${this.path}`);
+      }
+    }
+
     // Sync children
     this.children.forEach((child) => child.sync());
+
+    // Extend List
+    if (this.data instanceof ListData) {
+      if (!isBrpArray(access)) {
+        console.error(`Error in parsing: ${this.path} is not an array`);
+      }
+      if (isBrpArray(access)) {
+        let index = this.children.length;
+        while (this.children.length < access.length) {
+          this.children.push(new SyncNode(this.source, [...this.path, index], this.data.childTypePath));
+          console.log(`Extend: ${this.path}`);
+          index++;
+        }
+      }
+    }
   }
 }
 

@@ -1,0 +1,4 @@
+COMPONENTS:                                   
+| server_all_types::GameState                 Enum(server_all_types::GameState)/"Loading"
+| | Loading                                   Tuple(server_all_types::GameState::Loading)
+| | | ...                                     Value+Serde(i32) = 123

@@ -1,0 +1,2 @@
+COMPONENTS:                                   
+| server_all_types::GameState                 Enum(server_all_types::GameState)/"Playing"
