@@ -35,14 +35,14 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     let mut hash_map = HashMap::with_hasher(FixedHasher::default());
-    hash_map.insert("First".to_string(), 73682 as i32);
-    hash_map.insert("Second".to_string(), 5882 as i32);
-    hash_map.insert("Third".to_string(), 34234 as i32);
+    hash_map.insert("First".to_string(), 1 as i32);
+    hash_map.insert("Second".to_string(), 2 as i32);
+    hash_map.insert("Third".to_string(), 3 as i32);
 
     let mut hash_set = HashSet::with_hasher(FixedHasher::default());
-    hash_set.insert(7368 as i32);
-    hash_set.insert(1232 as i32);
-    hash_set.insert(2324 as i32);
+    hash_set.insert(1 as i32);
+    hash_set.insert(2 as i32);
+    hash_set.insert(3 as i32);
 
     commands.spawn(Name::new("Named Entity"));
     commands.spawn((
@@ -54,7 +54,7 @@ fn setup(mut commands: Commands) {
         Person {
             name: String::from("David"),
             friends: 4,
-            birth_date: (4, 8, 1998),
+            birth_date: (1, 1, 2000),
         },
         GameState::Playing,
         GameDifficulty::Hard { enemies: 4 },
@@ -63,14 +63,11 @@ fn setup(mut commands: Commands) {
             sequences: Sequences {
                 array: [1, 2, 3, 4, 5],
                 vec: vec![1, 2, 3],
-                vec_deque: VecDeque::from([4, 5, 6]),
+                vec_deque: VecDeque::from([1, 2, 3]),
             },
             maps: Maps { hash_map: hash_map },
             sets: Sets { hash_set: hash_set },
-            tuples: (
-                SignedIntegers(0, -1, 2, -3, 4),
-                UnsignedIntegers(0, 1, 2, 3, 4),
-            ),
+            tuples: ((1, 2, 3), SignedIntegers(1, 2, 3, 4, 5)),
         },
     ));
 }
@@ -168,7 +165,7 @@ struct Collections {
     sequences: Sequences,
     maps: Maps,
     sets: Sets,
-    tuples: (SignedIntegers, UnsignedIntegers),
+    tuples: ((i32, i32, i32), SignedIntegers),
     // binary_heap: BinaryHeap<i32>,
 }
 
@@ -194,6 +191,3 @@ struct Sets {
 
 #[derive(Reflect)]
 struct SignedIntegers(i8, i16, i32, i64, i128);
-
-#[derive(Reflect)]
-struct UnsignedIntegers(u8, u16, u32, u64, u128);

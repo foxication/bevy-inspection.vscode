@@ -13,32 +13,30 @@ COMPONENTS:
 | | | | 1                                     Value+Serde(i32) = 2
 | | | | 2                                     Value+Serde(i32) = 3
 | | | vec_deque                               List(alloc::collections::VecDeque<i32>)
-| | | | 0                                     Value+Serde(i32) = 4
-| | | | 1                                     Value+Serde(i32) = 5
-| | | | 2                                     Value+Serde(i32) = 6
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 3
 | | maps                                      Struct(server_all_types::Maps)
 | | | hash_map                                Map(bevy_platform_support::collections::HashMap<alloc::string::String, i32, bevy_platform_support::hash::FixedHasher>)
-| | | | First                                 Value+Serde(i32) = 73682
-| | | | Second                                Value+Serde(i32) = 5882
-| | | | Third                                 Value+Serde(i32) = 34234
+| | | | First                                 Value+Serde(i32) = 1
+| | | | Second                                Value+Serde(i32) = 2
+| | | | Third                                 Value+Serde(i32) = 3
 | | sets                                      Struct(server_all_types::Sets)
 | | | hash_set                                Set(bevy_platform_support::collections::HashSet<i32, bevy_platform_support::hash::FixedHasher>)
-| | | | 0                                     Value+Serde(i32) = 2324
-| | | | 1                                     Value+Serde(i32) = 1232
-| | | | 2                                     Value+Serde(i32) = 7368
-| | tuples                                    Tuple((server_all_types::SignedIntegers, server_all_types::UnsignedIntegers))
-| | | 0                                       TupleStruct(server_all_types::SignedIntegers)
-| | | | 0                                     Value+Serde(i8) = 0
-| | | | 1                                     Value+Serde(i16) = -1
+| | | | 0                                     Value+Serde(i32) = 3
+| | | | 1                                     Value+Serde(i32) = 1
 | | | | 2                                     Value+Serde(i32) = 2
-| | | | 3                                     Value+Serde(i64) = -3
-| | | | 4                                     Value+Serde(i128) = 4
-| | | 1                                       TupleStruct(server_all_types::UnsignedIntegers)
-| | | | 0                                     Value+Serde(u8) = 0
-| | | | 1                                     Value+Serde(u16) = 1
-| | | | 2                                     Value+Serde(u32) = 2
-| | | | 3                                     Value+Serde(u64) = 3
-| | | | 4                                     Value+Serde(u128) = 4
+| | tuples                                    Tuple(((i32, i32, i32), server_all_types::SignedIntegers))
+| | | 0                                       Tuple((i32, i32, i32))
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 3
+| | | 1                                       TupleStruct(server_all_types::SignedIntegers)
+| | | | 0                                     Value+Serde(i8) = 1
+| | | | 1                                     Value+Serde(i16) = 2
+| | | | 2                                     Value+Serde(i32) = 3
+| | | | 3                                     Value+Serde(i64) = 4
+| | | | 4                                     Value+Serde(i128) = 5
 | server_all_types::GameDifficulty            Enum(server_all_types::GameDifficulty)/"Hard"
 | | Hard                                      Struct(server_all_types::GameDifficulty::Hard)
 | | | enemies                                 Value+Serde(u32) = 4
@@ -47,9 +45,9 @@ COMPONENTS:
 | | name                                      Value+Serde(alloc::string::String) = "David"
 | | friends                                   Value+Serde(u32) = 4
 | | birth_date                                Tuple((u8, u8, u32))
-| | | 0                                       Value+Serde(u8) = 4
-| | | 1                                       Value+Serde(u8) = 8
-| | | 2                                       Value+Serde(u32) = 1998
+| | | 0                                       Value+Serde(u8) = 1
+| | | 1                                       Value+Serde(u8) = 1
+| | | 2                                       Value+Serde(u32) = 2000
 | server_all_types::SingleValue               TupleStruct(server_all_types::SingleValue)
 | | ...                                       Value+Serde(f32) = 138
 | server_all_types::SingleValueSerialized     TupleStruct+Serde(server_all_types::SingleValueSerialized) = 28

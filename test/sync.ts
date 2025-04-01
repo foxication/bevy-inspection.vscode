@@ -61,24 +61,31 @@ test('components synchronization', async (t: TestContext) => {
       }
     };
 
-    const getResponse = await protocol.get(entity, componentNames);
+    let getResponse = await protocol.get(entity, componentNames);
     assertEqualOrCreateFile(getResponse.result ?? {}, 'test/sync-get-response.json');
     const componentRegistry = getResponse.result?.components;
     t.assert.ok(componentRegistry);
 
-    // Initial data
+    // Render debug tree
     const syncManager = new DataSyncManager(componentRegistry, registrySchema);
     const treeResult = syncManager.debugTree();
-    assertEqualOrCreateFile(treeResult, 'test/sync-debug-tree.txt');
+    assertEqualOrCreateFile(treeResult, 'test/sync-initial-tree.txt');
 
-    // // Value modification
-    // protocol.mutateComponent(entity, 'server_all_types::Collections', '.sequences.vec[2]', 10);
-    // const getResponse1 = await protocol.get(entity, ['server_all_types::Collections']);
-    // t.assert.ok(getResponse1.result);
-    // syncManager.mapOfComponents['server_all_types::Collections'] =
-    //   getResponse1.result.components['server_all_types::Collections'];
-    // syncManager.sync();
-    // console.log(syncManager.debugTree(['server_all_types::Collections']));
+    // Value modification
+    const mutatedComponent = 'server_all_types::Collections';
+    await protocol.mutateComponent(entity, mutatedComponent, '.sequences.array[2]', 3000000);
+    await protocol.mutateComponent(entity, mutatedComponent, '.sequences.vec[1]', 2000000);
+    await protocol.mutateComponent(entity, mutatedComponent, '.sequences.vec_deque[1]', 5000000);
+    // await protocol.mutateComponent(entity, mutatedComponent, '.maps.hash_map[Second]', 2222);
+    // await protocol.mutateComponent(entity, mutatedComponent, '.maps.hash_set[1]', 123456);
+    await protocol.mutateComponent(entity, mutatedComponent, '.tuples.0.2', 200);
+    await protocol.mutateComponent(entity, mutatedComponent, '.tuples.1.4', -300);
+    getResponse = await protocol.get(entity, [mutatedComponent]);
+    t.assert.ok(getResponse.result);
+
+    syncManager.mapOfComponents[mutatedComponent] = getResponse.result.components[mutatedComponent];
+    syncManager.sync();
+    assertEqualOrCreateFile(syncManager.debugTree([mutatedComponent]), 'test/sync-mutated-tree.txt');
 
     // Array insert
 
