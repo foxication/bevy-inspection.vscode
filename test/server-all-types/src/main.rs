@@ -23,6 +23,8 @@ fn main() {
         .register_type::<GameDifficulty>()
         .register_type::<WindowMode>()
         .register_type::<Collections>()
+        .register_type::<Inserted>()
+        .register_type::<InsertedAlter>()
         .add_plugins(MinimalPlugins.set(
             // run 60 times per second
             ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 60.0)),
@@ -191,3 +193,11 @@ struct Sets {
 
 #[derive(Reflect)]
 struct SignedIntegers(i8, i16, i32, i64, i128);
+
+#[derive(Component, Reflect, Deserialize)]
+#[reflect(Component, Deserialize)]
+struct Inserted;
+
+#[derive(Component, Reflect, Deserialize)]
+#[reflect(Component, Deserialize)]
+struct InsertedAlter(i32);

@@ -1,0 +1,67 @@
+COMPONENTS:                                   
+| bevy_ecs::name::Name                        Struct+Serde(bevy_ecs::name::Name) = "All Components"
+| server_all_types::Collections               Struct(server_all_types::Collections)
+| | sequences                                 Struct(server_all_types::Sequences)
+| | | array                                   Array([i32; 5])
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 3000000
+| | | | 3                                     Value+Serde(i32) = 4
+| | | | 4                                     Value+Serde(i32) = 5
+| | | vec                                     List(alloc::vec::Vec<i32>)
+| | | | 0                                     Value+Serde(i32) = 10
+| | | | 1                                     Value+Serde(i32) = 20
+| | | | 2                                     Value+Serde(i32) = 30
+| | | | 3                                     Value+Serde(i32) = 40
+| | | | 4                                     Value+Serde(i32) = 50
+| | | | 5                                     Value+Serde(i32) = 60
+| | | | 6                                     Value+Serde(i32) = 70
+| | | vec_deque                               List(alloc::collections::VecDeque<i32>)
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 5000000
+| | | | 2                                     Value+Serde(i32) = 3
+| | maps                                      Struct(server_all_types::Maps)
+| | | hash_map                                Map(bevy_platform_support::collections::HashMap<alloc::string::String, i32, bevy_platform_support::hash::FixedHasher>)
+| | | | First                                 Value+Serde(i32) = 1
+| | | | Second                                Value+Serde(i32) = 2
+| | | | Third                                 Value+Serde(i32) = 3
+| | sets                                      Struct(server_all_types::Sets)
+| | | hash_set                                Set(bevy_platform_support::collections::HashSet<i32, bevy_platform_support::hash::FixedHasher>)
+| | | | 0                                     Value+Serde(i32) = 3
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 5
+| | | | 3                                     Value+Serde(i32) = 4
+| | | | 4                                     Value+Serde(i32) = 1
+| | tuples                                    Tuple(((i32, i32, i32), server_all_types::SignedIntegers))
+| | | 0                                       Tuple((i32, i32, i32))
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 200
+| | | 1                                       TupleStruct(server_all_types::SignedIntegers)
+| | | | 0                                     Value+Serde(i8) = 1
+| | | | 1                                     Value+Serde(i16) = 2
+| | | | 2                                     Value+Serde(i32) = 3
+| | | | 3                                     Value+Serde(i64) = 4
+| | | | 4                                     Value+Serde(i128) = -300
+| server_all_types::GameDifficulty            Enum(server_all_types::GameDifficulty)/"Hard"
+| | Hard                                      Struct(server_all_types::GameDifficulty::Hard)
+| | | enemies                                 Value+Serde(u32) = 4
+| server_all_types::GameState                 Enum(server_all_types::GameState)/"Playing"
+| server_all_types::Person                    Struct(server_all_types::Person)
+| | name                                      Value+Serde(alloc::string::String) = "Mr. Night"
+| | friends                                   Value+Serde(u32) = 4
+| | birth_date                                Tuple((u8, u8, u32))
+| | | 0                                       Value+Serde(u8) = 1
+| | | 1                                       Value+Serde(u8) = 1
+| | | 2                                       Value+Serde(u32) = 2000
+| server_all_types::SingleValue               TupleStruct(server_all_types::SingleValue)
+| | ...                                       Value+Serde(f32) = 138
+| server_all_types::SingleValueSerialized     TupleStruct+Serde(server_all_types::SingleValueSerialized) = 28
+| server_all_types::Special                   Struct(server_all_types::Special)
+| server_all_types::WindowMode                Enum(server_all_types::WindowMode)/"Window"
+| | Window                                    Tuple(server_all_types::WindowMode::Window)
+| | | 0                                       Value+Serde(u32) = 512
+| | | 1                                       Value+Serde(u32) = 256
+| server_all_types::Inserted                  Struct(server_all_types::Inserted)
+| server_all_types::InsertedAlter             TupleStruct(server_all_types::InsertedAlter)
+| | ...                                       Value+Serde(i32) = 42

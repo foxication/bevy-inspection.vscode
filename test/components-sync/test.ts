@@ -1,6 +1,6 @@
 import { test, TestContext } from 'node:test';
 import { DataPathSegment, DataSyncManager } from '../../src/web-components/sync';
-import { BevyRemoteProtocol, BrpValue, TypePath } from '../../src/protocol';
+import { BevyRemoteProtocol, BrpComponentRegistry, BrpValue, TypePath } from '../../src/protocol';
 import { ChildProcessWithoutNullStreams, spawn, spawnSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { inspect } from 'util';
@@ -73,40 +73,75 @@ test('components synchronization', async (t: TestContext) => {
       t.assert.ok(entity);
       t.assert.ok(syncManager);
 
+      const collectionsTypePath = 'server_all_types::Collections';
+      const personTypePath = 'server_all_types::Person';
+      const gameStateTypePath = 'server_all_types::GameState';
+      const insertedTypePath = 'server_all_types::Inserted';
+      const insertedAlterTypePath = 'server_all_types::InsertedAlter';
+      const allTypePaths = [
+        collectionsTypePath,
+        personTypePath,
+        gameStateTypePath,
+        insertedTypePath,
+        insertedAlterTypePath,
+      ];
+
       const assertEqualComponents = async (
         direction: DataPathSegment[],
         title: string,
         toUpdateComponents: boolean = true,
-        toLogResponse: boolean = false
+        onlyLog: boolean = false
       ) => {
         t.assert.ok(entity);
         t.assert.ok(componentNames);
         t.assert.ok(syncManager);
-        if (typeof direction[0] !== 'string') t.assert.fail("filter doesn't include componentName");
 
         // Apply changes
-        if (toUpdateComponents) {
+        if (typeof direction[0] === 'string' && toUpdateComponents) {
           const componentTypePath = direction[0];
           const getResponse = await protocol.get(entity, [componentTypePath]);
-          syncManager.mapOfComponents[componentTypePath] = getResponse.result?.components[componentTypePath] ?? {};
-          if (toLogResponse) console.log(inspect(getResponse.result, false, null, true));
+          if (getResponse.result?.components[componentTypePath] !== undefined) {
+            syncManager.mapOfComponents[componentTypePath] = getResponse.result?.components[componentTypePath];
+          } else {
+            delete syncManager.mapOfComponents[componentTypePath];
+          }
+          if (onlyLog) console.log(inspect(getResponse.result, false, null, true));
+        }
+
+        // Apply changes to All components
+        if (typeof direction[0] !== 'string' && toUpdateComponents) {
+          const getResponse = await protocol.get(entity, allTypePaths);
+          for (const typePath of allTypePaths) {
+            if (getResponse.result?.components[typePath] !== undefined) {
+              syncManager.mapOfComponents[typePath] = getResponse.result?.components[typePath];
+            } else {
+              delete syncManager.mapOfComponents[typePath];
+            }
+          }
+          if (onlyLog) console.log(inspect(getResponse.result, false, null, true));
         }
 
         // Update tree
         syncManager.sync();
 
         // Check`
-        assertEqualOrCreateFile(t, syncManager.debugTree(direction), title);
+        if (!onlyLog) assertEqualOrCreateFile(t, syncManager.debugTree(direction), title);
       };
       const mutateComplex = async (componentTypePath: TypePath, path: string, value: BrpValue) => {
         t.assert.ok(entity);
         const response = await protocol.mutateComponent(entity, componentTypePath, path, value);
         if (response.error) console.error(`Error: ${JSON.stringify(response.error)}`);
       };
-
-      const collectionsTypePath = 'server_all_types::Collections';
-      const personTypePath = 'server_all_types::Person';
-      const gameStateTypePath = 'server_all_types::GameState';
+      const insertComponents = async (components: BrpComponentRegistry) => {
+        t.assert.ok(entity);
+        const response = await protocol.insert(entity, components);
+        if (response.error) console.error(`Error: ${JSON.stringify(response.error)}`);
+      };
+      const removeComponents = async (components: TypePath[]) => {
+        t.assert.ok(entity);
+        const response = await protocol.remove(entity, components);
+        if (response.error) console.error(`Error: ${JSON.stringify(response.error)}`);
+      };
 
       // Serialized
       await mutateComplex(collectionsTypePath, '.sequences.array[2]', 3000000);
@@ -147,6 +182,14 @@ test('components synchronization', async (t: TestContext) => {
       await assertEqualComponents([collectionsTypePath, 'maps', 'hash_map'], 'sync-map-1', false);
       (syncManager.mapOfComponents[collectionsTypePath] ?? {})['maps']['hash_map'] = { A: 29, B: 30, C: 31 }; // unsupported
       await assertEqualComponents([collectionsTypePath, 'maps', 'hash_map'], 'sync-map-2', false);
+
+      // Components
+      await insertComponents({ [insertedTypePath]: null, [insertedAlterTypePath]: 42 });
+      await assertEqualComponents([], 'sync-components-1');
+      await removeComponents([insertedTypePath, insertedAlterTypePath]);
+      await assertEqualComponents([], 'sync-components-2');
+
+      // Single tuple ???
     });
   });
   isTestFinished = true;
