@@ -1,0 +1,5 @@
+COMPONENTS:                                   
+| server_all_types::Collections               Struct(server_all_types::Collections)
+| | sequences                                 Struct(server_all_types::Sequences)
+| | | vec                                     List(alloc::vec::Vec<i32>)
+| | | | 0                                     Value+Serde(i32) = 200

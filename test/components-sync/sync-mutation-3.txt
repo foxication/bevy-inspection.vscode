@@ -1,0 +1,38 @@
+COMPONENTS:                                   
+| server_all_types::Collections               Struct(server_all_types::Collections)
+| | sequences                                 Struct(server_all_types::Sequences)
+| | | array                                   Array([i32; 5])
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 3000000
+| | | | 3                                     Value+Serde(i32) = 4
+| | | | 4                                     Value+Serde(i32) = 5
+| | | vec                                     List(alloc::vec::Vec<i32>)
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2000000
+| | | | 2                                     Value+Serde(i32) = 3
+| | | vec_deque                               List(alloc::collections::VecDeque<i32>)
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 5000000
+| | | | 2                                     Value+Serde(i32) = 3
+| | maps                                      Struct(server_all_types::Maps)
+| | | hash_map                                Map(bevy_platform_support::collections::HashMap<alloc::string::String, i32, bevy_platform_support::hash::FixedHasher>)
+| | | | First                                 Value+Serde(i32) = 1
+| | | | Second                                Value+Serde(i32) = 22222
+| | | | Third                                 Value+Serde(i32) = 3
+| | sets                                      Struct(server_all_types::Sets)
+| | | hash_set                                Set(bevy_platform_support::collections::HashSet<i32, bevy_platform_support::hash::FixedHasher>)
+| | | | 0                                     Value+Serde(i32) = 3
+| | | | 1                                     Value+Serde(i32) = 123456
+| | | | 2                                     Value+Serde(i32) = 2
+| | tuples                                    Tuple(((i32, i32, i32), server_all_types::SignedIntegers))
+| | | 0                                       Tuple((i32, i32, i32))
+| | | | 0                                     Value+Serde(i32) = 1
+| | | | 1                                     Value+Serde(i32) = 2
+| | | | 2                                     Value+Serde(i32) = 200
+| | | 1                                       TupleStruct(server_all_types::SignedIntegers)
+| | | | 0                                     Value+Serde(i8) = 1
+| | | | 1                                     Value+Serde(i16) = 2
+| | | | 2                                     Value+Serde(i32) = 3
+| | | | 3                                     Value+Serde(i64) = 4
+| | | | 4                                     Value+Serde(i128) = -300

@@ -71,10 +71,12 @@ test('components synchronization', async (t: TestContext) => {
 
     await t.test('Handle changes of mutate_components', async (t: TestContext) => {
       t.assert.ok(entity);
+      t.assert.ok(syncManager);
 
       const assertEqualComponents = async (
         direction: DataPathSegment[],
         title: string,
+        toUpdateComponents: boolean = true,
         toLogResponse: boolean = false
       ) => {
         t.assert.ok(entity);
@@ -83,10 +85,12 @@ test('components synchronization', async (t: TestContext) => {
         if (typeof direction[0] !== 'string') t.assert.fail("filter doesn't include componentName");
 
         // Apply changes
-        const componentTypePath = direction[0];
-        const getResponse = await protocol.get(entity, [componentTypePath]);
-        syncManager.mapOfComponents[componentTypePath] = getResponse.result?.components[componentTypePath] ?? {};
-        if (toLogResponse) console.log(inspect(getResponse.result, false, null, true));
+        if (toUpdateComponents) {
+          const componentTypePath = direction[0];
+          const getResponse = await protocol.get(entity, [componentTypePath]);
+          syncManager.mapOfComponents[componentTypePath] = getResponse.result?.components[componentTypePath] ?? {};
+          if (toLogResponse) console.log(inspect(getResponse.result, false, null, true));
+        }
 
         // Update tree
         syncManager.sync();
@@ -94,7 +98,7 @@ test('components synchronization', async (t: TestContext) => {
         // Check`
         assertEqualOrCreateFile(t, syncManager.debugTree(direction), title);
       };
-      const mutate = async (componentTypePath: TypePath, path: string, value: BrpValue) => {
+      const mutateComplex = async (componentTypePath: TypePath, path: string, value: BrpValue) => {
         t.assert.ok(entity);
         const response = await protocol.mutateComponent(entity, componentTypePath, path, value);
         if (response.error) console.error(`Error: ${JSON.stringify(response.error)}`);
@@ -105,36 +109,40 @@ test('components synchronization', async (t: TestContext) => {
       const gameStateTypePath = 'server_all_types::GameState';
 
       // Serialized
-      await mutate(collectionsTypePath, '.sequences.array[2]', 3000000);
-      await mutate(collectionsTypePath, '.sequences.vec[1]', 2000000);
-      await mutate(collectionsTypePath, '.sequences.vec_deque[1]', 5000000);
-      await mutate(collectionsTypePath, '.maps.hash_set[1]', 123456); // unsupported
-      await mutate(collectionsTypePath, '.maps.hash_map[Second]', 2222); // unsupported
-      await mutate(collectionsTypePath, '.tuples.0.2', 200);
-      await mutate(collectionsTypePath, '.tuples.1.4', -300);
-      await mutate(collectionsTypePath, '.tuples.1.4', -300);
+      await mutateComplex(collectionsTypePath, '.sequences.array[2]', 3000000);
+      await mutateComplex(collectionsTypePath, '.sequences.vec[1]', 2000000);
+      await mutateComplex(collectionsTypePath, '.sequences.vec_deque[1]', 5000000);
+      await mutateComplex(collectionsTypePath, '.tuples.0.2', 200);
+      await mutateComplex(collectionsTypePath, '.tuples.1.4', -300);
+      await mutateComplex(collectionsTypePath, '.tuples.1.4', -300);
       await assertEqualComponents([collectionsTypePath], 'sync-mutation-1');
-      await mutate(personTypePath, '.name', 'Mr. Night');
+      await mutateComplex(personTypePath, '.name', 'Mr. Night');
       await assertEqualComponents([personTypePath], 'sync-mutation-2');
+      (syncManager.mapOfComponents[collectionsTypePath] ?? {})['sets']['hash_set'][1] = 123456; // unsupported
+      (syncManager.mapOfComponents[collectionsTypePath] ?? {})['maps']['hash_map']['Second'] = 22222; // unsupported
+      await assertEqualComponents([collectionsTypePath], 'sync-mutation-3', false);
 
       // List
-      await mutate(collectionsTypePath, '.sequences.vec', [10, 20, 30, 40, 50, 60, 70]);
-      await mutate(collectionsTypePath, '.sequences.vec_deque', [200]); // unsupported
-      await assertEqualComponents([collectionsTypePath, 'sequences'], 'sync-list-length');
-
-      // Enum
-      await mutate(gameStateTypePath, '', 'Pause');
-      await assertEqualComponents([gameStateTypePath], 'sync-enum-1');
-      await mutate(gameStateTypePath, '', { Loading: 123 });
-      await assertEqualComponents([gameStateTypePath], 'sync-enum-2');
-      await mutate(gameStateTypePath, '', 'Playing');
-      await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
+      await mutateComplex(collectionsTypePath, '.sequences.vec', [10, 20, 30, 40, 50, 60, 70]);
+      await assertEqualComponents([collectionsTypePath, 'sequences', 'vec'], 'sync-list-1');
+      (syncManager.mapOfComponents[collectionsTypePath] ?? {})['sequences']['vec'] = [200]; // unsupported
+      await assertEqualComponents([collectionsTypePath, 'sequences', 'vec'], 'sync-list-2', false);
 
       // Set
-      await mutate(collectionsTypePath, '.sets.hash_set', [1, 2, 3, 4, 5]);
+      await mutateComplex(collectionsTypePath, '.sets.hash_set', [1, 2, 3, 4, 5]);
       await assertEqualComponents([collectionsTypePath, 'sets'], 'sync-set-1');
-      await mutate(collectionsTypePath, '.sets.hash_set', [6]); // unsupported
-      await assertEqualComponents([collectionsTypePath, 'sets'], 'sync-set-2');
+      (syncManager.mapOfComponents[collectionsTypePath] ?? {})['sets']['hash_set'] = [6]; // unsupported
+      await assertEqualComponents([collectionsTypePath, 'sets'], 'sync-set-2', false);
+
+      // Enum
+      await mutateComplex(gameStateTypePath, '', 'Pause');
+      await assertEqualComponents([gameStateTypePath], 'sync-enum-1');
+      await mutateComplex(gameStateTypePath, '', { Loading: 123 });
+      await assertEqualComponents([gameStateTypePath], 'sync-enum-2');
+      await mutateComplex(gameStateTypePath, '', 'Playing');
+      await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
+
+      // Map
     });
   });
   isTestFinished = true;

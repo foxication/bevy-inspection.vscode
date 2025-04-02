@@ -346,8 +346,8 @@ class SyncNode {
       }
     }
 
-    // Shrink List
-    if (this.data instanceof ListData) {
+    // Shrink List + Set
+    if (this.data instanceof ListData || this.data instanceof SetData) {
       if (!isBrpArray(access)) {
         console.error(`Error in parsing: ${this.path} is not an array`);
       }
@@ -360,7 +360,7 @@ class SyncNode {
     // Sync children
     this.children.forEach((child) => child.sync());
 
-    // Extend List
+    // Extend List + Set
     if (this.data instanceof ListData || this.data instanceof SetData) {
       if (!isBrpArray(access)) {
         console.error(`Error in parsing: ${this.path} is not an array`);
