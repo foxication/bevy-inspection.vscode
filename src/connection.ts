@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject } from './protocol';
+import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject, BrpRegistrySchema } from './protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 import { EntityFocus } from './connection-list';
 
@@ -18,6 +18,7 @@ export class Connection {
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
+  private registrySchema: BrpRegistrySchema = {};
   private entityElements = new Map<EntityId, EntityElement>();
   private inspectionElements: BrpObject = {};
 
@@ -95,15 +96,30 @@ export class Connection {
     return 'success';
   }
 
+  public async requestRegistrySchema(): Promise<ProtocolResult> {
+    const response = await this.protocol.registrySchema().catch((e) => this.errorHandler(e));
+    if (response === 'disconnection') {
+      return response;
+    }
+    if (response.result === undefined) {
+      return 'error';
+    }
+
+    this.registrySchema = response.result;
+    return 'success';
+  }
+
   public async initialize(): Promise<ProtocolResult> {
     this.network = 'online';
-
     let status;
+
     status = await this.requestEntityElements();
-    if (status !== 'success') {
-      return status;
-    }
+    if (status !== 'success') return status;
+
     status = await this.requestRegisteredComponents();
+    if (status !== 'success') return status;
+
+    status = await this.requestRegistrySchema();
     return status;
   }
 
@@ -122,6 +138,10 @@ export class Connection {
 
   public getInspectionElementsSimple() {
     return this.inspectionElements;
+  }
+  
+  public getRegistrySchema() {
+    return this.registrySchema;
   }
 
   public getSessionInfo(): string {

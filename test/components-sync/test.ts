@@ -64,7 +64,7 @@ test('components synchronization', async (t: TestContext) => {
       t.assert.ok(componentRegistry);
 
       // Render debug tree
-      syncManager = new DataSyncManager(componentRegistry, registrySchema);
+      syncManager = new DataSyncManager(componentRegistry, registrySchema, undefined);
       const treeResult = syncManager.debugTree();
       assertEqualOrCreateFile(t, treeResult, 'sync-initial-tree');
     });
@@ -176,8 +176,11 @@ test('components synchronization', async (t: TestContext) => {
       await assertEqualComponents([gameStateTypePath], 'sync-enum-1');
       await mutateComplex(gameStateTypePath, '', { Loading: 123 });
       await assertEqualComponents([gameStateTypePath], 'sync-enum-2');
-      await mutateComplex(gameStateTypePath, '', 'Playing');
+      await mutateComplex(gameStateTypePath, '.0', 456);
       await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
+      console.log(inspect(syncManager.mapOfComponents, false, null, true));
+      await mutateComplex(gameStateTypePath, '', 'Playing');
+      await assertEqualComponents([gameStateTypePath], 'sync-enum-4');
 
       // Map
       (syncManager.mapOfComponents[collectionsTypePath] ?? {})['maps']['hash_map'] = { A: 29, C: 31 }; // unsupported

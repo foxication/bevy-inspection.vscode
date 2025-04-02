@@ -8,6 +8,7 @@ import {
   TypePath,
   TypePathReference,
 } from '../protocol/types';
+import { Visual } from './visual';
 
 export type DataPathSegment = string | number | undefined;
 
@@ -104,12 +105,8 @@ class ComponentsData {
   // TODO: remove()
 }
 
-// class Visual {
-//   constructor(private element: HTMLElement) {}
-// }
-
-class SyncNode {
-  private source: DataSyncManager;
+export class SyncNode {
+  private parent: SyncNode | DataSyncManager;
   private path: DataPathSegment[];
   private children: SyncNode[] = [];
   private data:
@@ -123,13 +120,18 @@ class SyncNode {
     | MapData
     | ComponentsData
     | undefined;
-  // private visual: Visual; // TODO
+  private visual: Visual | undefined;
 
-  constructor(source: DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
-    this.source = source;
+  constructor(parent: SyncNode | DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
+    this.parent = parent;
     this.path = path;
 
+    const source = this.source();
     const access = this.access(path);
+    const visualize = () => {
+      if (source.mount === undefined) return undefined;
+      return new Visual(this);
+    };
 
     // ComponentsData
     if (path.length === 0) {
@@ -140,7 +142,7 @@ class SyncNode {
       }
       this.data = new ComponentsData(Object.keys(access));
       for (const childTypePath of this.data.componentNames) {
-        this.children.push(new SyncNode(source, [...path, childTypePath], childTypePath));
+        this.children.push(new SyncNode(this, [...path, childTypePath], childTypePath));
       }
       return;
     }
@@ -161,6 +163,7 @@ class SyncNode {
     // SerializedData
     if (schema.reflectTypes?.includes('Serialize')) {
       this.data = new SerializedData(schema, access);
+      this.visual = visualize();
       return;
     }
 
@@ -174,12 +177,14 @@ class SyncNode {
         if (typeof access === 'string') {
           const variant = schema.typePath + '::' + access;
           this.data = new EnumData(schema, variant);
+          this.visual = visualize();
           break;
         }
         if (isBrpObject(access) && Object.keys(access).length >= 1) {
           const variant = schema.typePath + '::' + Object.keys(access)[0];
           this.data = new EnumData(schema, variant);
-          this.children.push(new SyncNode(this.source, [...path, this.data.variantName], this.data.variant));
+          this.visual = visualize();
+          this.children.push(new SyncNode(this, [...path, this.data.variantName], this.data.variant));
           break;
         }
         console.error(`Error in parsing enum: ${access}`);
@@ -188,67 +193,77 @@ class SyncNode {
       case 'Tuple':
       case 'TupleStruct': {
         this.data = new TupleData(schema);
+        this.visual = visualize();
         if (this.data.childTypePaths.length === 1) {
-          this.children.push(new SyncNode(this.source, [...path, undefined], this.data.childTypePaths[0]));
+          this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
           break;
         }
         let index = 0;
         for (const childTypePath of this.data.childTypePaths) {
-          this.children.push(new SyncNode(this.source, [...path, index], childTypePath));
+          this.children.push(new SyncNode(this, [...path, index], childTypePath));
           index++;
         }
         break;
       }
       case 'Array':
         this.data = new ArrayData(schema);
+        this.visual = visualize();
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not an array`);
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
+          this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
         break;
       case 'List':
         this.data = new ListData(schema);
+        this.visual = visualize();
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not an array`);
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
+          this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
         break;
       case 'Set':
         this.data = new SetData(schema);
+        this.visual = visualize();
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not a set`);
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this.source, [...path, item], this.data.childTypePath));
+          this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
         break;
       case 'Struct':
         this.data = new StructData(schema);
+        this.visual = visualize();
         for (const { property, typePath: childTypePath } of this.data.properties) {
-          this.children.push(new SyncNode(this.source, [...path, property], childTypePath));
+          this.children.push(new SyncNode(this, [...path, property], childTypePath));
         }
         break;
       case 'Map':
         this.data = new MapData(schema);
+        this.visual = visualize();
         if (!isBrpObject(access)) {
           console.error(`Error in parsing: ${path} is not a map`);
           break;
         }
         for (const key of Object.keys(access)) {
-          this.children.push(new SyncNode(this.source, [...path, key], this.data.valueTypePath));
+          this.children.push(new SyncNode(this, [...path, key], this.data.valueTypePath));
         }
         break;
     }
   }
+  public source(): DataSyncManager {
+    if (this.parent instanceof DataSyncManager) return this.parent;
+    return this.parent.source();
+  }
   public access(path: DataPathSegment[]): BrpValue {
-    let access: BrpValue = this.source.mapOfComponents;
+    let access: BrpValue = this.source().mapOfComponents;
 
     for (const key of path) {
       // skip fake pathSegments
@@ -318,11 +333,14 @@ class SyncNode {
   }
   public sync() {
     const access = this.access(this.path);
+    const source = this.source();
 
     // Sync Serialized
     if (this.data instanceof SerializedData) {
       if (this.data.value === access) return;
-      console.log(`Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`);
+      console.log(
+        `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
+      );
       this.data.value = access;
     }
 
@@ -339,7 +357,7 @@ class SyncNode {
         if (this.data.variant === variant) return;
         console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
         this.data.variant = variant;
-        this.children = [new SyncNode(this.source, [...this.path, this.data.variantName], variant)];
+        this.children = [new SyncNode(source, [...this.path, this.data.variantName], variant)];
       } else {
         console.log(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
       }
@@ -382,7 +400,7 @@ class SyncNode {
       if (isBrpArray(access)) {
         let index = this.children.length;
         while (this.children.length < access.length) {
-          this.children.push(new SyncNode(this.source, [...this.path, index], this.data.childTypePath));
+          this.children.push(new SyncNode(source, [...this.path, index], this.data.childTypePath));
           console.log(`Extend: ${JSON.stringify([...this.path, index])}`);
           index++;
         }
@@ -402,7 +420,7 @@ class SyncNode {
           });
           if (exists === undefined) {
             const childTypePath = this.data instanceof MapData ? this.data.valueTypePath : key;
-            this.children.push(new SyncNode(this.source, [...this.path, key], childTypePath));
+            this.children.push(new SyncNode(source, [...this.path, key], childTypePath));
             console.log(`Extend: ${JSON.stringify([...this.path, key])}`);
           }
         }
@@ -418,8 +436,15 @@ class SyncNode {
 
 export class DataSyncManager {
   private root: SyncNode;
-  constructor(public mapOfComponents: BrpComponentRegistry, public registrySchema: BrpRegistrySchema) {
+  constructor(
+    public mapOfComponents: BrpComponentRegistry,
+    public registrySchema: BrpRegistrySchema,
+    public readonly mount: HTMLElement | undefined
+  ) {
     this.root = new SyncNode(this, [], undefined);
+  }
+  source(): DataSyncManager {
+    return this;
   }
   sync() {
     this.root.sync();

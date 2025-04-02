@@ -57,7 +57,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
     await connection.requestInspectionElements(this.connections.focus);
     const entityData = connection.getInspectionElementsSimple();
-    if (entityData !== undefined) this.postVSCodeMessage({ cmd: 'update', data: entityData });
+    const registrySchema = connection.getRegistrySchema();
+    if (registrySchema !== undefined) this.postVSCodeMessage({ cmd: 'update_registry_schema', data: registrySchema });
+    if (entityData !== undefined) this.postVSCodeMessage({ cmd: 'update_all', data: entityData });
   }
 
   public async resolveWebviewView(

@@ -1,19 +1,13 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
-import { BrpValue, BrpComponentRegistry, TypePath } from '../protocol/types';
+import { BrpValue, BrpComponentRegistry, TypePath, BrpRegistrySchema } from '../protocol/types';
 
 export type WebviewMessage =
   | {
       cmd: 'mutate_component';
-      data: {
-        component: string;
-        path: string;
-        value: BrpValue;
-      };
+      data: { component: string; path: string; value: BrpValue };
     }
-  | {
-      cmd: 'ready_for_watch';
-    };
+  | { cmd: 'ready_for_watch' };
 
 export type VSCodeMessage =
   | {
@@ -21,8 +15,19 @@ export type VSCodeMessage =
       host: string;
       entityId: number;
     }
-  | { cmd: 'update'; data: BrpComponentRegistry }
-  | { cmd: 'update_component'; component: TypePath; value: BrpValue };
+  | {
+      cmd: 'update_all';
+      data: BrpComponentRegistry;
+    }
+  | {
+      cmd: 'update_registry_schema';
+      data: BrpRegistrySchema;
+    }
+  | {
+      cmd: 'update_component';
+      component: TypePath;
+      value: BrpValue;
+    };
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
@@ -32,12 +37,12 @@ function postWebviewMessage(message: WebviewMessage) {
 
 // Main script
 (function () {
-  const list = document.querySelector('.component-list') as HTMLDivElement;
-  if (list === null) {
+  const componentList = document.querySelector('.component-list') as HTMLDivElement;
+  if (componentList === null) {
     console.error('.component-list is not found in DOM');
     return;
   }
-  const components = new DataSyncManager({}, {});
+  const syncRoot = new DataSyncManager({}, {}, componentList);
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -47,14 +52,18 @@ function postWebviewMessage(message: WebviewMessage) {
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
         break;
-      case 'update':
-        components.mapOfComponents = message.data;
-        components.sync();
+      case 'update_registry_schema':
+        syncRoot.registrySchema = message.data;
+        break;
+      case 'update_all':
+        syncRoot.mapOfComponents = message.data;
+        syncRoot.sync();
+        console.log(syncRoot.debugTree());
         postWebviewMessage({ cmd: 'ready_for_watch' });
         break;
       case 'update_component':
-        components.mapOfComponents[message.component] = message.value;
-        components.sync();
+        syncRoot.mapOfComponents[message.component] = message.value;
+        syncRoot.sync();
         break;
     }
   });
