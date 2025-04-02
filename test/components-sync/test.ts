@@ -143,6 +143,10 @@ test('components synchronization', async (t: TestContext) => {
       await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
 
       // Map
+      (syncManager.mapOfComponents[collectionsTypePath] ?? {})['maps']['hash_map'] = { A: 29, C: 31 }; // unsupported
+      await assertEqualComponents([collectionsTypePath, 'maps', 'hash_map'], 'sync-map-1', false);
+      (syncManager.mapOfComponents[collectionsTypePath] ?? {})['maps']['hash_map'] = { A: 29, B: 30, C: 31 }; // unsupported
+      await assertEqualComponents([collectionsTypePath, 'maps', 'hash_map'], 'sync-map-2', false);
     });
   });
   isTestFinished = true;

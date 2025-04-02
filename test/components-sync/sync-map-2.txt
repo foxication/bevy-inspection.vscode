@@ -1,0 +1,7 @@
+COMPONENTS:                                   
+| server_all_types::Collections               Struct(server_all_types::Collections)
+| | maps                                      Struct(server_all_types::Maps)
+| | | hash_map                                Map(bevy_platform_support::collections::HashMap<alloc::string::String, i32, bevy_platform_support::hash::FixedHasher>)
+| | | | A                                     Value+Serde(i32) = 29
+| | | | C                                     Value+Serde(i32) = 31
+| | | | B                                     Value+Serde(i32) = 30

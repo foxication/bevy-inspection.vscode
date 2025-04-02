@@ -349,11 +349,26 @@ class SyncNode {
     // Shrink List + Set
     if (this.data instanceof ListData || this.data instanceof SetData) {
       if (!isBrpArray(access)) {
-        console.error(`Error in parsing: ${this.path} is not an array`);
+        console.error(`Error in parsing: ${this.path} is not a BrpArray`);
       }
       if (isBrpArray(access) && this.children.length > access.length) {
         this.children.length = access.length;
         console.log(`Shrink: ${this.path}`);
+      }
+    }
+
+    // Sync Map (shrink)
+    if (this.data instanceof MapData) {
+      if (!isBrpObject(access)) {
+        console.error(`Error in parsing: ${this.path} is not a BrpObject`);
+      }
+      if (isBrpObject(access)) {
+        const prevLength = this.children.length;
+        this.children = this.children.filter((child) => {
+          if (typeof child.lastPathSegment !== 'string') return false;
+          return Object.keys(access).includes(child.lastPathSegment);
+        });
+        if (prevLength !== this.children.length) console.log(`Shrink: ${this.path}`);
       }
     }
 
@@ -363,17 +378,41 @@ class SyncNode {
     // Extend List + Set
     if (this.data instanceof ListData || this.data instanceof SetData) {
       if (!isBrpArray(access)) {
-        console.error(`Error in parsing: ${this.path} is not an array`);
+        console.error(`Error in parsing: ${this.path} is not a BrpArray`);
       }
       if (isBrpArray(access)) {
         let index = this.children.length;
         while (this.children.length < access.length) {
           this.children.push(new SyncNode(this.source, [...this.path, index], this.data.childTypePath));
-          console.log(`Extend: ${this.path}`);
+          console.log(`Extend: ${[...this.path, index]}`);
           index++;
         }
       }
     }
+
+    // Sync Map (extend)
+    if (this.data instanceof MapData) {
+      if (!isBrpObject(access)) {
+        console.error(`Error in parsing: ${this.path} is not a BrpObject`);
+      }
+      if (isBrpObject(access)) {
+        for (const key of Object.keys(access)) {
+          const exists = this.children.find((child) => {
+            if (typeof child.lastPathSegment !== 'string') return false;
+            return key === child.lastPathSegment;
+          });
+          if (exists === undefined) {
+            this.children.push(new SyncNode(this.source, [...this.path, key], this.data.valueTypePath));
+            console.log(`Extend: ${[...this.path, key]}`);
+          }
+        }
+      }
+    }
+  }
+
+  get lastPathSegment(): DataPathSegment {
+    if (this.path.length === 0) return undefined;
+    return this.path[this.path.length - 1];
   }
 }
 
