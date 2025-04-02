@@ -1,0 +1,3 @@
+COMPONENTS:                                   
+| server_all_types::SingleValue               TupleStruct(server_all_types::SingleValue)
+| | ...                                       Value+Serde(f32) = 276

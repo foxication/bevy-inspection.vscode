@@ -76,12 +76,14 @@ test('components synchronization', async (t: TestContext) => {
       const collectionsTypePath = 'server_all_types::Collections';
       const personTypePath = 'server_all_types::Person';
       const gameStateTypePath = 'server_all_types::GameState';
+      const singleValueTypePath = 'server_all_types::SingleValue';
       const insertedTypePath = 'server_all_types::Inserted';
       const insertedAlterTypePath = 'server_all_types::InsertedAlter';
       const allTypePaths = [
         collectionsTypePath,
         personTypePath,
         gameStateTypePath,
+        singleValueTypePath,
         insertedTypePath,
         insertedAlterTypePath,
       ];
@@ -189,7 +191,9 @@ test('components synchronization', async (t: TestContext) => {
       await removeComponents([insertedTypePath, insertedAlterTypePath]);
       await assertEqualComponents([], 'sync-components-2');
 
-      // Single tuple ???
+      // Single-element Tuple
+      await mutateComplex(singleValueTypePath, '', 276);
+      await assertEqualComponents([singleValueTypePath], 'sync-tuple');
     });
   });
   isTestFinished = true;
