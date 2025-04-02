@@ -337,11 +337,12 @@ export class SyncNode {
 
     // Overwrite Serialized
     if (this.data instanceof SerializedData) {
-      if (this.data.value === access) return;
-      console.log(
-        `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
-      );
-      this.data.value = access;
+      if (this.data.value !== access) {
+        console.log(
+          `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
+        );
+        this.data.value = access;
+      }
     }
 
     // Restructure Enum
