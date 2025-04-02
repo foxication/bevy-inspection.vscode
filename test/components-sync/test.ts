@@ -178,7 +178,6 @@ test('components synchronization', async (t: TestContext) => {
       await assertEqualComponents([gameStateTypePath], 'sync-enum-2');
       await mutateComplex(gameStateTypePath, '.0', 456);
       await assertEqualComponents([gameStateTypePath], 'sync-enum-3');
-      console.log(inspect(syncManager.mapOfComponents, false, null, true));
       await mutateComplex(gameStateTypePath, '', 'Playing');
       await assertEqualComponents([gameStateTypePath], 'sync-enum-4');
 

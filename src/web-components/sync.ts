@@ -335,7 +335,7 @@ export class SyncNode {
     const access = this.access(this.path);
     const source = this.source();
 
-    // Sync Serialized
+    // Overwrite Serialized
     if (this.data instanceof SerializedData) {
       if (this.data.value === access) return;
       console.log(
@@ -344,20 +344,22 @@ export class SyncNode {
       this.data.value = access;
     }
 
-    // Sync Enum
+    // Restructure Enum
     if (this.data instanceof EnumData) {
       if (typeof access === 'string') {
         const variant = this.data.schema.typePath + '::' + access;
-        if (this.data.variant === variant) return;
-        console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${access}`);
-        this.data.variant = variant;
-        this.children = [];
+        if (this.data.variant !== variant) {
+          console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${access}`);
+          this.data.variant = variant;
+          this.children = [];
+        }
       } else if (isBrpObject(access) && Object.keys(access).length === 1) {
         const variant = this.data.schema.typePath + '::' + Object.keys(access)[0];
-        if (this.data.variant === variant) return;
-        console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
-        this.data.variant = variant;
-        this.children = [new SyncNode(source, [...this.path, this.data.variantName], variant)];
+        if (this.data.variant !== variant) {
+          console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
+          this.data.variant = variant;
+          this.children = [new SyncNode(source, [...this.path, this.data.variantName], variant)];
+        }
       } else {
         console.log(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
       }
@@ -374,7 +376,7 @@ export class SyncNode {
       }
     }
 
-    // Sync Map + Components (shrink)
+    // Shrink Map + Components
     if (this.data instanceof MapData || this.data instanceof ComponentsData) {
       if (!isBrpObject(access)) {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
@@ -407,7 +409,7 @@ export class SyncNode {
       }
     }
 
-    // Sync Map + Components (extend)
+    // Extend Map + Components
     if (this.data instanceof MapData || this.data instanceof ComponentsData) {
       if (!isBrpObject(access)) {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
