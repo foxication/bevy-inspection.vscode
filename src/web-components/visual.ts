@@ -1,6 +1,7 @@
-import { BrpSchema, BrpValue, TypePath } from '../protocol';
+import { BrpValue } from '../protocol';
 import { ArrayData, EnumData, ListData, MapData, SerializedData, SetData, StructData, TupleData } from './sync';
 import * as VslStyles from './styles';
+import { VscodeIcon } from '@vscode-elements/elements';
 
 export class Visual {
   private representation: HTMLElement;
@@ -11,19 +12,22 @@ export class Visual {
     data: SerializedData | EnumData | TupleData | ArrayData | ListData | SetData | StructData | MapData,
     mount: HTMLElement
   ) {
-    if (data instanceof SerializedData) this.representation = createVslDeclaration(label, data.value);
-    if (data instanceof EnumData) this.representation = createVslDeclaration(label, data.variantName);
-    this.representation = createVslExpandable(level, label, data.schema.kind, data.schema.typePath);
+    switch (true) {
+      case data instanceof SerializedData:
+        this.representation = createVslDeclaration(label, data.value);
+        break;
+      case data instanceof EnumData:
+        this.representation = createVslDeclaration(label, data.variantName);
+        break;
+      default:
+        this.representation = createVslExpandable(level, label);
+        break;
+    }
     mount.append(this.representation);
   }
 
-  private _hasChildren = false;
   set hasChildren(has: boolean) {
-    if (this._hasChildren === has) return;
-    if (!(this.representation instanceof VslExpandable)) return;
-
-    this.representation.setChevronVisibility(has);
-    this._hasChildren = has;
+    if (this.representation instanceof VslExpandable) this.representation.isExpandable = has;
   }
 
   update(value: BrpValue) {
@@ -32,70 +36,56 @@ export class Visual {
   }
 
   preDestruct() {
-    this.representation?.remove();
+    this.representation.remove();
   }
 }
 
-let isVslExpandableDefined = false;
-function createVslExpandable(
-  level: number,
-  label: string | undefined,
-  kind: BrpSchema['kind'] | undefined,
-  typePath: TypePath | undefined
-): VslExpandable {
-  if (!isVslExpandableDefined) {
+function createVslExpandable(level: number, label: string | undefined): VslExpandable {
+  if (customElements.get('visual-expandable') === undefined) {
     customElements.define('visual-expandable', VslExpandable);
-    isVslExpandableDefined = true;
   }
   const result = document.createElement('visual-expandable') as VslExpandable;
-  result.initialLevel = level;
-  result.initialLabel = label;
-  result.initialKind = kind;
-  result.initialTypePath = typePath;
+  result.level = level;
+  result.label = label ?? '...';
   return result;
 }
 
 export class VslExpandable extends HTMLElement {
-  public initialLevel: number = 1;
-  public initialLabel: string | undefined;
-  public initialKind: BrpSchema['kind'] | undefined;
-  public initialTypePath: TypePath | undefined;
+  private chevron: VscodeIcon;
+  private indentation: HTMLDivElement;
+  private labelElement: HTMLSpanElement;
+
+  constructor() {
+    super();
+    this.indentation = document.createElement('div');
+    this.indentation.style.width = '0px';
+    this.indentation.classList.add('indent');
+
+    this.chevron = document.createElement('vscode-icon');
+    this.chevron.setAttribute('name', 'chevron-right');
+    this.chevron.setAttribute('class', 'rotatable');
+    this.chevron.style.display = 'none';
+
+    this.labelElement = document.createElement('span');
+  }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
-    const label = this.initialLabel ?? this.initialKind ?? this.initialTypePath ?? '???';
-    const indentPx = Math.max((this.initialLevel - 1) * 16, 0);
-
-    const indentation = () => {
-      const element = document.createElement('div');
-      element.style.width = indentPx.toString() + 'px';
-      element.classList.add('indent');
-      return element;
-    };
-
-    const labelElement = () => {
-      const element = document.createElement('span');
-      element.textContent = label;
-      return element;
-    };
-
-    // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
-    if (indentPx > 0) shadow.append(indentation());
-    shadow.append(this.chevron, labelElement());
+    shadow.append(this.indentation, this.chevron, this.labelElement);
   }
 
-  private chevron: HTMLElement = (() => {
-    const element = document.createElement('vscode-icon');
-    element.setAttribute('name', 'chevron-right');
-    element.setAttribute('class', 'rotatable');
-    element.style.display = 'none';
-    return element;
-  })();
-  setChevronVisibility(visible: boolean) {
-    if (visible) this.chevron.style.removeProperty('display');
+  set level(l: number) {
+    const indent = l * 16;
+    this.indentation.style.width = indent.toString() + 'px';
+  }
+  set isExpandable(is: boolean) {
+    if (is) this.chevron.style.removeProperty('display');
     else this.chevron.style.display = 'none';
+  }
+  set label(text: string) {
+    this.labelElement.textContent = text;
   }
 }
 
