@@ -1,39 +1,29 @@
 import { BrpValue } from '../protocol';
-import {
-  ArrayData,
-  EnumData,
-  ErrorData,
-  ListData,
-  MapData,
-  SerializedData,
-  SetData,
-  StructData,
-  TupleData,
-} from './sync';
+import { ComponentsData, EnumData, ErrorData, SerializedData, SyncNode } from './sync';
 import * as VslStyles from './styles';
 import { VscodeIcon } from '@vscode-elements/elements';
 
 export class Visual {
-  private representation: HTMLElement;
+  private representation: VslDeclaration | VslExpandable;
+  private sync: SyncNode;
 
-  constructor(
-    level: number,
-    label: string | undefined,
-    data: SerializedData | EnumData | TupleData | ArrayData | ListData | SetData | StructData | MapData | ErrorData,
-    mount: HTMLElement
-  ) {
+  constructor(sync: SyncNode, level: number, label: string | undefined, mount: HTMLElement) {
+    this.sync = sync;
     switch (true) {
-      case data instanceof ErrorData:
-        this.representation = createVslDeclaration(label, data.message);
+      case sync.data instanceof ComponentsData:
+        this.representation = createVslDeclaration(label, '___ComponentsData___');
         break;
-      case data instanceof SerializedData:
-        this.representation = createVslDeclaration(label, data.value);
+      case sync.data instanceof ErrorData:
+        this.representation = createVslDeclaration(label, sync.data.message);
         break;
-      case data instanceof EnumData:
-        this.representation = createVslDeclaration(label, data.variantName);
+      case sync.data instanceof SerializedData:
+        this.representation = createVslDeclaration(label, sync.data.value);
+        break;
+      case sync.data instanceof EnumData:
+        this.representation = createVslDeclaration(label, sync.data.variantName);
         break;
       default:
-        this.representation = createVslExpandable(level, label);
+        this.representation = createVslExpandable(sync, level, label);
         break;
     }
     mount.append(this.representation);
@@ -41,6 +31,11 @@ export class Visual {
 
   set hasChildren(has: boolean) {
     if (this.representation instanceof VslExpandable) this.representation.isExpandable = has;
+  }
+
+  get isExpanded(): boolean {
+    if (!(this.representation instanceof VslExpandable)) return true;
+    return this.representation.isExpanded;
   }
 
   update(value: BrpValue) {
@@ -51,15 +46,32 @@ export class Visual {
   preDestruct() {
     this.representation.remove();
   }
+
+  show() {
+    this.representation.style.removeProperty('display');
+    console.log('showing');
+  }
+  hide() {
+    this.representation.style.display = 'none';
+    console.log('hiding');
+  }
 }
 
-function createVslExpandable(level: number, label: string | undefined): VslExpandable {
+function createVslExpandable(sync: SyncNode, level: number, label: string | undefined): VslExpandable {
   if (customElements.get('visual-expandable') === undefined) {
     customElements.define('visual-expandable', VslExpandable);
   }
   const result = document.createElement('visual-expandable') as VslExpandable;
   result.level = level;
   result.label = label ?? '...';
+
+  result.onclick = () => {
+    console.log('trying to switch visibility of children');
+    result.isExpanded = !result.isExpanded;
+    if (result.isExpanded) sync.showChildren();
+    else sync.hideChildren();
+  };
+
   return result;
 }
 
@@ -67,6 +79,7 @@ export class VslExpandable extends HTMLElement {
   private chevron: VscodeIcon;
   private indentation: HTMLDivElement;
   private labelElement: HTMLSpanElement;
+  public isExpanded = true;
 
   constructor() {
     super();
