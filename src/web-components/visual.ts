@@ -1,5 +1,15 @@
 import { BrpValue } from '../protocol';
-import { ArrayData, EnumData, ListData, MapData, SerializedData, SetData, StructData, TupleData } from './sync';
+import {
+  ArrayData,
+  EnumData,
+  ErrorData,
+  ListData,
+  MapData,
+  SerializedData,
+  SetData,
+  StructData,
+  TupleData,
+} from './sync';
 import * as VslStyles from './styles';
 import { VscodeIcon } from '@vscode-elements/elements';
 
@@ -9,10 +19,13 @@ export class Visual {
   constructor(
     level: number,
     label: string | undefined,
-    data: SerializedData | EnumData | TupleData | ArrayData | ListData | SetData | StructData | MapData,
+    data: SerializedData | EnumData | TupleData | ArrayData | ListData | SetData | StructData | MapData | ErrorData,
     mount: HTMLElement
   ) {
     switch (true) {
+      case data instanceof ErrorData:
+        this.representation = createVslDeclaration(label, data.message);
+        break;
       case data instanceof SerializedData:
         this.representation = createVslDeclaration(label, data.value);
         break;
