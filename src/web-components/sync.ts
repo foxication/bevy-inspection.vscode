@@ -160,7 +160,9 @@ export class SyncNode {
     const createVisual = () => {
       const mount = this.source().mount;
       if (this.data instanceof ComponentsData || this.data === undefined || mount === undefined) return;
-      this.visual = new Visual(this.path.length, (this.lastPathSegment ?? '...').toString(), this.data, mount);
+      const level = Math.max(this.path.length - 1, 0);
+      const label = typeof this.lastPathSegment === 'number' ? this.lastPathSegment.toString() : this.lastPathSegment;
+      this.visual = new Visual(level, label, this.data, mount);
     };
 
     // SerializedData
@@ -200,6 +202,7 @@ export class SyncNode {
         createVisual();
         if (this.data.childTypePaths.length === 1) {
           this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
+          this.updateVisualOnChildrenAppend();
           break;
         }
         let index = 0;

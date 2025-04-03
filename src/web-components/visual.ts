@@ -8,7 +8,7 @@ export class Visual {
 
   constructor(
     level: number,
-    label: string,
+    label: string | undefined,
     data: SerializedData | EnumData | TupleData | ArrayData | ListData | SetData | StructData | MapData,
     mount: HTMLElement
   ) {
@@ -32,7 +32,7 @@ export class Visual {
 
   update(value: BrpValue) {
     if (!(this.representation instanceof VslDeclaration)) return;
-    this.representation.update(value);
+    this.representation.brpValue = value;
   }
 
   preDestruct() {
@@ -89,72 +89,45 @@ export class VslExpandable extends HTMLElement {
   }
 }
 
-let isVslDeclarationDefined = false;
-function createVslDeclaration(label: string | undefined, value: BrpValue): VslDeclaration {
-  if (!isVslDeclarationDefined) {
+function createVslDeclaration(initialLabel: string | undefined, initialValue: BrpValue): VslDeclaration {
+  if (customElements.get('visual-declaration') === undefined) {
     customElements.define('visual-declaration', VslDeclaration);
-    isVslDeclarationDefined = true;
   }
   const result = document.createElement('visual-declaration') as VslDeclaration;
-  result.initialLabel = label;
-  result.initialValue = value;
+  result.label = initialLabel ?? '...';
+  result.brpValue = initialValue;
   return result;
 }
 
 export class VslDeclaration extends HTMLElement {
-  public initialLabel: string | undefined = undefined;
-  public initialValue: BrpValue = null;
+  private property: HTMLSpanElement;
+  private valueWrapper: HTMLDivElement;
+  private valueElement: VslString; // VslNumber // VslBoolean // VslObject
+
+  constructor() {
+    super();
+    this.property = document.createElement('span');
+    this.property.classList.add('left-side');
+
+    this.valueWrapper = document.createElement('div');
+    this.valueWrapper.classList.add('right-side');
+
+    this.valueElement = createVslString('');
+    this.valueWrapper.append(this.valueElement);
+  }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
-
-    const labelElement = () => {
-      if (this.initialLabel === undefined) {
-        const element = document.createElement('div');
-        element.classList.add('left-side');
-        return element;
-      }
-      const element = document.createElement('span');
-      element.textContent = this.initialLabel;
-      element.classList.add('left-side');
-      return element;
-    };
-    const valueHolder = () => {
-      const holder = document.createElement('div');
-      holder.classList.add('right-side');
-      this.valueElement = createVslString(JSON.stringify(this.initialValue, null, 4));
-      holder.append(this.valueElement);
-
-      // TODO:
-      // switch (typeof this.value) {
-      //   case 'number': {
-      //     const valueElement = document.createElement('ext-number') as ExtNumber;
-      //     holder.append(valueElement);
-      //     break;
-      //   }
-      //   case 'boolean': {
-      //     const valueElement = document.createElement('ext-boolean') as ExtBoolean;
-      //     holder.append(valueElement);
-      //     break;
-      //   }
-      //   default: {
-      //     const valueElement = document.createElement('ext-string') as ExtString;
-      //     holder.append(valueElement);
-      //     break;
-      //   }
-      // }
-      return holder;
-    };
-
-    // Create shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.declaration];
-    shadow.append(labelElement(), valueHolder());
+    shadow.append(this.property, this.valueWrapper);
   }
 
-  private valueElement: VslString | undefined;
-  update(value: BrpValue) {
-    if (this.valueElement instanceof VslString) this.valueElement.setText(JSON.stringify(value, null, 4));
+  set label(text: string) {
+    this.property.textContent = text;
+  }
+  set brpValue(value: BrpValue) {
+    this.valueElement.text = JSON.stringify(value, null, 4);
   }
 }
 
@@ -165,45 +138,28 @@ function createVslString(text: string): VslString {
     isVslStringDefined = true;
   }
   const result = document.createElement('visual-string') as VslString;
-  result.textBuffer = text;
+  result.text = text;
   return result;
 }
 
 class VslString extends HTMLElement {
-  public textBuffer: string = '';
-  private textElement: HTMLTextAreaElement | undefined;
+  private textBuffer: string | undefined = undefined;
+  private textElement: HTMLTextAreaElement;
 
-  setText(text: string) {
-    if (this.textElement === undefined) return;
-    this.textElement.value = text;
-    this.textBuffer = text;
-  }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const isDisabled = false; // TODO
-
+  constructor() {
+    super();
     this.textElement = document.createElement('textarea');
-    this.textElement.value = this.textBuffer;
-    this.textElement.disabled = isDisabled;
+    this.textElement.disabled = true;
     this.textElement.rows = 1;
 
-    const recalculateHeight = () => {
-      if (this.textElement === undefined) return;
-      this.textElement.style.height = 'auto';
-      this.textElement.style.height = this.textElement.scrollHeight + 'px';
-    };
-
     // Interactions
-    this.textElement.oninput = () => recalculateHeight();
+    this.textElement.oninput = () => this.recalculateHeight();
     this.textElement.onfocus = () => {
       this.setAttribute('focused', '');
     };
     this.textElement.onkeydown = (e) => {
-      if (this.textElement === undefined) return;
-
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.textElement.value = this.textBuffer;
+        this.textElement.value = this.textBuffer ?? '';
         this.textElement.blur();
         e.preventDefault();
       }
@@ -212,24 +168,34 @@ class VslString extends HTMLElement {
       }
     };
     this.textElement.onchange = () => {
-      if (this.textElement === undefined) return;
-
-      this.setText(this.textElement.value);
+      this.textBuffer = this.textElement.value;
       this.textElement.blur();
     };
     this.textElement.onblur = () => {
-      if (this.textElement === undefined) return;
-
-      this.textElement.value = this.textBuffer;
+      this.textElement.value = this.textBuffer ?? '';
       this.textElement.scrollTo(0, 0);
       this.removeAttribute('focused');
-      recalculateHeight();
+      this.recalculateHeight();
     };
+  }
 
-    // Initialize shadow DOM
+  connectedCallback() {
+    if (this.shadowRoot !== null) return;
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.textArea];
     shadow.append(this.textElement);
-    recalculateHeight();
+    this.recalculateHeight();
+  }
+
+  set text(t: string | undefined) {
+    this.textBuffer = t ?? '';
+    this.textElement.value = this.textBuffer;
+    this.textElement.disabled = t === undefined;
+    this.recalculateHeight();
+  }
+
+  private recalculateHeight() {
+    this.textElement.style.height = 'auto';
+    this.textElement.style.height = this.textElement.scrollHeight + 'px';
   }
 }
