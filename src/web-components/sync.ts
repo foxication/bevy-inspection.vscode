@@ -356,6 +356,7 @@ export class SyncNode {
           `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
         );
         this.data.value = access;
+        this.visual?.update(access);
       }
     }
 
@@ -366,6 +367,7 @@ export class SyncNode {
         if (this.data.variant !== variant) {
           console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${access}`);
           this.data.variant = variant;
+          this.children.forEach((child) => child.preDestruct());
           this.children = [];
         }
       } else if (isBrpObject(access) && Object.keys(access).length === 1) {
@@ -373,6 +375,7 @@ export class SyncNode {
         if (this.data.variant !== variant) {
           console.log(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
           this.data.variant = variant;
+          this.children.forEach((child) => child.preDestruct());
           this.children = [new SyncNode(source, [...this.path, this.data.variantName], variant)];
         }
       } else {
@@ -386,6 +389,7 @@ export class SyncNode {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpArray`);
       }
       if (isBrpArray(access) && this.children.length > access.length) {
+        for (let index = access.length; index < this.children.length; index++) this.children[index].preDestruct();
         this.children.length = access.length;
         console.log(`Shrink: ${JSON.stringify(this.path)}`);
       }
@@ -399,8 +403,11 @@ export class SyncNode {
       if (isBrpObject(access)) {
         const prevLength = this.children.length;
         this.children = this.children.filter((child) => {
-          if (typeof child.lastPathSegment !== 'string') return false;
-          return Object.keys(access).includes(child.lastPathSegment);
+          if (typeof child.lastPathSegment !== 'string' || !Object.keys(access).includes(child.lastPathSegment)) {
+            child.preDestruct();
+            return false;
+          }
+          return true;
         });
         if (prevLength !== this.children.length) console.log(`Shrink: ${JSON.stringify(this.path)}`);
       }
@@ -448,6 +455,11 @@ export class SyncNode {
   get lastPathSegment(): DataPathSegment {
     if (this.path.length === 0) return undefined;
     return this.path[this.path.length - 1];
+  }
+
+  preDestruct() {
+    this.children.forEach((child) => child.preDestruct());
+    this.visual?.preDestruct();
   }
 }
 

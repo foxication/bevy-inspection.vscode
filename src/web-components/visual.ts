@@ -3,7 +3,7 @@ import { ArrayData, EnumData, ListData, MapData, SerializedData, SetData, Struct
 import * as VslStyles from './styles';
 
 export class Visual {
-  private element?: HTMLElement;
+  private representation?: HTMLElement;
   // private child?: Visual;
 
   constructor(
@@ -18,30 +18,39 @@ export class Visual {
 
     // Value
     if (data instanceof SerializedData) {
-      this.element = createVslDeclaration(label, data.value);
-      mount.append(this.element);
+      this.representation = createVslDeclaration(label, data.value);
+      mount.append(this.representation);
       return;
     }
 
     // Enum
     if (data instanceof EnumData) {
-      this.element = createVslDeclaration(label, data.variantName);
-      mount.append(this.element);
+      this.representation = createVslDeclaration(label, data.variantName);
+      mount.append(this.representation);
       return;
     }
 
     // Header
-    this.element = createVslExpandable(level, label, kind, typePath);
-    mount.append(this.element);
+    this.representation = createVslExpandable(level, label, kind, typePath);
+    mount.append(this.representation);
   }
 
   private _hasChildren = false;
   set hasChildren(has: boolean) {
     if (this._hasChildren === has) return;
-    if (!(this.element instanceof VslExpandable)) return;
-    
-    this.element.setChevronVisibility(has);
+    if (!(this.representation instanceof VslExpandable)) return;
+
+    this.representation.setChevronVisibility(has);
     this._hasChildren = has;
+  }
+
+  update(value: BrpValue) {
+    if (!(this.representation instanceof VslDeclaration)) return;
+    this.representation.update(value);
+  }
+
+  preDestruct() {
+    this.representation?.remove();
   }
 }
 
@@ -57,23 +66,23 @@ function createVslExpandable(
     isVslExpandableDefined = true;
   }
   const result = document.createElement('visual-expandable') as VslExpandable;
-  result.level = level;
-  result.label = label;
-  result.kind = kind;
-  result.typePath = typePath;
+  result.initialLevel = level;
+  result.initialLabel = label;
+  result.initialKind = kind;
+  result.initialTypePath = typePath;
   return result;
 }
 
 export class VslExpandable extends HTMLElement {
-  public level: number = 1;
-  public label: string | undefined;
-  public kind: BrpSchema['kind'] | undefined;
-  public typePath: TypePath | undefined;
+  public initialLevel: number = 1;
+  public initialLabel: string | undefined;
+  public initialKind: BrpSchema['kind'] | undefined;
+  public initialTypePath: TypePath | undefined;
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
-    const label = this.label ?? this.kind ?? this.typePath ?? '???';
-    const indentPx = Math.max((this.level - 1) * 16, 0);
+    const label = this.initialLabel ?? this.initialKind ?? this.initialTypePath ?? '???';
+    const indentPx = Math.max((this.initialLevel - 1) * 16, 0);
 
     const indentation = () => {
       const element = document.createElement('div');
@@ -115,34 +124,34 @@ function createVslDeclaration(label: string | undefined, value: BrpValue): VslDe
     isVslDeclarationDefined = true;
   }
   const result = document.createElement('visual-declaration') as VslDeclaration;
-  result.label = label;
-  result.value = value;
+  result.initialLabel = label;
+  result.initialValue = value;
   return result;
 }
 
 export class VslDeclaration extends HTMLElement {
-  public label: string | undefined = undefined;
-  public value: BrpValue = null;
+  public initialLabel: string | undefined = undefined;
+  public initialValue: BrpValue = null;
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
 
     const labelElement = () => {
-      if (this.label === undefined) {
+      if (this.initialLabel === undefined) {
         const element = document.createElement('div');
         element.classList.add('left-side');
         return element;
       }
       const element = document.createElement('span');
-      element.textContent = this.label;
+      element.textContent = this.initialLabel;
       element.classList.add('left-side');
       return element;
     };
     const valueHolder = () => {
       const holder = document.createElement('div');
       holder.classList.add('right-side');
-      const valueElement = createVslString(JSON.stringify(this.value, null, 4));
-      holder.append(valueElement);
+      this.valueElement = createVslString(JSON.stringify(this.initialValue, null, 4));
+      holder.append(this.valueElement);
 
       // TODO:
       // switch (typeof this.value) {
@@ -170,6 +179,11 @@ export class VslDeclaration extends HTMLElement {
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.declaration];
     shadow.append(labelElement(), valueHolder());
   }
+
+  private valueElement: VslString | undefined;
+  update(value: BrpValue) {
+    if (this.valueElement instanceof VslString) this.valueElement.setText(JSON.stringify(value, null, 4));
+  }
 }
 
 let isVslStringDefined = false;
@@ -179,51 +193,63 @@ function createVslString(text: string): VslString {
     isVslStringDefined = true;
   }
   const result = document.createElement('visual-string') as VslString;
-  result.text = text;
+  result.textBuffer = text;
   return result;
 }
 
 class VslString extends HTMLElement {
-  public text: string = '';
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setText(text: string) {}
+  public textBuffer: string = '';
+  private textElement: HTMLTextAreaElement | undefined;
+
+  setText(text: string) {
+    if (this.textElement === undefined) return;
+    this.textElement.value = text;
+    this.textBuffer = text;
+  }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
     const isDisabled = false; // TODO
 
-    const textArea = document.createElement('textarea');
-    textArea.value = this.text;
-    textArea.disabled = isDisabled;
-    textArea.rows = 1;
+    this.textElement = document.createElement('textarea');
+    this.textElement.value = this.textBuffer;
+    this.textElement.disabled = isDisabled;
+    this.textElement.rows = 1;
 
     const recalculateHeight = () => {
-      textArea.style.height = 'auto';
-      textArea.style.height = textArea.scrollHeight + 'px';
+      if (this.textElement === undefined) return;
+      this.textElement.style.height = 'auto';
+      this.textElement.style.height = this.textElement.scrollHeight + 'px';
     };
 
     // Interactions
-    textArea.oninput = () => recalculateHeight();
-    textArea.onfocus = () => {
+    this.textElement.oninput = () => recalculateHeight();
+    this.textElement.onfocus = () => {
       this.setAttribute('focused', '');
     };
-    textArea.onkeydown = (e) => {
+    this.textElement.onkeydown = (e) => {
+      if (this.textElement === undefined) return;
+
       if (e.key === 'Escape' || e.key === 'Esc') {
-        textArea.value = this.text;
-        textArea.blur();
+        this.textElement.value = this.textBuffer;
+        this.textElement.blur();
         e.preventDefault();
       }
       if (e.ctrlKey && e.key === 'Enter') {
-        textArea.blur();
+        this.textElement.blur();
       }
     };
-    textArea.onchange = () => {
-      this.setText(textArea.value);
-      textArea.blur();
+    this.textElement.onchange = () => {
+      if (this.textElement === undefined) return;
+
+      this.setText(this.textElement.value);
+      this.textElement.blur();
     };
-    textArea.onblur = () => {
-      textArea.value = this.text;
-      textArea.scrollTo(0, 0);
+    this.textElement.onblur = () => {
+      if (this.textElement === undefined) return;
+
+      this.textElement.value = this.textBuffer;
+      this.textElement.scrollTo(0, 0);
       this.removeAttribute('focused');
       recalculateHeight();
     };
@@ -231,7 +257,7 @@ class VslString extends HTMLElement {
     // Initialize shadow DOM
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.textArea];
-    shadow.append(textArea);
+    shadow.append(this.textElement);
     recalculateHeight();
   }
 }
