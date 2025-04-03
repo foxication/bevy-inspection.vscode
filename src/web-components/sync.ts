@@ -12,12 +12,12 @@ import { Visual } from './visual';
 
 export type DataPathSegment = string | number | undefined;
 
-class SerializedData {
+export class SerializedData {
   constructor(public readonly schema: BrpSchema, public value: BrpValue) {}
   // TODO: set()
 }
 
-class EnumData {
+export class EnumData {
   constructor(public readonly schema: BrpSchema, public variant: TypePath) {
     if (!this.variantTypePaths.includes(variant)) console.error(`Error: variant ${variant} doesn't exist`);
   }
@@ -34,7 +34,7 @@ class EnumData {
   // TODO: set()
 }
 
-class TupleData {
+export class TupleData {
   constructor(public readonly schema: BrpSchema) {}
   get childTypePaths(): readonly TypePath[] {
     return (this.schema.prefixItems ?? []).map((ref) => {
@@ -44,7 +44,7 @@ class TupleData {
   // TODO: set()
 }
 
-class ArrayData {
+export class ArrayData {
   constructor(public readonly schema: BrpSchema) {}
   get childTypePath(): TypePath {
     if (typeof this.schema.items !== 'object') return '()';
@@ -53,7 +53,7 @@ class ArrayData {
   // TODO: set()
 }
 
-class ListData {
+export class ListData {
   constructor(public readonly schema: BrpSchema) {}
   get childTypePath(): TypePath {
     if (typeof this.schema.items !== 'object') return '()';
@@ -64,7 +64,7 @@ class ListData {
   // TODO: remove()
 }
 
-class SetData {
+export class SetData {
   constructor(public readonly schema: BrpSchema) {}
   get childTypePath(): TypePath {
     if (typeof this.schema.items !== 'object') return '()';
@@ -74,7 +74,7 @@ class SetData {
   // TODO: remove()
 }
 
-class StructData {
+export class StructData {
   constructor(public readonly schema: BrpSchema) {}
   get properties(): readonly { property: string; typePath: TypePath }[] {
     return (this.schema.required ?? []).map((name) => {
@@ -85,7 +85,7 @@ class StructData {
   // TODO: set()
 }
 
-class MapData {
+export class MapData {
   constructor(public readonly schema: BrpSchema) {}
   get keyTypePath(): TypePath {
     if (this.schema.keyType === undefined) return '()';
@@ -99,17 +99,17 @@ class MapData {
   // TODO: remove()
 }
 
-class ComponentsData {
+export class ComponentsData {
   constructor(public componentNames: TypePath[]) {}
   // TODO: insert()
   // TODO: remove()
 }
 
 export class SyncNode {
-  private parent: SyncNode | DataSyncManager;
-  private path: DataPathSegment[];
-  private children: SyncNode[] = [];
-  private data:
+  public readonly parent: SyncNode | DataSyncManager;
+  public readonly path: DataPathSegment[];
+  public children: SyncNode[] = [];
+  public readonly data:
     | SerializedData
     | EnumData
     | TupleData
@@ -128,10 +128,6 @@ export class SyncNode {
 
     const source = this.source();
     const access = this.access(path);
-    const visualize = () => {
-      if (source.mount === undefined) return undefined;
-      return new Visual(this);
-    };
 
     // ComponentsData
     if (path.length === 0) {
@@ -160,14 +156,21 @@ export class SyncNode {
       return;
     }
 
+    // Visual creation
+    const createVisual = () => {
+      const mount = this.source().mount;
+      if (this.data instanceof ComponentsData || this.data === undefined || mount === undefined) return;
+      this.visual = new Visual(this.path.length, (this.lastPathSegment ?? '...').toString(), this.data, mount);
+    };
+
     // SerializedData
     if (schema.reflectTypes?.includes('Serialize')) {
       this.data = new SerializedData(schema, access);
-      this.visual = visualize();
+      createVisual();
       return;
     }
 
-    // Parsing
+    // Parsing other types of Data
     switch (schema.kind) {
       case 'Value':
         console.error(`Error: value ${path} is not serializable`);
@@ -177,14 +180,15 @@ export class SyncNode {
         if (typeof access === 'string') {
           const variant = schema.typePath + '::' + access;
           this.data = new EnumData(schema, variant);
-          this.visual = visualize();
+          createVisual();
           break;
         }
         if (isBrpObject(access) && Object.keys(access).length >= 1) {
           const variant = schema.typePath + '::' + Object.keys(access)[0];
           this.data = new EnumData(schema, variant);
-          this.visual = visualize();
+          createVisual();
           this.children.push(new SyncNode(this, [...path, this.data.variantName], this.data.variant));
+          this.updateVisualOnChildrenAppend();
           break;
         }
         console.error(`Error in parsing enum: ${access}`);
@@ -193,7 +197,7 @@ export class SyncNode {
       case 'Tuple':
       case 'TupleStruct': {
         this.data = new TupleData(schema);
-        this.visual = visualize();
+        createVisual();
         if (this.data.childTypePaths.length === 1) {
           this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
           break;
@@ -203,11 +207,12 @@ export class SyncNode {
           this.children.push(new SyncNode(this, [...path, index], childTypePath));
           index++;
         }
+        this.updateVisualOnChildrenAppend();
         break;
       }
       case 'Array':
         this.data = new ArrayData(schema);
-        this.visual = visualize();
+        createVisual();
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not an array`);
           break;
@@ -215,10 +220,11 @@ export class SyncNode {
         for (const item of access.keys()) {
           this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
+        this.updateVisualOnChildrenAppend();
         break;
       case 'List':
         this.data = new ListData(schema);
-        this.visual = visualize();
+        createVisual();
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not an array`);
           break;
@@ -226,10 +232,11 @@ export class SyncNode {
         for (const item of access.keys()) {
           this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
+        this.updateVisualOnChildrenAppend();
         break;
       case 'Set':
         this.data = new SetData(schema);
-        this.visual = visualize();
+        createVisual();
         if (!isBrpArray(access)) {
           console.error(`Error in parsing: ${path} is not a set`);
           break;
@@ -237,17 +244,19 @@ export class SyncNode {
         for (const item of access.keys()) {
           this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
+        this.updateVisualOnChildrenAppend();
         break;
       case 'Struct':
         this.data = new StructData(schema);
-        this.visual = visualize();
+        createVisual();
         for (const { property, typePath: childTypePath } of this.data.properties) {
           this.children.push(new SyncNode(this, [...path, property], childTypePath));
         }
+        this.updateVisualOnChildrenAppend();
         break;
       case 'Map':
         this.data = new MapData(schema);
-        this.visual = visualize();
+        createVisual();
         if (!isBrpObject(access)) {
           console.error(`Error in parsing: ${path} is not a map`);
           break;
@@ -255,8 +264,13 @@ export class SyncNode {
         for (const key of Object.keys(access)) {
           this.children.push(new SyncNode(this, [...path, key], this.data.valueTypePath));
         }
+        this.updateVisualOnChildrenAppend();
         break;
     }
+  }
+  private updateVisualOnChildrenAppend() {
+    if (this.visual === undefined) return;
+    this.visual.hasChildren = this.children.length > 0;
   }
   public source(): DataSyncManager {
     if (this.parent instanceof DataSyncManager) return this.parent;
@@ -454,6 +468,9 @@ export class DataSyncManager {
   }
   debugTree(direction: DataPathSegment[] = []): string {
     return this.root.debugTree(0, direction);
+  }
+  get lastPathSegment(): DataPathSegment {
+    return '';
   }
 }
 

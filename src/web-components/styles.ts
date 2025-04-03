@@ -63,69 +63,24 @@ export const expandable = new CSSStyleSheet();
 expandable.replaceSync(
   dontIndent(`
   :host {
-    position: relative;
-  }
-  
-  details {
     border-radius: 2px;
-    width: 100%;
-
-    summary {
-      align-items: center;
-      column-gap: 6px;      
-      display: flex;
-      display: flex;
-      height: 26px;
-      list-style: none;
-
-      span {
-        direction: rtl;
-        overflow: hidden;
-        text-align: left;
-        white-space: nowrap;
-      }
-      vscode-icon {
-        flex: none;
-      }
-      div.indent {
-        height: 16px;
-        width: 16px;
-      }
-      div.space {
-        flex: auto;
-      }
-      div.buttons {
-        display: flex;
-        flex-direction: row;
-        height: 100%;
-      }
-    }
-    summary:focus {
-      background-color: var(--vscode-list-activeSelectionBackground);
-      outline: none;
-    }
-  }
-  details:hover {
-    cursor: pointer;
-  }
-  details[open] > summary .rotatable {
-    transform: rotate(90deg);
-  }
-  .details-content {
-    cursor: default;
     display: flex;
-    flex-direction: column;
-    margin-top: 4px;
-    position: relative;
-    row-gap: 4px;
+    width: 100%;
   }
-  :host([dragging]) {
-    background-color: var(--vscode-sideBar-background);
-    color: var(--vscode-list-activeSelectionForeground);
-    
-    >details {
-      background-color: var(--vscode-list-activeSelectionBackground);
-    }
+  :host(:hover) {
+    background-color: var(--vscode-list-hoverBackground);
+  }
+  span {
+    direction: rtl;
+    flex: 1;
+    line-height: 22px;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  vscode-icon {
+    padding: 3px 6px 3px 0;
   }
 `)
 );
@@ -133,93 +88,27 @@ export const declaration = new CSSStyleSheet();
 declaration.replaceSync(
   dontIndent(`
   :host {
+    border-radius: 2px;
     column-gap: 8px;
     display: flex;
-    position: relative;
+    width: 100%;
     
-    .background {
-      height: 100%;
-      position: absolute;
-      width: 100%;
-      z-index: -1;
-    }
-
-    label {
-      flex: 3;
-      line-height: 18px;
+    span {
+      line-height: 22px;
       overflow: hidden;
-      padding: 4px 0;
       text-align: right;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .value {
+    .left-side {
+      flex: 3;
+    }
+    .right-side {
       flex: 5;
-      display: flex;
-      align-items: center;
     }
   }
-  :host([dragging]) {
-    background-color: var(--vscode-sideBar-background);
-    color: var(--vscode-list-activeSelectionForeground);
-    
-    >.background {
-      background-color: var(--vscode-list-activeSelectionBackground);
-    }
-  }
-`)
-);
-export const input = new CSSStyleSheet();
-input.replaceSync(
-  dontIndent(`
-  :host {
-    align-items: center;
-    background-color: var(--vscode-settings-textInputBackground, #313131);
-    border-color: var(--vscode-settings-textInputBorder, var(--vscode-settings-textInputBackground, #3c3c3c));
-    border-radius: 2px;
-    border-style: solid;
-    border-width: 1px;
-    box-sizing: border-box;
-    color: var(--vscode-settings-textInputForeground, #cccccc);
-    display: inline-flex;
-    position: relative;
-    width: 100%;
-    
-    input {
-      background-color: var(--vscode-settings-textInputBackground, #313131);
-      border-radius: inherit;
-      border: 0px;
-      box-sizing: border-box;
-      color: var(--vscode-settings-textInputForeground, #cccccc);
-      display: block;
-      font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
-      font-size: var(--vscode-font-size, 13px);
-      font-weight: var(--vscode-font-weight, 'normal');
-      line-height: 18px;
-      outline: none;
-      padding: 3px 4px;
-      width: 100%;
-    }
-    input.centered {
-      text-align: center;
-    } 
-    input.wider {
-      padding-left: 0px;
-      padding-right: 0px;
-    }
-    input.input:focus-visible {
-      outline-offset: 0px;
-    }
-    input[disabled] {
-      color: var(--vscode-disabledForeground);
-    }
-    ::placeholder {
-      color: var(--vscode-input-placeholderForeground, #989898);
-      opacity: 1;
-    }
-  }
-  :host([focused]) {
-    border-color: var(--vscode-focusBorder, #0078d4);
+  :host(:hover) {
+    background-color: var(--vscode-list-hoverBackground);
   }
 `)
 );
@@ -236,8 +125,8 @@ textArea.replaceSync(
     font-family: var(--vscode-font-family, sans-serif);
     font-size: var(--vscode-font-size, 13px);
     font-weight: var(--vscode-font-weight, normal);
-    line-height: 18px;
-    padding: 3px 4px;
+    line-height: 20px;
+    padding: 1px 4px;
     resize: none;
     text-wrap: nowrap;
     width: 100%;
