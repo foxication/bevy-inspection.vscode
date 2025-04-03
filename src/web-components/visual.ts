@@ -3,8 +3,7 @@ import { ArrayData, EnumData, ListData, MapData, SerializedData, SetData, Struct
 import * as VslStyles from './styles';
 
 export class Visual {
-  private representation?: HTMLElement;
-  // private child?: Visual;
+  private representation: HTMLElement;
 
   constructor(
     level: number,
@@ -12,26 +11,9 @@ export class Visual {
     data: SerializedData | EnumData | TupleData | ArrayData | ListData | SetData | StructData | MapData,
     mount: HTMLElement
   ) {
-    const schema = data.schema;
-    const kind = schema.kind;
-    const typePath = schema.typePath;
-
-    // Value
-    if (data instanceof SerializedData) {
-      this.representation = createVslDeclaration(label, data.value);
-      mount.append(this.representation);
-      return;
-    }
-
-    // Enum
-    if (data instanceof EnumData) {
-      this.representation = createVslDeclaration(label, data.variantName);
-      mount.append(this.representation);
-      return;
-    }
-
-    // Header
-    this.representation = createVslExpandable(level, label, kind, typePath);
+    if (data instanceof SerializedData) this.representation = createVslDeclaration(label, data.value);
+    if (data instanceof EnumData) this.representation = createVslDeclaration(label, data.variantName);
+    this.representation = createVslExpandable(level, label, data.schema.kind, data.schema.typePath);
     mount.append(this.representation);
   }
 
