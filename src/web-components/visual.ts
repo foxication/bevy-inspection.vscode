@@ -19,16 +19,16 @@ export class Visual {
         this.representation = createVslHeading();
         break;
       case sync.data instanceof ErrorData:
-        this.representation = createVslDeclaration(label, sync.data.message, onMutation);
+        this.representation = VslDeclaration.create(label, sync.data.message, onMutation);
         break;
       case sync.data instanceof SerializedData:
-        this.representation = createVslDeclaration(label, sync.data.value, onMutation);
+        this.representation = VslDeclaration.create(label, sync.data.value, onMutation);
         break;
       case sync.data instanceof EnumData:
-        this.representation = createVslDeclaration(label, sync.data.variantName, onMutation);
+        this.representation = VslDeclaration.create(label, sync.data.variantName, onMutation);
         break;
       default:
-        this.representation = createVslExpandable(sync, level, label);
+        this.representation = VslExpandable.create(sync, level, label);
         break;
     }
     mount.append(this.representation);
@@ -68,29 +68,29 @@ function createVslHeading() {
   return result;
 }
 
-function createVslExpandable(sync: SyncNode, level: number, label: string | undefined): VslExpandable {
-  if (customElements.get('visual-expandable') === undefined) {
-    customElements.define('visual-expandable', VslExpandable);
-  }
-  const result = document.createElement('visual-expandable') as VslExpandable;
-  result.level = level;
-  result.label = label ?? '...';
-
-  result.onclick = () => {
-    console.log('trying to switch visibility of children');
-    result.isExpanded = !result.isExpanded;
-    if (result.isExpanded) sync.showChildren();
-    else sync.hideChildren();
-  };
-
-  return result;
-}
-
 export class VslExpandable extends HTMLElement {
   private chevron: VscodeIcon;
   private indentation: HTMLDivElement;
   private labelElement: HTMLSpanElement;
   public isExpanded = true;
+
+  static create(sync: SyncNode, level: number, label: string | undefined): VslExpandable {
+    if (customElements.get('visual-expandable') === undefined) {
+      customElements.define('visual-expandable', VslExpandable);
+    }
+    const result = document.createElement('visual-expandable') as VslExpandable;
+    result.level = level;
+    result.label = label ?? '...';
+
+    result.onclick = () => {
+      console.log('trying to switch visibility of children');
+      result.isExpanded = !result.isExpanded;
+      if (result.isExpanded) sync.showChildren();
+      else sync.hideChildren();
+    };
+
+    return result;
+  }
 
   constructor() {
     super();
@@ -126,25 +126,25 @@ export class VslExpandable extends HTMLElement {
   }
 }
 
-function createVslDeclaration(
-  initialLabel: string | undefined,
-  initialValue: BrpValue,
-  onMutation: (value: BrpValue) => void
-): VslDeclaration {
-  if (customElements.get('visual-declaration') === undefined) {
-    customElements.define('visual-declaration', VslDeclaration);
-  }
-  const result = document.createElement('visual-declaration') as VslDeclaration;
-  result.label = initialLabel ?? '...';
-  result.brpValue = initialValue;
-  result.onMutation = onMutation;
-  return result;
-}
-
 export class VslDeclaration extends HTMLElement {
   private property: HTMLSpanElement;
   private valueWrapper: HTMLDivElement;
   private valueElement: VslString; // VslNumber // VslBoolean // VslObject
+
+  static create(
+    initialLabel: string | undefined,
+    initialValue: BrpValue,
+    onMutation: (value: BrpValue) => void
+  ): VslDeclaration {
+    if (customElements.get('visual-declaration') === undefined) {
+      customElements.define('visual-declaration', VslDeclaration);
+    }
+    const result = document.createElement('visual-declaration') as VslDeclaration;
+    result.label = initialLabel ?? '...';
+    result.brpValue = initialValue;
+    result.onMutation = onMutation;
+    return result;
+  }
 
   constructor() {
     super();
@@ -154,7 +154,7 @@ export class VslDeclaration extends HTMLElement {
     this.valueWrapper = document.createElement('div');
     this.valueWrapper.classList.add('right-side');
 
-    this.valueElement = createVslString('', () => {});
+    this.valueElement = VslString.create('', () => {});
     this.valueWrapper.append(this.valueElement);
   }
 
@@ -177,23 +177,21 @@ export class VslDeclaration extends HTMLElement {
   }
 }
 
-let isVslStringDefined = false;
-function createVslString(text: string, onMutation: (value: BrpValue) => void): VslString {
-  if (!isVslStringDefined) {
-    customElements.define('visual-string', VslString);
-    isVslStringDefined = true;
-  }
-  const result = document.createElement('visual-string') as VslString;
-  result.text = text;
-  result.onMutation = onMutation;
-  return result;
-}
-
 class VslString extends HTMLElement {
   private textBuffer: string | undefined = undefined;
   private textElement: HTMLTextAreaElement;
   private inEdit: boolean;
   public mutate: (value: BrpValue) => void;
+
+  static create(text: string, onMutation: (value: BrpValue) => void): VslString {
+    if (customElements.get('visual-string') === undefined) {
+      customElements.define('visual-string', VslString);
+    }
+    const result = document.createElement('visual-string') as VslString;
+    result.text = text;
+    result.onMutation = onMutation;
+    return result;
+  }
 
   constructor() {
     super();
