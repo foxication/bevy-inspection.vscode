@@ -64,7 +64,6 @@ function postWebviewMessage(message: WebviewMessage) {
       case 'update_all':
         syncRoot.mapOfComponents = message.data;
         syncRoot.sync();
-        postWebviewMessage({ cmd: 'ready_for_watch' });
         break;
       case 'update_components':
         Object.entries(message.components).forEach(([typePath, value]) => {

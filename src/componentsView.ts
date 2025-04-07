@@ -101,9 +101,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           protocol.insert(this.connections.focus.entityId, sending);
           break;
         }
-        case 'ready_for_watch': {
-          break;
-        }
       }
     });
   }
