@@ -74,7 +74,7 @@ ul#entity-info {
  * Component List
  */
 
-.component-list {
+#section-component-list {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

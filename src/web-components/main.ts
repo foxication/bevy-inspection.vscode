@@ -37,9 +37,9 @@ function postWebviewMessage(message: WebviewMessage) {
 
 // Main script
 (function () {
-  const componentList = document.querySelector('.component-list') as HTMLDivElement;
+  const componentList = document.querySelector('#section-component-list') as HTMLDivElement;
   if (componentList === null) {
-    console.error('.component-list is not found in DOM');
+    console.error('#section-component-list is not found in DOM');
     return;
   }
   const onMutation = (component: string, path: string, value: BrpValue) => {

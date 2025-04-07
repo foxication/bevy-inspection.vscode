@@ -5,7 +5,7 @@ import { VscodeIcon } from '@vscode-elements/elements';
 import { SyncNode } from './sync';
 
 export class Visual {
-  private representation: VslDeclaration | VslExpandable;
+  private representation: HTMLHeadingElement | VslDeclaration | VslExpandable;
   private sync: SyncNode;
 
   constructor(sync: SyncNode, level: number, label: string | undefined, mount: HTMLElement) {
@@ -16,7 +16,7 @@ export class Visual {
     };
     switch (true) {
       case sync.data instanceof ComponentsData:
-        this.representation = createVslDeclaration(label, '___ComponentsData___', onMutation);
+        this.representation = createVslHeading();
         break;
       case sync.data instanceof ErrorData:
         this.representation = createVslDeclaration(label, sync.data.message, onMutation);
@@ -60,6 +60,12 @@ export class Visual {
     this.representation.style.display = 'none';
     console.log('hiding');
   }
+}
+
+function createVslHeading() {
+  const result = document.createElement('h3');
+  result.textContent = 'Component List';
+  return result;
 }
 
 function createVslExpandable(sync: SyncNode, level: number, label: string | undefined): VslExpandable {
