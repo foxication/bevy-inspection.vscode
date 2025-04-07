@@ -1,7 +1,8 @@
 import { BrpValue } from '../protocol';
-import { ComponentsData, EnumData, ErrorData, SerializedData, SyncNode } from './sync';
+import { ComponentsData, EnumData, ErrorData, SerializedData } from './data';
 import * as VslStyles from './styles';
 import { VscodeIcon } from '@vscode-elements/elements';
+import { SyncNode } from './sync';
 
 export class Visual {
   private representation: VslDeclaration | VslExpandable;
