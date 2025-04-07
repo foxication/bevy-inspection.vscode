@@ -362,7 +362,7 @@ export class SyncNode {
   public sync() {
     const access = this.access(this.path);
     const source = this.source();
-    
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const debugLog = (message: string) => {}; // console.log(message);
 
@@ -492,6 +492,53 @@ export class SyncNode {
   hideChildren() {
     this.children.forEach((child) => child.hide());
   }
+
+  mutate(value: BrpValue) {
+    console.log('Called SyncNode.mutate()');
+    const component = (this.path[0] ?? '').toString();
+    const path = this.pathSerialized;
+    this.source().mutate(component, path, value);
+  }
+  get pathSerialized(): string {
+    // Never-happen situation
+    if (this.parent instanceof DataSyncManager) return '';
+
+    // Skip
+    if (
+      this.lastPathSegment === undefined &&
+      this.parent.data instanceof SerializedData &&
+      this.parent.data instanceof ErrorData
+    ) {
+      return this.parent.pathSerialized;
+    }
+
+    const segment = (this.lastPathSegment ?? '').toString();
+
+    // Component
+    if (this.parent.data instanceof ComponentsData) return segment;
+
+    // Dot
+    if (
+      this.parent.data instanceof MapData &&
+      this.parent.data instanceof StructData &&
+      this.parent.data instanceof TupleData
+    ) {
+      return this.parent.pathSerialized + '.' + segment;
+    }
+
+    // Array Item
+    if (
+      this.parent.data instanceof ArrayData &&
+      this.parent.data instanceof ListData &&
+      this.parent.data instanceof SetData
+    ) {
+      return this.parent.pathSerialized + '[' + segment + ']';
+    }
+
+    // Error
+    console.error('Error in "pathSerialized": parsing error');
+    return this.parent.pathSerialized;
+  }
 }
 
 export class DataSyncManager {
@@ -499,7 +546,8 @@ export class DataSyncManager {
   constructor(
     public mapOfComponents: BrpComponentRegistry,
     public registrySchema: BrpRegistrySchema,
-    public readonly mount: HTMLElement
+    public readonly mount: HTMLElement,
+    public readonly mutate: (component: string, path: string, value: BrpValue) => void
   ) {
     this.root = new SyncNode(this, [], undefined);
   }

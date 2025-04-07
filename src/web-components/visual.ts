@@ -9,18 +9,22 @@ export class Visual {
 
   constructor(sync: SyncNode, level: number, label: string | undefined, mount: HTMLElement) {
     this.sync = sync;
+    const onMutation = (value: BrpValue) => {
+      console.log('Called Visual.onMutation()');
+      sync.mutate(value);
+    };
     switch (true) {
       case sync.data instanceof ComponentsData:
-        this.representation = createVslDeclaration(label, '___ComponentsData___');
+        this.representation = createVslDeclaration(label, '___ComponentsData___', onMutation);
         break;
       case sync.data instanceof ErrorData:
-        this.representation = createVslDeclaration(label, sync.data.message);
+        this.representation = createVslDeclaration(label, sync.data.message, onMutation);
         break;
       case sync.data instanceof SerializedData:
-        this.representation = createVslDeclaration(label, sync.data.value);
+        this.representation = createVslDeclaration(label, sync.data.value, onMutation);
         break;
       case sync.data instanceof EnumData:
-        this.representation = createVslDeclaration(label, sync.data.variantName);
+        this.representation = createVslDeclaration(label, sync.data.variantName, onMutation);
         break;
       default:
         this.representation = createVslExpandable(sync, level, label);
@@ -115,13 +119,18 @@ export class VslExpandable extends HTMLElement {
   }
 }
 
-function createVslDeclaration(initialLabel: string | undefined, initialValue: BrpValue): VslDeclaration {
+function createVslDeclaration(
+  initialLabel: string | undefined,
+  initialValue: BrpValue,
+  onMutation: (value: BrpValue) => void
+): VslDeclaration {
   if (customElements.get('visual-declaration') === undefined) {
     customElements.define('visual-declaration', VslDeclaration);
   }
   const result = document.createElement('visual-declaration') as VslDeclaration;
   result.label = initialLabel ?? '...';
   result.brpValue = initialValue;
+  result.onMutation = onMutation;
   return result;
 }
 
@@ -138,7 +147,7 @@ export class VslDeclaration extends HTMLElement {
     this.valueWrapper = document.createElement('div');
     this.valueWrapper.classList.add('right-side');
 
-    this.valueElement = createVslString('');
+    this.valueElement = createVslString('', () => {});
     this.valueWrapper.append(this.valueElement);
   }
 
@@ -155,29 +164,37 @@ export class VslDeclaration extends HTMLElement {
   set brpValue(value: BrpValue) {
     this.valueElement.text = JSON.stringify(value, null, 4);
   }
+  set onMutation(fun: (value: BrpValue) => void) {
+    console.log('Set VslDeclaration.onMutation = ...');
+    this.valueElement.onMutation = fun;
+  }
 }
 
 let isVslStringDefined = false;
-function createVslString(text: string): VslString {
+function createVslString(text: string, onMutation: (value: BrpValue) => void): VslString {
   if (!isVslStringDefined) {
     customElements.define('visual-string', VslString);
     isVslStringDefined = true;
   }
   const result = document.createElement('visual-string') as VslString;
   result.text = text;
+  result.onMutation = onMutation;
   return result;
 }
 
 class VslString extends HTMLElement {
   private textBuffer: string | undefined = undefined;
   private textElement: HTMLTextAreaElement;
-  private inEdit = false;
+  private inEdit: boolean;
+  public mutate: (value: BrpValue) => void;
 
   constructor() {
     super();
     this.textElement = document.createElement('textarea');
     this.textElement.disabled = true;
     this.textElement.rows = 1;
+    this.inEdit = false;
+    this.mutate = () => {};
 
     // Interactions
     this.textElement.oninput = () => this.recalculateHeight();
@@ -192,6 +209,13 @@ class VslString extends HTMLElement {
         e.preventDefault();
       }
       if (e.ctrlKey && e.key === 'Enter') {
+        try {
+          const parsed = JSON.parse(this.textElement.value);
+          this.mutate(parsed);
+        } catch {
+          /* empty */
+        }
+        this.textElement.value = this.textBuffer ?? '';
         this.textElement.blur();
       }
     };
@@ -218,10 +242,16 @@ class VslString extends HTMLElement {
 
   set text(t: string | undefined) {
     this.textBuffer = t ?? '';
+    this.textElement.disabled = t === undefined;
+    
     if (this.inEdit) return;
     this.textElement.value = this.textBuffer;
-    this.textElement.disabled = t === undefined;
     this.recalculateHeight();
+  }
+
+  set onMutation(call: (value: BrpValue) => void) {
+    console.log('Set VslString.onMutation = ...');
+    this.mutate = call;
   }
 
   private recalculateHeight() {

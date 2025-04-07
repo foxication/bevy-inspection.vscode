@@ -42,7 +42,14 @@ function postWebviewMessage(message: WebviewMessage) {
     console.error('.component-list is not found in DOM');
     return;
   }
-  const syncRoot = new DataSyncManager({}, {}, componentList);
+  const onMutation = (component: string, path: string, value: BrpValue) => {
+    console.log('Called main.onMutation()');
+    postWebviewMessage({
+      cmd: 'mutate_component',
+      data: { component, path, value },
+    });
+  };
+  const syncRoot = new DataSyncManager({}, {}, componentList, onMutation);
 
   // Event listener
   window.addEventListener('message', (event) => {
