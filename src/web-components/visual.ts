@@ -208,7 +208,9 @@ class VslString extends HTMLElement {
         this.textElement.blur();
         e.preventDefault();
       }
-      if (e.ctrlKey && e.key === 'Enter') {
+
+      // apply changes
+      if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
           const parsed = JSON.parse(this.textElement.value);
           this.mutate(parsed);
@@ -243,7 +245,7 @@ class VslString extends HTMLElement {
   set text(t: string | undefined) {
     this.textBuffer = t ?? '';
     this.textElement.disabled = t === undefined;
-    
+
     if (this.inEdit) return;
     this.textElement.value = this.textBuffer;
     this.recalculateHeight();
