@@ -113,10 +113,41 @@ export class ErrorData {
   }
 }
 
+class SyncNodeCollection {
+  private collection: SyncNode[] = [];
+  constructor(private parent: SyncNode) {}
+  private updateVisual() {
+    this.parent.visual.hasChildren = this.collection.length > 0;
+  }
+
+  push(node: SyncNode) {
+    this.collection.push(node);
+    this.updateVisual();
+  }
+  shrink(newLength: number) {
+    if (newLength >= this.collection.length) return;
+    for (let index = newLength; index < this.collection.length; index++) this.collection[index].preDestruct();
+    this.collection.length = newLength;
+    this.updateVisual();
+  }
+  filter(fn: (child: SyncNode) => boolean) {
+    this.collection = this.collection.filter((child) => {
+      if (!fn(child)) {
+        child.preDestruct();
+        return false;
+      }
+      return true;
+    });
+  }
+  unwrap(): SyncNode[] {
+    return this.collection;
+  }
+}
+
 export class SyncNode {
   public readonly parent: SyncNode | DataSyncManager;
   public readonly path: DataPathSegment[];
-  public children: SyncNode[] = [];
+  public children = new SyncNodeCollection(this);
   public readonly data:
     | SerializedData
     | EnumData
@@ -128,7 +159,7 @@ export class SyncNode {
     | MapData
     | ComponentsData
     | ErrorData;
-  private visual: Visual;
+  public visual: Visual;
 
   constructor(parent: SyncNode | DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
     this.parent = parent;
@@ -155,7 +186,6 @@ export class SyncNode {
       for (const childTypePath of this.data.componentNames) {
         this.children.push(new SyncNode(this, [...path, childTypePath], childTypePath));
       }
-      this.updateVisualOnChildrenAppend();
       return;
     }
 
@@ -197,7 +227,6 @@ export class SyncNode {
           this.data = new EnumData(schema, variant);
           this.visual = createVisual();
           this.children.push(new SyncNode(this, [...path, this.data.variantName], this.data.variant));
-          this.updateVisualOnChildrenAppend();
           break;
         }
         this.data = new ErrorData(undefined, `cannot deserialize Enum`, path);
@@ -209,7 +238,6 @@ export class SyncNode {
         this.visual = createVisual();
         if (this.data.childTypePaths.length === 1) {
           this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
-          this.updateVisualOnChildrenAppend();
           break;
         }
         let index = 0;
@@ -217,7 +245,6 @@ export class SyncNode {
           this.children.push(new SyncNode(this, [...path, index], childTypePath));
           index++;
         }
-        this.updateVisualOnChildrenAppend();
         break;
       }
       case 'Array':
@@ -231,7 +258,6 @@ export class SyncNode {
         for (const item of access.keys()) {
           this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
-        this.updateVisualOnChildrenAppend();
         break;
       case 'List':
         this.data = new ListData(schema);
@@ -244,7 +270,6 @@ export class SyncNode {
         for (const item of access.keys()) {
           this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
-        this.updateVisualOnChildrenAppend();
         break;
       case 'Set':
         this.data = new SetData(schema);
@@ -257,7 +282,6 @@ export class SyncNode {
         for (const item of access.keys()) {
           this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
         }
-        this.updateVisualOnChildrenAppend();
         break;
       case 'Struct':
         this.data = new StructData(schema);
@@ -265,7 +289,6 @@ export class SyncNode {
         for (const { property, typePath: childTypePath } of this.data.properties) {
           this.children.push(new SyncNode(this, [...path, property], childTypePath));
         }
-        this.updateVisualOnChildrenAppend();
         break;
       case 'Map':
         this.data = new MapData(schema);
@@ -278,13 +301,8 @@ export class SyncNode {
         for (const key of Object.keys(access)) {
           this.children.push(new SyncNode(this, [...path, key], this.data.valueTypePath));
         }
-        this.updateVisualOnChildrenAppend();
         break;
     }
-  }
-  private updateVisualOnChildrenAppend() {
-    if (this.visual === undefined) return;
-    this.visual.hasChildren = this.children.length > 0;
   }
   public source(): DataSyncManager {
     if (this.parent instanceof DataSyncManager) return this.parent;
@@ -344,7 +362,7 @@ export class SyncNode {
 
     // Set after
     let after = '';
-    this.children.forEach((child) => {
+    this.children.unwrap().forEach((child) => {
       const childPathSegment = child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
       const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
       if (childPathSegment === undefined) {
@@ -384,16 +402,15 @@ export class SyncNode {
         if (this.data.variant !== variant) {
           debugLog(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${access}`);
           this.data.variant = variant;
-          this.children.forEach((child) => child.preDestruct());
-          this.children = [];
+          this.children.shrink(0);
         }
       } else if (isBrpObject(access) && Object.keys(access).length === 1) {
         const variant = this.data.schema.typePath + '::' + Object.keys(access)[0];
         if (this.data.variant !== variant) {
           debugLog(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
           this.data.variant = variant;
-          this.children.forEach((child) => child.preDestruct());
-          this.children = [new SyncNode(source, [...this.path, this.data.variantName], variant)];
+          this.children.shrink(0);
+          this.children.push(new SyncNode(source, [...this.path, this.data.variantName], variant));
         }
       } else {
         debugLog(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
@@ -405,9 +422,8 @@ export class SyncNode {
       if (!isBrpArray(access)) {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpArray`);
       }
-      if (isBrpArray(access) && this.children.length > access.length) {
-        for (let index = access.length; index < this.children.length; index++) this.children[index].preDestruct();
-        this.children.length = access.length;
+      if (isBrpArray(access) && this.children.unwrap().length > access.length) {
+        this.children.shrink(access.length);
         debugLog(`Shrink: ${JSON.stringify(this.path)}`);
       }
     }
@@ -418,20 +434,16 @@ export class SyncNode {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
       }
       if (isBrpObject(access)) {
-        const prevLength = this.children.length;
-        this.children = this.children.filter((child) => {
-          if (typeof child.lastPathSegment !== 'string' || !Object.keys(access).includes(child.lastPathSegment)) {
-            child.preDestruct();
-            return false;
-          }
-          return true;
+        const prevLength = this.children.unwrap().length;
+        this.children.filter((child) => {
+          return typeof child.lastPathSegment === 'string' && Object.keys(access).includes(child.lastPathSegment);
         });
-        if (prevLength !== this.children.length) debugLog(`Shrink: ${JSON.stringify(this.path)}`);
+        if (prevLength !== this.children.unwrap().length) debugLog(`Shrink: ${JSON.stringify(this.path)}`);
       }
     }
 
     // Sync children
-    this.children.forEach((child) => child.sync());
+    this.children.unwrap().forEach((child) => child.sync());
 
     // Extend List + Set
     if (this.data instanceof ListData || this.data instanceof SetData) {
@@ -439,8 +451,8 @@ export class SyncNode {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpArray`);
       }
       if (isBrpArray(access)) {
-        let index = this.children.length;
-        while (this.children.length < access.length) {
+        let index = this.children.unwrap().length;
+        while (this.children.unwrap().length < access.length) {
           this.children.push(new SyncNode(source, [...this.path, index], this.data.childTypePath));
           debugLog(`Extend: ${JSON.stringify([...this.path, index])}`);
           index++;
@@ -455,7 +467,7 @@ export class SyncNode {
       }
       if (isBrpObject(access)) {
         for (const key of Object.keys(access)) {
-          const exists = this.children.find((child) => {
+          const exists = this.children.unwrap().find((child) => {
             if (typeof child.lastPathSegment !== 'string') return false;
             return key === child.lastPathSegment;
           });
@@ -475,7 +487,7 @@ export class SyncNode {
   }
 
   preDestruct() {
-    this.children.forEach((child) => child.preDestruct());
+    this.children.shrink(0);
     this.visual?.preDestruct();
   }
   show() {
@@ -483,14 +495,14 @@ export class SyncNode {
     this.showChildren();
   }
   showChildren() {
-    if (this.visual !== undefined && this.visual.isExpanded) this.children.forEach((child) => child.show());
+    if (this.visual !== undefined && this.visual.isExpanded) this.children.unwrap().forEach((child) => child.show());
   }
   hide() {
     this.visual?.hide();
     this.hideChildren();
   }
   hideChildren() {
-    this.children.forEach((child) => child.hide());
+    this.children.unwrap().forEach((child) => child.hide());
   }
 
   mutate(value: BrpValue) {
