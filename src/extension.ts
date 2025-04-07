@@ -105,6 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
       });
       if (connections.focus?.host === connection.getProtocol().url.host) {
         componentsView.description = 'Disconnected';
+        connections.stopWatch();
       }
     });
 
@@ -121,6 +122,9 @@ export function activate(context: vscode.ExtensionContext) {
   connections.onRemoved(() => {
     areThereConnections(connections.all().length > 0);
     hierarchyData.updateConnections();
+  });
+  connections.onGetWatchResult((getWatchResult) => {
+    componentsView.updateComponents(getWatchResult.components, getWatchResult.removed);
   });
 
   hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
@@ -147,5 +151,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  connections.onFocusChanged(() => componentsView.update());
+  connections.onFocusChanged((focus) => {
+    componentsView.updateAll();
+    if (focus !== null) connections.startWatch(focus);
+  });
 }

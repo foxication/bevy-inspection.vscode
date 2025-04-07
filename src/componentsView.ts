@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web-components/main';
-import { BrpObject } from './protocol';
+import { BrpObject, TypePath } from './protocol';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
@@ -41,7 +41,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   // Called on componentsData.onDidChangeTreeData
-  public async update() {
+  public async updateAll() {
     if (this.view === undefined) {
       return;
     }
@@ -55,11 +55,16 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     const connection = this.connections.get(this.connections.focus.host);
     if (connection === undefined) return;
 
-    await connection.requestInspectionElements(this.connections.focus);
-    const entityData = connection.getInspectionElementsSimple();
+    await connection.requestInspectionElements(this.connections.focus.entityId);
+    const entityData = connection.getInspectionElements();
     const registrySchema = connection.getRegistrySchema();
     if (registrySchema !== undefined) this.postVSCodeMessage({ cmd: 'update_registry_schema', data: registrySchema });
     if (entityData !== undefined) this.postVSCodeMessage({ cmd: 'update_all', data: entityData });
+  }
+
+  public updateComponents(components: BrpObject, removed: TypePath[]) {
+    if (this.view === undefined) return;
+    this.postVSCodeMessage({ cmd: 'update_components', components, removed });
   }
 
   public async resolveWebviewView(

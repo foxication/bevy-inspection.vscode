@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
-import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject, BrpRegistrySchema } from './protocol';
+import {
+  EntityId,
+  BevyRemoteProtocol,
+  TypePath,
+  BevyVersion,
+  BrpObject,
+  BrpRegistrySchema,
+} from './protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
-import { EntityFocus } from './connection-list';
 
 type ProtocolDisconnection = 'disconnection';
 type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
@@ -20,7 +26,8 @@ export class Connection {
   private registeredComponents: TypePath[] = [];
   private registrySchema: BrpRegistrySchema = {};
   private entityElements = new Map<EntityId, EntityElement>();
-  private inspectionElements: BrpObject = {};
+  private inspectionList: TypePath[] = [];
+  private inspectionTree: BrpObject = {};
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -123,23 +130,28 @@ export class Connection {
     return status;
   }
 
-  public async requestInspectionElements(focus: EntityFocus): Promise<ProtocolResult> {
-    const listResponse = await this.protocol.list(focus.entityId).catch((e) => this.errorHandler(e));
+  public async requestInspectionElements(entity: EntityId): Promise<ProtocolResult> {
+    const listResponse = await this.protocol.list(entity).catch((e) => this.errorHandler(e));
     if (listResponse === 'disconnection') return 'disconnection';
     if (listResponse.result === undefined) return 'error';
 
-    const getResponse = await this.protocol.get(focus.entityId, listResponse.result).catch((e) => this.errorHandler(e));
+    const getResponse = await this.protocol.get(entity, listResponse.result).catch((e) => this.errorHandler(e));
     if (getResponse === 'disconnection') return 'disconnection';
     if (getResponse.result === undefined) return 'error';
 
-    this.inspectionElements = getResponse.result.components;
+    this.inspectionList = listResponse.result;
+    this.inspectionTree = getResponse.result.components;
     return 'success';
   }
 
-  public getInspectionElementsSimple() {
-    return this.inspectionElements;
+  public getInspectionElements() {
+    return this.inspectionTree;
   }
-  
+
+  public getInspectionList() {
+    return this.inspectionList;
+  }
+
   public getRegistrySchema() {
     return this.registrySchema;
   }

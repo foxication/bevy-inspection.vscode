@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, EntityId, BevyVersion, BevyVersions } from './protocol';
+import { BevyRemoteProtocol, EntityId, BevyVersion, BevyVersions, BrpGetWatchResult } from './protocol';
 import { Connection } from './connection';
 import { ConnectionElement } from './hierarchyData';
 
@@ -28,6 +28,7 @@ export class ConnectionList {
   private connections = new Map<string, Connection>();
   private lastProtocol: BevyRemoteProtocol | null = null;
   private _focus: EntityFocus | null = null;
+  private watchingController: AbortController | undefined = undefined;
 
   get focus() {
     return this._focus;
@@ -45,6 +46,9 @@ export class ConnectionList {
 
   private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
+
+  private getWatchResultEmitter = new vscode.EventEmitter<BrpGetWatchResult>();
+  readonly onGetWatchResult = this.getWatchResultEmitter.event;
 
   public async tryCreateConnection(behavior: AddBehavior = 'prompt') {
     let newConnection;
@@ -97,10 +101,8 @@ export class ConnectionList {
   }
 
   public async updateFocus(newFocus: EntityFocus | null) {
-    // Check if focus changed
-    if (this.focus === newFocus) {
-      return;
-    }
+    // Check if focus different
+    if (this._focus === newFocus) return;
 
     // Scenario when focus is null
     if (newFocus === null) {
@@ -111,15 +113,13 @@ export class ConnectionList {
 
     // Check if connection exists and is online
     const connection = this.connections.get(newFocus.host);
-    if (connection === undefined || connection.getNetworkStatus() === 'offline') {
-      return;
-    }
+    if (connection === undefined || connection.getNetworkStatus() === 'offline') return;
 
     // Change focus of inspection
     this._focus = new EntityFocus(newFocus.host, newFocus.entityId);
 
     // before emitting change, request data
-    this.get(newFocus.host)?.requestInspectionElements(newFocus);
+    this.get(newFocus.host)?.requestInspectionElements(newFocus.entityId);
     this.focusChangedEmitter.fire(newFocus);
   }
 
@@ -143,9 +143,39 @@ export class ConnectionList {
   public getAsElement(host: string): ConnectionElement | undefined {
     const connection = this.get(host);
     const protocol = connection?.getProtocol();
-    if (connection === undefined || protocol === undefined) {
-      return;
-    }
+    if (connection === undefined || protocol === undefined) return;
     return new ConnectionElement(protocol.url.host, protocol.serverVersion, connection.getNetworkStatus());
+  }
+
+  public startWatch(focus: EntityFocus) {
+    // Stop previous watching
+    this.stopWatch();
+
+    // Get connection
+    const connection = this.get(focus.host);
+    const protocol = connection?.getProtocol();
+    if (connection === undefined || protocol === undefined) return;
+
+    connection
+      .getProtocol()
+      .list(focus.entityId)
+      .then((response) => {
+        // Skip if no components to watch
+        if (response.result === undefined) return;
+
+        // Start watching
+        console.log(`Start Watching on entity: ${focus.entityId}`);
+        this.watchingController = new AbortController();
+        connection.getProtocol().getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
+          this.getWatchResultEmitter.fire(v);
+        });
+      })
+      .catch(() => {});
+  }
+
+  public stopWatch() {
+    if (this.watchingController === undefined) return;
+    console.log(`Stop Watching on entity`);
+    this.watchingController.abort('Hah?');
   }
 }

@@ -171,6 +171,7 @@ function createVslString(text: string): VslString {
 class VslString extends HTMLElement {
   private textBuffer: string | undefined = undefined;
   private textElement: HTMLTextAreaElement;
+  private inEdit = false;
 
   constructor() {
     super();
@@ -181,6 +182,7 @@ class VslString extends HTMLElement {
     // Interactions
     this.textElement.oninput = () => this.recalculateHeight();
     this.textElement.onfocus = () => {
+      this.inEdit = true;
       this.setAttribute('focused', '');
     };
     this.textElement.onkeydown = (e) => {
@@ -198,6 +200,7 @@ class VslString extends HTMLElement {
       this.textElement.blur();
     };
     this.textElement.onblur = () => {
+      this.inEdit = false;
       this.textElement.value = this.textBuffer ?? '';
       this.textElement.scrollTo(0, 0);
       this.removeAttribute('focused');
@@ -215,6 +218,7 @@ class VslString extends HTMLElement {
 
   set text(t: string | undefined) {
     this.textBuffer = t ?? '';
+    if (this.inEdit) return;
     this.textElement.value = this.textBuffer;
     this.textElement.disabled = t === undefined;
     this.recalculateHeight();

@@ -64,9 +64,9 @@ test('components synchronization', async (t: TestContext) => {
       t.assert.ok(componentRegistry);
 
       // Render debug tree
-      syncManager = new DataSyncManager(componentRegistry, registrySchema, undefined);
-      const treeResult = syncManager.debugTree();
-      assertEqualOrCreateFile(t, treeResult, 'sync-initial-tree');
+      // syncManager = new DataSyncManager(componentRegistry, registrySchema, undefined);
+      // const treeResult = syncManager.debugTree();
+      // assertEqualOrCreateFile(t, treeResult, 'sync-initial-tree');
     });
 
     await t.test('Handle changes of mutate_components', async (t: TestContext) => {

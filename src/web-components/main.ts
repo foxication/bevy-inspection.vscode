@@ -1,6 +1,6 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
-import { BrpValue, BrpComponentRegistry, TypePath, BrpRegistrySchema } from '../protocol/types';
+import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath } from '../protocol/types';
 
 export type WebviewMessage =
   | {
@@ -24,9 +24,9 @@ export type VSCodeMessage =
       data: BrpRegistrySchema;
     }
   | {
-      cmd: 'update_component';
-      component: TypePath;
-      value: BrpValue;
+      cmd: 'update_components';
+      components: BrpObject;
+      removed: TypePath[];
     };
 
 // VSCode Access
@@ -47,7 +47,6 @@ function postWebviewMessage(message: WebviewMessage) {
   // Event listener
   window.addEventListener('message', (event) => {
     const message = event.data as VSCodeMessage;
-    console.log(`recieved message: ${message.cmd}`);
     switch (message.cmd) {
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
@@ -58,11 +57,15 @@ function postWebviewMessage(message: WebviewMessage) {
       case 'update_all':
         syncRoot.mapOfComponents = message.data;
         syncRoot.sync();
-        console.log(syncRoot.debugTree());
         postWebviewMessage({ cmd: 'ready_for_watch' });
         break;
-      case 'update_component':
-        syncRoot.mapOfComponents[message.component] = message.value;
+      case 'update_components':
+        Object.entries(message.components).forEach(([typePath, value]) => {
+          syncRoot.mapOfComponents[typePath] = value;
+        });
+        message.removed.forEach((component) => {
+          delete syncRoot.mapOfComponents[component];
+        });
         syncRoot.sync();
         break;
     }
