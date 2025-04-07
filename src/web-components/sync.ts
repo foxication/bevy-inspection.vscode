@@ -427,8 +427,8 @@ export class SyncNode {
 
     // Skip
     if (
-      this.lastPathSegment === undefined &&
-      this.parent.data instanceof SerializedData &&
+      this.lastPathSegment === undefined ||
+      this.parent.data instanceof SerializedData ||
       this.parent.data instanceof ErrorData
     ) {
       return this.parent.pathSerialized;
@@ -441,8 +441,8 @@ export class SyncNode {
 
     // Dot
     if (
-      this.parent.data instanceof MapData &&
-      this.parent.data instanceof StructData &&
+      this.parent.data instanceof MapData ||
+      this.parent.data instanceof StructData ||
       this.parent.data instanceof TupleData
     ) {
       return this.parent.pathSerialized + '.' + segment;
@@ -450,8 +450,8 @@ export class SyncNode {
 
     // Array Item
     if (
-      this.parent.data instanceof ArrayData &&
-      this.parent.data instanceof ListData &&
+      this.parent.data instanceof ArrayData ||
+      this.parent.data instanceof ListData ||
       this.parent.data instanceof SetData
     ) {
       return this.parent.pathSerialized + '[' + segment + ']';
