@@ -19,26 +19,28 @@ import {
   ComponentsData,
   ErrorData,
 } from './data';
-import { Visual } from './visual';
+import { ComponentsVisual, EnumVisual, ErrorVisual, ExpandableVisual, SerializedVisual } from './visual';
 
 export type DataPathSegment = string | number | undefined;
 
 class SyncNodeCollection {
   private collection: SyncNode[] = [];
   constructor(private parent: SyncNode) {}
-  private updateVisual() {
-    this.parent.visual.isExpandable = this.collection.length > 0;
+  private updateIsExpandable() {
+    if (this.parent.visual instanceof ExpandableVisual) {
+      this.parent.visual.isExpandable = this.collection.length > 0;
+    }
   }
 
   push(node: SyncNode) {
     this.collection.push(node);
-    this.updateVisual();
+    this.updateIsExpandable();
   }
   shrink(newLength: number) {
     if (newLength >= this.collection.length) return;
     for (let index = newLength; index < this.collection.length; index++) this.collection[index].preDestruct();
     this.collection.length = newLength;
-    this.updateVisual();
+    this.updateIsExpandable();
   }
   filter(fn: (child: SyncNode) => boolean) {
     this.collection = this.collection.filter((child) => {
@@ -69,7 +71,7 @@ export class SyncNode {
     | MapData
     | ComponentsData
     | ErrorData;
-  public visual: Visual;
+  public visual: ComponentsVisual | ErrorVisual | SerializedVisual | ExpandableVisual | EnumVisual;
 
   constructor(parent: SyncNode | DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
     this.parent = parent;
@@ -77,22 +79,20 @@ export class SyncNode {
 
     const source = this.source();
     const access = this.access(path);
-    const createVisual = () => {
-      const mount = this.source().mount;
-      const level = Math.max(this.path.length - 1, 0);
-      const label = typeof this.lastPathSegment === 'number' ? this.lastPathSegment.toString() : this.lastPathSegment;
-      return new Visual(this, level, label, mount);
-    };
+    const mount = source.mount;
+    const level = Math.max(this.path.length - 1, 0);
+    const label =
+      typeof this.lastPathSegment === 'number' ? this.lastPathSegment.toString() : this.lastPathSegment ?? '...';
 
     // ComponentsData
     if (path.length === 0) {
       if (!isBrpObject(access)) {
         this.data = new ErrorData(undefined, `expected BrpObject`, path);
-        this.visual = createVisual();
+        this.visual = new ErrorVisual(level, this.data, mount);
         return;
       }
       this.data = new ComponentsData(Object.keys(access));
-      this.visual = createVisual();
+      this.visual = new ComponentsVisual(mount);
       for (const childTypePath of this.data.componentNames) {
         this.children.push(new SyncNode(this, [...path, childTypePath], childTypePath));
       }
@@ -102,20 +102,20 @@ export class SyncNode {
     // Get schema
     if (typePath === undefined) {
       this.data = new ErrorData(undefined, `typePath is undefined`, path);
-      this.visual = createVisual();
+      this.visual = new ErrorVisual(level, this.data, mount);
       return;
     }
     const schema = getSchemaRecursively(typePath, source.getRegistrySchema());
     if (schema === undefined) {
       this.data = new ErrorData(undefined, `schema is not found`, path);
-      this.visual = createVisual();
+      this.visual = new ErrorVisual(level, this.data, mount);
       return;
     }
 
     // SerializedData
     if (schema.reflectTypes?.includes('Serialize')) {
       this.data = new SerializedData(schema, access);
-      this.visual = createVisual();
+      this.visual = new SerializedVisual(this, level, label, this.data.value, mount);
       return;
     }
 
@@ -123,29 +123,29 @@ export class SyncNode {
     switch (schema.kind) {
       case 'Value':
         this.data = new ErrorData(undefined, `Value is not serializable`, path);
-        this.visual = createVisual();
+        this.visual = new ErrorVisual(level, this.data, mount);
         break;
       case 'Enum':
         if (typeof access === 'string') {
           const variant = schema.typePath + '::' + access;
           this.data = new EnumData(schema, variant);
-          this.visual = createVisual();
+          this.visual = new EnumVisual(this, level, label, mount);
           break;
         }
         if (isBrpObject(access) && Object.keys(access).length >= 1) {
           const variant = schema.typePath + '::' + Object.keys(access)[0];
           this.data = new EnumData(schema, variant);
-          this.visual = createVisual();
+          this.visual = new EnumVisual(this, level, label, mount);
           this.children.push(new SyncNode(this, [...path, this.data.variantName], this.data.variant));
           break;
         }
         this.data = new ErrorData(undefined, `cannot deserialize Enum`, path);
-        this.visual = createVisual();
+        this.visual = new ErrorVisual(level, this.data, mount);
         break;
       case 'Tuple':
       case 'TupleStruct': {
         this.data = new TupleData(schema);
-        this.visual = createVisual();
+        this.visual = new ExpandableVisual(this, level, label, mount);
         if (this.data.childTypePaths.length === 1) {
           this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
           break;
@@ -159,10 +159,10 @@ export class SyncNode {
       }
       case 'Array':
         this.data = new ArrayData(schema);
-        this.visual = createVisual();
+        this.visual = new ExpandableVisual(this, level, label, mount);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = createVisual();
+          this.visual = new ErrorVisual(level, this.data, mount);
           break;
         }
         for (const item of access.keys()) {
@@ -171,10 +171,10 @@ export class SyncNode {
         break;
       case 'List':
         this.data = new ListData(schema);
-        this.visual = createVisual();
+        this.visual = new ExpandableVisual(this, level, label, mount);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = createVisual();
+          this.visual = new ErrorVisual(level, this.data, mount);
           break;
         }
         for (const item of access.keys()) {
@@ -183,10 +183,10 @@ export class SyncNode {
         break;
       case 'Set':
         this.data = new SetData(schema);
-        this.visual = createVisual();
+        this.visual = new ExpandableVisual(this, level, label, mount);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = createVisual();
+          this.visual = new ErrorVisual(level, this.data, mount);
           break;
         }
         for (const item of access.keys()) {
@@ -195,17 +195,17 @@ export class SyncNode {
         break;
       case 'Struct':
         this.data = new StructData(schema);
-        this.visual = createVisual();
+        this.visual = new ExpandableVisual(this, level, label, mount);
         for (const { property, typePath: childTypePath } of this.data.properties) {
           this.children.push(new SyncNode(this, [...path, property], childTypePath));
         }
         break;
       case 'Map':
         this.data = new MapData(schema);
-        this.visual = createVisual();
+        this.visual = new ExpandableVisual(this, level, label, mount);
         if (!isBrpObject(access)) {
           this.data = new ErrorData(undefined, `expected BrpObject`, path);
-          this.visual = createVisual();
+          this.visual = new ErrorVisual(level, this.data, mount);
           break;
         }
         for (const key of Object.keys(access)) {
@@ -301,7 +301,7 @@ export class SyncNode {
           `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
         );
         this.data.value = access;
-        this.visual.update(access);
+        if (this.visual instanceof SerializedVisual) this.visual.set(access);
       }
     }
 
@@ -405,7 +405,9 @@ export class SyncNode {
     this.showChildren();
   }
   showChildren() {
-    if (this.visual !== undefined && this.visual.isExpanded) this.children.unwrap().forEach((child) => child.show());
+    if (this.visual instanceof ExpandableVisual && this.visual.isExpanded) {
+      this.children.unwrap().forEach((child) => child.show());
+    }
   }
   hide() {
     this.visual.hide();

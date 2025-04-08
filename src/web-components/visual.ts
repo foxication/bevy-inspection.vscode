@@ -1,60 +1,85 @@
 import { BrpValue } from '../protocol';
-import { ComponentsData, EnumData, ErrorData, SerializedData } from './data';
 import * as VslStyles from './styles';
 import { VscodeIcon } from '@vscode-elements/elements';
 import { SyncNode } from './sync';
+import { ErrorData } from './data';
 
-export class Visual {
-  private representation: HTMLHeadingElement | VslDeclaration | VslExpandable;
-  private sync: SyncNode;
-
-  constructor(sync: SyncNode, level: number, label: string | undefined, mount: HTMLElement) {
-    this.sync = sync;
-    const onMutation = (value: BrpValue) => {
-      sync.mutate(value);
-    };
-    switch (true) {
-      case sync.data instanceof ComponentsData:
-        this.representation = createVslHeading();
-        break;
-      case sync.data instanceof ErrorData:
-        this.representation = VslDeclaration.create(level, label, sync.data.message, onMutation);
-        break;
-      case sync.data instanceof SerializedData:
-        this.representation = VslDeclaration.create(level, label, sync.data.value, onMutation);
-        break;
-      case sync.data instanceof EnumData:
-        this.representation = VslDeclaration.create(level, label, sync.data.variantName, onMutation);
-        break;
-      default:
-        this.representation = VslExpandable.create(sync, level, label);
-        break;
-    }
-    mount.append(this.representation);
-  }
-
-  set isExpandable(able: boolean) {
-    if ('isExpandable' in this.representation) this.representation.isExpandable = able;
-  }
-
-  get isExpanded(): boolean {
-    if ('isExpanded' in this.representation) return this.representation.isExpanded;
-    return true;
-  }
-
-  update(value: BrpValue) {
-    if ('brpValue' in this.representation) this.representation.brpValue = value;
-  }
+abstract class Visual {
+  abstract representation: HTMLElement;
 
   preDestruct() {
     this.representation.remove();
   }
-
   show() {
     this.representation.style.removeProperty('display');
   }
   hide() {
     this.representation.style.display = 'none';
+  }
+}
+
+export class ComponentsVisual extends Visual {
+  readonly representation: HTMLHeadingElement;
+
+  constructor(mount: HTMLElement) {
+    super();
+    this.representation = createVslHeading();
+    mount.append(this.representation);
+  }
+}
+
+export class ErrorVisual extends Visual {
+  readonly representation: VslDeclaration;
+
+  constructor(level: number, error: ErrorData, mount: HTMLElement) {
+    super();
+    const label = error.code === undefined ? 'Error' : 'Error' + error.code;
+    this.representation = VslDeclaration.create(level, label, error.message, () => {});
+    mount.append(this.representation);
+  }
+}
+
+export class SerializedVisual extends Visual {
+  readonly representation: VslDeclaration;
+
+  constructor(sync: SyncNode, level: number, label: string, value: BrpValue, mount: HTMLElement) {
+    super();
+    this.representation = VslDeclaration.create(level, label, value, (value: BrpValue) => {
+      sync.mutate(value);
+    });
+    mount.append(this.representation);
+  }
+
+  set(value: BrpValue) {
+    this.representation.brpValue = value;
+  }
+}
+
+export class EnumVisual extends Visual {
+  readonly representation: VslExpandable;
+
+  constructor(sync: SyncNode, level: number, label: string, mount: HTMLElement) {
+    super();
+    this.representation = VslExpandable.create(sync, level, label);
+    mount.append(this.representation);
+  }
+}
+
+export class ExpandableVisual extends Visual {
+  readonly representation: VslExpandable;
+
+  constructor(sync: SyncNode, level: number, label: string, mount: HTMLElement) {
+    super();
+    this.representation = VslExpandable.create(sync, level, label);
+    mount.append(this.representation);
+  }
+
+  set isExpandable(able: boolean) {
+    this.representation.isExpandable = able;
+  }
+
+  get isExpanded(): boolean {
+    return this.representation.isExpanded;
   }
 }
 
@@ -69,7 +94,7 @@ export class VslExpandable extends HTMLElement {
   private htmlLabel: HTMLSpanElement;
   public isExpanded = true;
 
-  static create(sync: SyncNode, level: number, label: string | undefined): VslExpandable {
+  static create(sync: SyncNode, level: number, label: string): VslExpandable {
     if (customElements.get('visual-expandable') === undefined) {
       customElements.define('visual-expandable', VslExpandable);
     }
@@ -89,7 +114,7 @@ export class VslExpandable extends HTMLElement {
   constructor() {
     super();
     this.htmlLabel = document.createElement('span');
-    
+
     this.chevron = document.createElement('vscode-icon');
     this.chevron.setAttribute('name', 'chevron-right');
     this.chevron.setAttribute('class', 'rotatable');
@@ -121,18 +146,13 @@ export class VslDeclaration extends HTMLElement {
   private valueWrapper: HTMLDivElement;
   private valueElement: VslString; // VslNumber // VslBoolean // VslObject
 
-  static create(
-    level: number,
-    label: string | undefined,
-    value: BrpValue,
-    onMutation: (value: BrpValue) => void
-  ): VslDeclaration {
+  static create(level: number, label: string, value: BrpValue, onMutation: (value: BrpValue) => void): VslDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
       customElements.define('visual-declaration', VslDeclaration);
     }
     const result = document.createElement('visual-declaration') as VslDeclaration;
     result.level = level;
-    result.label = label ?? '...';
+    result.label = label;
     result.brpValue = value;
     result.onMutation = onMutation;
     return result;
