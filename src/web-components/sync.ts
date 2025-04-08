@@ -301,7 +301,7 @@ export class SyncNode {
           `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
         );
         this.data.value = access;
-        this.visual?.update(access);
+        this.visual.update(access);
       }
     }
 
@@ -398,17 +398,17 @@ export class SyncNode {
 
   preDestruct() {
     this.children.shrink(0);
-    this.visual?.preDestruct();
+    this.visual.preDestruct();
   }
   show() {
-    this.visual?.show();
+    this.visual.show();
     this.showChildren();
   }
   showChildren() {
     if (this.visual !== undefined && this.visual.isExpanded) this.children.unwrap().forEach((child) => child.show());
   }
   hide() {
-    this.visual?.hide();
+    this.visual.hide();
     this.hideChildren();
   }
   hideChildren() {
