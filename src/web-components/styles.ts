@@ -71,15 +71,15 @@ expandable.replaceSync(
     background-color: var(--vscode-list-hoverBackground);
   }
   span {
-    direction: rtl;
-    flex: 1;
+    flex: auto;
     line-height: 22px;
     overflow: hidden;
-    text-align: left;
+    text-indent: 0px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   vscode-icon {
+    flex: none;
     padding: 3px 6px 3px 0;
   }
 `)
@@ -93,15 +93,14 @@ declaration.replaceSync(
     display: flex;
     width: 100%;
     
-    span {
-      line-height: 22px;
-      overflow: hidden;
-      text-align: right;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    
     .left-side {
       flex: 3;
+      line-height: 22px;
+      overflow: hidden;
+      text-indent: 0px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .right-side {
       flex: 5;

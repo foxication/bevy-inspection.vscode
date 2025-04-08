@@ -19,13 +19,13 @@ export class Visual {
         this.representation = createVslHeading();
         break;
       case sync.data instanceof ErrorData:
-        this.representation = VslDeclaration.create(label, sync.data.message, onMutation);
+        this.representation = VslDeclaration.create(level, label, sync.data.message, onMutation);
         break;
       case sync.data instanceof SerializedData:
-        this.representation = VslDeclaration.create(label, sync.data.value, onMutation);
+        this.representation = VslDeclaration.create(level, label, sync.data.value, onMutation);
         break;
       case sync.data instanceof EnumData:
-        this.representation = VslDeclaration.create(label, sync.data.variantName, onMutation);
+        this.representation = VslDeclaration.create(level, label, sync.data.variantName, onMutation);
         break;
       default:
         this.representation = VslExpandable.create(sync, level, label);
@@ -69,8 +69,7 @@ function createVslHeading() {
 
 export class VslExpandable extends HTMLElement {
   private chevron: VscodeIcon;
-  private indentation: HTMLDivElement;
-  private labelElement: HTMLSpanElement;
+  private htmlLabel: HTMLSpanElement;
   public isExpanded = true;
 
   static create(sync: SyncNode, level: number, label: string | undefined): VslExpandable {
@@ -93,35 +92,31 @@ export class VslExpandable extends HTMLElement {
 
   constructor() {
     super();
-    this.indentation = document.createElement('div');
-    this.indentation.style.width = '0px';
-    this.indentation.classList.add('indent');
-
+    this.htmlLabel = document.createElement('span');
+    
     this.chevron = document.createElement('vscode-icon');
     this.chevron.setAttribute('name', 'chevron-right');
     this.chevron.setAttribute('class', 'rotatable');
     this.chevron.style.display = 'none';
-
-    this.labelElement = document.createElement('span');
   }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
-    shadow.append(this.indentation, this.chevron, this.labelElement);
+    shadow.append(this.htmlLabel, this.chevron);
   }
 
   set level(l: number) {
     const indent = l * 16;
-    this.indentation.style.width = indent.toString() + 'px';
+    this.htmlLabel.style.textIndent = indent.toString() + 'px';
   }
   set isExpandable(is: boolean) {
     if (is) this.chevron.style.removeProperty('display');
     else this.chevron.style.display = 'none';
   }
   set label(text: string) {
-    this.labelElement.textContent = text;
+    this.htmlLabel.textContent = text;
   }
 }
 
@@ -131,16 +126,18 @@ export class VslDeclaration extends HTMLElement {
   private valueElement: VslString; // VslNumber // VslBoolean // VslObject
 
   static create(
-    initialLabel: string | undefined,
-    initialValue: BrpValue,
+    level: number,
+    label: string | undefined,
+    value: BrpValue,
     onMutation: (value: BrpValue) => void
   ): VslDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
       customElements.define('visual-declaration', VslDeclaration);
     }
     const result = document.createElement('visual-declaration') as VslDeclaration;
-    result.label = initialLabel ?? '...';
-    result.brpValue = initialValue;
+    result.level = level;
+    result.label = label ?? '...';
+    result.brpValue = value;
     result.onMutation = onMutation;
     return result;
   }
@@ -164,6 +161,10 @@ export class VslDeclaration extends HTMLElement {
     shadow.append(this.property, this.valueWrapper);
   }
 
+  set level(l: number) {
+    const indent = l * 16;
+    this.property.style.textIndent = indent.toString() + 'px';
+  }
   set label(text: string) {
     this.property.textContent = text;
   }
