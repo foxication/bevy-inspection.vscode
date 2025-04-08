@@ -164,7 +164,6 @@ export class ConnectionList {
         if (response.result === undefined) return;
 
         // Start watching
-        console.log(`Start Watching on entity: ${focus.entityId}`);
         this.watchingController = new AbortController();
         connection.getProtocol().getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
           this.getWatchResultEmitter.fire(v);
@@ -175,7 +174,6 @@ export class ConnectionList {
 
   public stopWatch() {
     if (this.watchingController === undefined) return;
-    console.log(`Stop Watching on entity`);
-    this.watchingController.abort('Hah?');
+    this.watchingController.abort();
   }
 }

@@ -49,7 +49,6 @@ function postWebviewMessage(message: WebviewMessage) {
     return;
   }
   const onMutation = (component: string, path: string, value: BrpValue) => {
-    console.log('Called main.onMutation()');
     postWebviewMessage({
       cmd: 'mutate_component',
       data: { component, path, value },

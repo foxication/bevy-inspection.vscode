@@ -416,7 +416,6 @@ export class SyncNode {
   }
 
   mutate(value: BrpValue) {
-    console.log('Called SyncNode.mutate()');
     const component = (this.path[0] ?? '').toString();
     const path = this.pathSerialized;
     this.source().mutate(component, path, value);

@@ -11,7 +11,6 @@ export class Visual {
   constructor(sync: SyncNode, level: number, label: string | undefined, mount: HTMLElement) {
     this.sync = sync;
     const onMutation = (value: BrpValue) => {
-      console.log('Called Visual.onMutation()');
       sync.mutate(value);
     };
     switch (true) {
@@ -53,11 +52,9 @@ export class Visual {
 
   show() {
     this.representation.style.removeProperty('display');
-    console.log('showing');
   }
   hide() {
     this.representation.style.display = 'none';
-    console.log('hiding');
   }
 }
 
@@ -81,7 +78,6 @@ export class VslExpandable extends HTMLElement {
     result.label = label ?? '...';
 
     result.onclick = () => {
-      console.log('trying to switch visibility of children');
       result.isExpanded = !result.isExpanded;
       if (result.isExpanded) sync.showChildren();
       else sync.hideChildren();
@@ -172,7 +168,6 @@ export class VslDeclaration extends HTMLElement {
     this.valueElement.text = JSON.stringify(value, null, 4);
   }
   set onMutation(fun: (value: BrpValue) => void) {
-    console.log('Set VslDeclaration.onMutation = ...');
     this.valueElement.onMutation = fun;
   }
 }
@@ -252,7 +247,6 @@ class VslString extends HTMLElement {
   }
 
   set onMutation(call: (value: BrpValue) => void) {
-    console.log('Set VslString.onMutation = ...');
     this.mutate = call;
   }
 }
