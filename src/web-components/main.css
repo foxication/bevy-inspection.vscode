@@ -2,10 +2,6 @@
  * Global
  */
 
-html {
-  scrollbar-color: unset;
-}
-
 body {
   padding: 0;
   user-select: none;

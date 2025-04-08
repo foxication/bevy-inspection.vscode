@@ -179,7 +179,7 @@ export class VslDeclaration extends HTMLElement {
 
 class VslString extends HTMLElement {
   private textBuffer: string | undefined = undefined;
-  private textElement: HTMLTextAreaElement;
+  private textElement: HTMLDivElement;
   private inEdit: boolean;
   public mutate: (value: BrpValue) => void;
 
@@ -195,21 +195,19 @@ class VslString extends HTMLElement {
 
   constructor() {
     super();
-    this.textElement = document.createElement('textarea');
-    this.textElement.disabled = true;
-    this.textElement.rows = 1;
+    this.textElement = document.createElement('div');
+    this.textElement.contentEditable = 'plaintext-only';
     this.inEdit = false;
     this.mutate = () => {};
 
     // Interactions
-    this.textElement.oninput = () => this.recalculateHeight();
     this.textElement.onfocus = () => {
       this.inEdit = true;
       this.setAttribute('focused', '');
     };
     this.textElement.onkeydown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.textElement.value = this.textBuffer ?? '';
+        this.textElement.innerText = this.textBuffer ?? '';
         this.textElement.blur();
         e.preventDefault();
       }
@@ -217,52 +215,44 @@ class VslString extends HTMLElement {
       // apply changes
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
-          const parsed = JSON.parse(this.textElement.value);
+          const parsed = JSON.parse(this.textElement.innerText);
           this.mutate(parsed);
         } catch {
           /* empty */
         }
-        this.textElement.value = this.textBuffer ?? '';
+        this.textElement.innerText = this.textBuffer ?? '';
         this.textElement.blur();
       }
     };
     this.textElement.onchange = () => {
-      this.textBuffer = this.textElement.value;
+      this.textBuffer = this.textElement.innerText;
       this.textElement.blur();
     };
     this.textElement.onblur = () => {
       this.inEdit = false;
-      this.textElement.value = this.textBuffer ?? '';
+      this.textElement.innerText = this.textBuffer ?? '';
       this.textElement.scrollTo(0, 0);
       this.removeAttribute('focused');
-      this.recalculateHeight();
     };
   }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.textArea];
+    shadow.adoptedStyleSheets = [VslStyles.editableText];
     shadow.append(this.textElement);
-    this.recalculateHeight();
   }
 
   set text(t: string | undefined) {
     this.textBuffer = t ?? '';
-    this.textElement.disabled = t === undefined;
+    this.textElement.contentEditable = t !== undefined ? 'plaintext-only' : 'false';
 
     if (this.inEdit) return;
-    this.textElement.value = this.textBuffer;
-    this.recalculateHeight();
+    this.textElement.innerText = this.textBuffer;
   }
 
   set onMutation(call: (value: BrpValue) => void) {
     console.log('Set VslString.onMutation = ...');
     this.mutate = call;
-  }
-
-  private recalculateHeight() {
-    this.textElement.style.height = 'auto';
-    this.textElement.style.height = this.textElement.scrollHeight + 'px';
   }
 }

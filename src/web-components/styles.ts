@@ -105,6 +105,7 @@ declaration.replaceSync(
     }
     .right-side {
       flex: 5;
+      overflow-x: overlay;
     }
   }
   :host(:hover) {
@@ -112,10 +113,10 @@ declaration.replaceSync(
   }
 `)
 );
-export const textArea = new CSSStyleSheet();
-textArea.replaceSync(
+export const editableText = new CSSStyleSheet();
+editableText.replaceSync(
   dontIndent(`
-  textarea {
+  div {
     background-color: var(--vscode-settings-textInputBackground, #313131);
     border-radius: inherit;
     border: 0px;
@@ -126,15 +127,16 @@ textArea.replaceSync(
     font-size: var(--vscode-font-size, 13px);
     font-weight: var(--vscode-font-weight, normal);
     line-height: 20px;
+    min-width: 100%;
     padding: 1px 4px;
     resize: none;
     text-wrap: nowrap;
-    width: 100%;
+    width: fit-content;
   }
-  textarea:focus {
+  div:focus {
     outline: none;
   }
-  textarea::-webkit-scrollbar { 
+  div::-webkit-scrollbar { 
     display: none;
   }
 `)
