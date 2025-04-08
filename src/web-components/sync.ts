@@ -19,7 +19,8 @@ import {
   ComponentsData,
   ErrorData,
 } from './data';
-import { ComponentsVisual, EnumVisual, ErrorVisual, ExpandableVisual, SerializedVisual } from './visual';
+import { ComponentsVisual, ErrorVisual, SerializedVisual } from './visual';
+import { StructVisual, EnumVisual, ExpandableVisual } from './visual-expandable';
 
 export type DataPathSegment = string | number | undefined;
 
@@ -27,7 +28,7 @@ class SyncNodeCollection {
   private collection: SyncNode[] = [];
   constructor(private parent: SyncNode) {}
   private updateIsExpandable() {
-    if (this.parent.visual instanceof ExpandableVisual) {
+    if ('isExpandable' in this.parent.visual) {
       this.parent.visual.isExpandable = this.collection.length > 0;
     }
   }
@@ -71,7 +72,7 @@ export class SyncNode {
     | MapData
     | ComponentsData
     | ErrorData;
-  public visual: ComponentsVisual | ErrorVisual | SerializedVisual | ExpandableVisual | EnumVisual;
+  public visual: ComponentsVisual | ErrorVisual | SerializedVisual | StructVisual | EnumVisual;
 
   constructor(parent: SyncNode | DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
     this.parent = parent;
@@ -129,13 +130,13 @@ export class SyncNode {
         if (typeof access === 'string') {
           const variant = schema.typePath + '::' + access;
           this.data = new EnumData(schema, variant);
-          this.visual = new EnumVisual(this, level, label, mount);
+          this.visual = new EnumVisual(this, level, label, this.data.variantName, mount);
           break;
         }
         if (isBrpObject(access) && Object.keys(access).length >= 1) {
           const variant = schema.typePath + '::' + Object.keys(access)[0];
           this.data = new EnumData(schema, variant);
-          this.visual = new EnumVisual(this, level, label, mount);
+          this.visual = new EnumVisual(this, level, label, this.data.variantName, mount);
           this.children.push(new SyncNode(this, [...path, this.data.variantName], this.data.variant));
           break;
         }
@@ -145,7 +146,7 @@ export class SyncNode {
       case 'Tuple':
       case 'TupleStruct': {
         this.data = new TupleData(schema);
-        this.visual = new ExpandableVisual(this, level, label, mount);
+        this.visual = new StructVisual(this, level, label, mount);
         if (this.data.childTypePaths.length === 1) {
           this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
           break;
@@ -159,7 +160,7 @@ export class SyncNode {
       }
       case 'Array':
         this.data = new ArrayData(schema);
-        this.visual = new ExpandableVisual(this, level, label, mount);
+        this.visual = new StructVisual(this, level, label, mount);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
           this.visual = new ErrorVisual(level, this.data, mount);
@@ -171,7 +172,7 @@ export class SyncNode {
         break;
       case 'List':
         this.data = new ListData(schema);
-        this.visual = new ExpandableVisual(this, level, label, mount);
+        this.visual = new StructVisual(this, level, label, mount);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
           this.visual = new ErrorVisual(level, this.data, mount);
@@ -183,7 +184,7 @@ export class SyncNode {
         break;
       case 'Set':
         this.data = new SetData(schema);
-        this.visual = new ExpandableVisual(this, level, label, mount);
+        this.visual = new StructVisual(this, level, label, mount);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
           this.visual = new ErrorVisual(level, this.data, mount);
@@ -195,14 +196,14 @@ export class SyncNode {
         break;
       case 'Struct':
         this.data = new StructData(schema);
-        this.visual = new ExpandableVisual(this, level, label, mount);
+        this.visual = new StructVisual(this, level, label, mount);
         for (const { property, typePath: childTypePath } of this.data.properties) {
           this.children.push(new SyncNode(this, [...path, property], childTypePath));
         }
         break;
       case 'Map':
         this.data = new MapData(schema);
-        this.visual = new ExpandableVisual(this, level, label, mount);
+        this.visual = new StructVisual(this, level, label, mount);
         if (!isBrpObject(access)) {
           this.data = new ErrorData(undefined, `expected BrpObject`, path);
           this.visual = new ErrorVisual(level, this.data, mount);

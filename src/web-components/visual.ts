@@ -1,10 +1,9 @@
 import { BrpValue } from '../protocol';
 import * as VslStyles from './styles';
-import { VscodeIcon } from '@vscode-elements/elements';
 import { SyncNode } from './sync';
 import { ErrorData } from './data';
 
-abstract class Visual {
+export abstract class Visual {
   abstract representation: HTMLElement;
 
   preDestruct() {
@@ -29,22 +28,22 @@ export class ComponentsVisual extends Visual {
 }
 
 export class ErrorVisual extends Visual {
-  readonly representation: VslDeclaration;
+  readonly representation: HTMLDeclaration;
 
   constructor(level: number, error: ErrorData, mount: HTMLElement) {
     super();
     const label = error.code === undefined ? 'Error' : 'Error' + error.code;
-    this.representation = VslDeclaration.create(level, label, error.message, () => {});
+    this.representation = HTMLDeclaration.create(level, label, error.message, () => {});
     mount.append(this.representation);
   }
 }
 
 export class SerializedVisual extends Visual {
-  readonly representation: VslDeclaration;
+  readonly representation: HTMLDeclaration;
 
   constructor(sync: SyncNode, level: number, label: string, value: BrpValue, mount: HTMLElement) {
     super();
-    this.representation = VslDeclaration.create(level, label, value, (value: BrpValue) => {
+    this.representation = HTMLDeclaration.create(level, label, value, (value: BrpValue) => {
       sync.mutate(value);
     });
     mount.append(this.representation);
@@ -55,102 +54,22 @@ export class SerializedVisual extends Visual {
   }
 }
 
-export class EnumVisual extends Visual {
-  readonly representation: VslExpandable;
-
-  constructor(sync: SyncNode, level: number, label: string, mount: HTMLElement) {
-    super();
-    this.representation = VslExpandable.create(sync, level, label);
-    mount.append(this.representation);
-  }
-}
-
-export class ExpandableVisual extends Visual {
-  readonly representation: VslExpandable;
-
-  constructor(sync: SyncNode, level: number, label: string, mount: HTMLElement) {
-    super();
-    this.representation = VslExpandable.create(sync, level, label);
-    mount.append(this.representation);
-  }
-
-  set isExpandable(able: boolean) {
-    this.representation.isExpandable = able;
-  }
-
-  get isExpanded(): boolean {
-    return this.representation.isExpanded;
-  }
-}
-
 function createVslHeading() {
   const result = document.createElement('h3');
   result.textContent = 'Component List';
   return result;
 }
 
-export class VslExpandable extends HTMLElement {
-  private chevron: VscodeIcon;
-  private htmlLabel: HTMLSpanElement;
-  public isExpanded = true;
-
-  static create(sync: SyncNode, level: number, label: string): VslExpandable {
-    if (customElements.get('visual-expandable') === undefined) {
-      customElements.define('visual-expandable', VslExpandable);
-    }
-    const result = document.createElement('visual-expandable') as VslExpandable;
-    result.level = level;
-    result.label = label ?? '...';
-
-    result.onclick = () => {
-      result.isExpanded = !result.isExpanded;
-      if (result.isExpanded) sync.showChildren();
-      else sync.hideChildren();
-    };
-
-    return result;
-  }
-
-  constructor() {
-    super();
-    this.htmlLabel = document.createElement('span');
-
-    this.chevron = document.createElement('vscode-icon');
-    this.chevron.setAttribute('name', 'chevron-right');
-    this.chevron.setAttribute('class', 'rotatable');
-    this.chevron.style.display = 'none';
-  }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
-    shadow.append(this.htmlLabel, this.chevron);
-  }
-
-  set level(l: number) {
-    const indent = l * 16;
-    this.htmlLabel.style.textIndent = indent.toString() + 'px';
-  }
-  set isExpandable(is: boolean) {
-    if (is) this.chevron.style.removeProperty('display');
-    else this.chevron.style.display = 'none';
-  }
-  set label(text: string) {
-    this.htmlLabel.textContent = text;
-  }
-}
-
-export class VslDeclaration extends HTMLElement {
+class HTMLDeclaration extends HTMLElement {
   private property: HTMLSpanElement;
   private valueWrapper: HTMLDivElement;
-  private valueElement: VslString; // VslNumber // VslBoolean // VslObject
+  private valueElement: HTMLString; // VslNumber // VslBoolean // VslObject
 
-  static create(level: number, label: string, value: BrpValue, onMutation: (value: BrpValue) => void): VslDeclaration {
+  static create(level: number, label: string, value: BrpValue, onMutation: (value: BrpValue) => void): HTMLDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
-      customElements.define('visual-declaration', VslDeclaration);
+      customElements.define('visual-declaration', HTMLDeclaration);
     }
-    const result = document.createElement('visual-declaration') as VslDeclaration;
+    const result = document.createElement('visual-declaration') as HTMLDeclaration;
     result.level = level;
     result.label = label;
     result.brpValue = value;
@@ -166,7 +85,7 @@ export class VslDeclaration extends HTMLElement {
     this.valueWrapper = document.createElement('div');
     this.valueWrapper.classList.add('right-side');
 
-    this.valueElement = VslString.create('', () => {});
+    this.valueElement = HTMLString.create('', () => {});
     this.valueWrapper.append(this.valueElement);
   }
 
@@ -192,17 +111,17 @@ export class VslDeclaration extends HTMLElement {
   }
 }
 
-class VslString extends HTMLElement {
+class HTMLString extends HTMLElement {
   private textBuffer: string | undefined = undefined;
   private textElement: HTMLDivElement;
   private inEdit: boolean;
   public mutate: (value: BrpValue) => void;
 
-  static create(text: string, onMutation: (value: BrpValue) => void): VslString {
+  static create(text: string, onMutation: (value: BrpValue) => void): HTMLString {
     if (customElements.get('visual-string') === undefined) {
-      customElements.define('visual-string', VslString);
+      customElements.define('visual-string', HTMLString);
     }
-    const result = document.createElement('visual-string') as VslString;
+    const result = document.createElement('visual-string') as HTMLString;
     result.text = text;
     result.onMutation = onMutation;
     return result;
