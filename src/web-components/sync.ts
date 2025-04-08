@@ -27,7 +27,7 @@ class SyncNodeCollection {
   private collection: SyncNode[] = [];
   constructor(private parent: SyncNode) {}
   private updateVisual() {
-    this.parent.visual.hasChildren = this.collection.length > 0;
+    this.parent.visual.isExpandable = this.collection.length > 0;
   }
 
   push(node: SyncNode) {

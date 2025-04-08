@@ -34,18 +34,17 @@ export class Visual {
     mount.append(this.representation);
   }
 
-  set hasChildren(has: boolean) {
-    if (this.representation instanceof VslExpandable) this.representation.isExpandable = has;
+  set isExpandable(able: boolean) {
+    if ('isExpandable' in this.representation) this.representation.isExpandable = able;
   }
 
   get isExpanded(): boolean {
-    if (!(this.representation instanceof VslExpandable)) return true;
-    return this.representation.isExpanded;
+    if ('isExpanded' in this.representation) return this.representation.isExpanded;
+    return true;
   }
 
   update(value: BrpValue) {
-    if (!(this.representation instanceof VslDeclaration)) return;
-    this.representation.brpValue = value;
+    if ('brpValue' in this.representation) this.representation.brpValue = value;
   }
 
   preDestruct() {
