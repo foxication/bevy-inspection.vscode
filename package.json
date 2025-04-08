@@ -124,8 +124,8 @@
 		},
 		"commands": [
 			{
-				"command": "extension.debugLog",
-				"title": "Log Debugging Data",
+				"command": "extension.debugOutput",
+				"title": "Dump Debugging Data",
 				"category": "Bevy Inspection"
 			},
 			{
@@ -183,7 +183,7 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "extension.debugLog",
+					"command": "extension.debugOutput",
 					"when": "true"
 				},
 				{

@@ -292,12 +292,12 @@ export class SyncNode {
     const source = this.source();
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const debugLog = (message: string) => {}; // console.log(message);
+    const debugOutput = (message: string) => {}; // console.log(message);
 
     // Overwrite Serialized
     if (this.data instanceof SerializedData) {
       if (this.data.value !== access) {
-        debugLog(
+        debugOutput(
           `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.data.value)} --> ${JSON.stringify(access)}`
         );
         this.data.value = access;
@@ -310,20 +310,20 @@ export class SyncNode {
       if (typeof access === 'string') {
         const variant = this.data.schema.typePath + '::' + access;
         if (this.data.variant !== variant) {
-          debugLog(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${access}`);
+          debugOutput(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${access}`);
           this.data.variant = variant;
           this.children.shrink(0);
         }
       } else if (isBrpObject(access) && Object.keys(access).length === 1) {
         const variant = this.data.schema.typePath + '::' + Object.keys(access)[0];
         if (this.data.variant !== variant) {
-          debugLog(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
+          debugOutput(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
           this.data.variant = variant;
           this.children.shrink(0);
           this.children.push(new SyncNode(source, [...this.path, this.data.variantName], variant));
         }
       } else {
-        debugLog(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
+        debugOutput(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
       }
     }
 
@@ -334,7 +334,7 @@ export class SyncNode {
       }
       if (isBrpArray(access) && this.children.unwrap().length > access.length) {
         this.children.shrink(access.length);
-        debugLog(`Shrink: ${JSON.stringify(this.path)}`);
+        debugOutput(`Shrink: ${JSON.stringify(this.path)}`);
       }
     }
 
@@ -348,7 +348,7 @@ export class SyncNode {
         this.children.filter((child) => {
           return typeof child.lastPathSegment === 'string' && Object.keys(access).includes(child.lastPathSegment);
         });
-        if (prevLength !== this.children.unwrap().length) debugLog(`Shrink: ${JSON.stringify(this.path)}`);
+        if (prevLength !== this.children.unwrap().length) debugOutput(`Shrink: ${JSON.stringify(this.path)}`);
       }
     }
 
@@ -364,7 +364,7 @@ export class SyncNode {
         let index = this.children.unwrap().length;
         while (this.children.unwrap().length < access.length) {
           this.children.push(new SyncNode(source, [...this.path, index], this.data.childTypePath));
-          debugLog(`Extend: ${JSON.stringify([...this.path, index])}`);
+          debugOutput(`Extend: ${JSON.stringify([...this.path, index])}`);
           index++;
         }
       }
@@ -384,7 +384,7 @@ export class SyncNode {
           if (exists === undefined) {
             const childTypePath = this.data instanceof MapData ? this.data.valueTypePath : key;
             this.children.push(new SyncNode(source, [...this.path, key], childTypePath));
-            debugLog(`Extend: ${JSON.stringify([...this.path, key])}`);
+            debugOutput(`Extend: ${JSON.stringify([...this.path, key])}`);
           }
         }
       }

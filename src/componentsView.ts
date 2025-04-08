@@ -150,6 +150,10 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
     return result;
   }
+
+  public debugOutput() {
+    this.postVSCodeMessage({ cmd: 'debug_output' });
+  }
 }
 
 function getNonce() {

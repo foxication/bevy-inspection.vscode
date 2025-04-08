@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol } from './protocol';
 import { createComponentsView } from './componentsView';
 import {
   ConnectionElement,
-  createHierarchyView as createHierarchyView,
+  createHierarchyView,
   HierarchyDataProvider,
   EntityElement,
 } from './hierarchyData';
@@ -12,12 +11,6 @@ import { ConnectionList, EntityFocus } from './connection-list';
 // Context
 function areThereConnections(value: boolean) {
   vscode.commands.executeCommand('setContext', 'extension.areThereConnections', value);
-}
-
-async function debugLog() {
-  const protocol = new BevyRemoteProtocol(BevyRemoteProtocol.DEFAULT_URL, '0.16');
-  console.log('COMPONENTS:');
-  console.log((await protocol.list())?.result);
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -32,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Userspace commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('extension.debugLog', () => debugLog()),
+    vscode.commands.registerCommand('extension.debugOutput', () => componentsView.debugOutput()),
     vscode.commands.registerCommand('extension.addConnection', () => connections.tryCreateConnection()),
     vscode.commands.registerCommand('extension.reconnectLast', () => connections.tryCreateConnection('last'))
   );

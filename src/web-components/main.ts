@@ -2,14 +2,13 @@ import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
 import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath } from '../protocol/types';
 
-export type WebviewMessage =
-  | {
-      cmd: 'mutate_component';
-      data: { component: string; path: string; value: BrpValue };
-    }
-  | { cmd: 'ready_for_watch' };
+export type WebviewMessage = {
+  cmd: 'mutate_component';
+  data: { component: string; path: string; value: BrpValue };
+};
 
 export type VSCodeMessage =
+  | { cmd: 'debug_output' }
   | {
       cmd: 'set_entity_info';
       host: string;
@@ -60,6 +59,9 @@ function postWebviewMessage(message: WebviewMessage) {
   window.addEventListener('message', (event) => {
     const message = event.data as VSCodeMessage;
     switch (message.cmd) {
+      case 'debug_output':
+        console.log(syncRoot.debugTree());
+        break;
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
         break;
