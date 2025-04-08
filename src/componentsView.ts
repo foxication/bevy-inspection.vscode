@@ -79,7 +79,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     };
-    this.view.webview.html = await this.getHtmlForWebview();
+    this.view.webview.html = await this.getHtmlForWebview(this.view.webview);
     webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => {
       console.log(`received message: ${message.cmd}`);
       switch (message.cmd) {
@@ -105,11 +105,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private async getHtmlForWebview(): Promise<string> {
-    if (this.view === undefined) {
-      return '';
-    }
-    const webview = this.view.webview;
+  private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {
     const htmlUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'main.html'));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'main.css'));
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js'));
