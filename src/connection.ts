@@ -1,12 +1,5 @@
 import * as vscode from 'vscode';
-import {
-  EntityId,
-  BevyRemoteProtocol,
-  TypePath,
-  BevyVersion,
-  BrpObject,
-  BrpRegistrySchema,
-} from './protocol';
+import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject, BrpRegistrySchema } from './protocol';
 import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
 
 type ProtocolDisconnection = 'disconnection';
