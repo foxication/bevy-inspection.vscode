@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web-components/main';
 import { BrpObject, TypePath } from './protocol';
+import { Connection } from './connection';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
@@ -17,6 +18,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private connections: ConnectionList;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
+  private bufferedMessages: VSCodeMessage[] = [];
 
   constructor(extensionUri: vscode.Uri, connections: ConnectionList) {
     this.connections = connections;
@@ -35,9 +37,31 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private postVSCodeMessage(message: VSCodeMessage) {
-    if (this.view === undefined) return;
-    this.view.webview.postMessage(message);
+  private async postVSCodeMessage(message: VSCodeMessage, bufferOnFail: boolean = false) {
+    if (this.view === undefined) {
+      if (bufferOnFail) this.bufferedMessages.push(message);
+      return;
+    }
+    const isPosted = await this.view.webview.postMessage(message);
+    if (!isPosted && bufferOnFail) this.bufferedMessages.push(message);
+  }
+
+  private flushBufferedMessages() {
+    const toFlush = this.bufferedMessages.splice(0);
+    for (const message of toFlush) this.postVSCodeMessage(message);
+  }
+
+  public async loadRegistrySchema(host: string) {
+    const connection = this.connections.get(host);
+    if (connection === undefined) return;
+
+    const schema = connection.getRegistrySchema();
+    return this.postVSCodeMessage({ cmd: 'load_registry_schema', host, data: schema }, true);
+  }
+
+  public async unloadRegistrySchema(connection: Connection) {
+    const host = connection.getProtocol().url.host;
+    return this.postVSCodeMessage({ cmd: 'unload_registry_schema', host }, true);
   }
 
   // Called on componentsData.onDidChangeTreeData
@@ -57,9 +81,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
     await connection.requestInspectionElements(this.connections.focus.entityId);
     const entityData = connection.getInspectionElements();
-    const registrySchema = connection.getRegistrySchema();
-    if (registrySchema !== undefined) this.postVSCodeMessage({ cmd: 'update_registry_schema', data: registrySchema });
-    if (entityData !== undefined) this.postVSCodeMessage({ cmd: 'update_all', data: entityData });
+    this.postVSCodeMessage({ cmd: 'update_all', host: this.connections.focus.host, data: entityData });
   }
 
   public updateComponents(components: BrpObject, removed: TypePath[]) {
@@ -103,6 +125,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
         }
       }
     });
+    this.flushBufferedMessages();
   }
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {

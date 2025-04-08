@@ -17,11 +17,17 @@ export type VSCodeMessage =
     }
   | {
       cmd: 'update_all';
+      host: string;
       data: BrpComponentRegistry;
     }
   | {
-      cmd: 'update_registry_schema';
+      cmd: 'load_registry_schema';
+      host: string;
       data: BrpRegistrySchema;
+    }
+  | {
+      cmd: 'unload_registry_schema';
+      host: string;
     }
   | {
       cmd: 'update_components';
@@ -49,7 +55,7 @@ function postWebviewMessage(message: WebviewMessage) {
       data: { component, path, value },
     });
   };
-  const syncRoot = new DataSyncManager({}, {}, componentList, onMutation);
+  const syncRoot = new DataSyncManager(componentList, onMutation);
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -58,10 +64,14 @@ function postWebviewMessage(message: WebviewMessage) {
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
         break;
-      case 'update_registry_schema':
-        syncRoot.registrySchema = message.data;
+      case 'load_registry_schema':
+        syncRoot.setRegistrySchema(message.host, message.data);
+        break;
+      case 'unload_registry_schema':
+        syncRoot.removeRegistrySchema(message.host);
         break;
       case 'update_all':
+        syncRoot.currentHost = message.host;
         syncRoot.mapOfComponents = message.data;
         syncRoot.sync();
         break;

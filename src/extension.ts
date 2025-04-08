@@ -68,6 +68,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Set context
     areThereConnections(true);
 
+    // Load registry schema in componentsView
+    componentsView.loadRegistrySchema(connection.getProtocol().url.host);
+
     // Connect all events
     connection.onHierarchyUpdated((connection) => {
       hierarchyData.updateInConnection(connection.getProtocol().url.host);
@@ -119,7 +122,8 @@ export function activate(context: vscode.ExtensionContext) {
   connections.onAddError(() => {
     vscode.window.showErrorMessage('Bevy instance refused to connect');
   });
-  connections.onRemoved(() => {
+  connections.onRemoved(async (removed) => {
+    await componentsView.unloadRegistrySchema(removed);
     areThereConnections(connections.all().length > 0);
     hierarchyData.updateConnections();
   });

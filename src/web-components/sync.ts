@@ -105,7 +105,7 @@ export class SyncNode {
       this.visual = createVisual();
       return;
     }
-    const schema = getSchemaRecursively(typePath, source.registrySchema);
+    const schema = getSchemaRecursively(typePath, source.getRegistrySchema());
     if (schema === undefined) {
       this.data = new ErrorData(undefined, `schema is not found`, path);
       this.visual = createVisual();
@@ -465,9 +465,11 @@ export class SyncNode {
 
 export class DataSyncManager {
   private root: SyncNode;
+  private registrySchemas: { [host: string]: BrpRegistrySchema } = {};
+  public mapOfComponents: BrpComponentRegistry = {};
+  public currentHost: string | undefined;
+
   constructor(
-    public mapOfComponents: BrpComponentRegistry,
-    public registrySchema: BrpRegistrySchema,
     public readonly mount: HTMLElement,
     public readonly mutate: (component: string, path: string, value: BrpValue) => void
   ) {
@@ -475,6 +477,18 @@ export class DataSyncManager {
   }
   source(): DataSyncManager {
     return this;
+  }
+  getRegistrySchema(): BrpRegistrySchema {
+    return this.registrySchemas[this.currentHost ?? ''] ?? {};
+  }
+  setRegistrySchema(host: string, schema: BrpRegistrySchema) {
+    this.registrySchemas[host] = schema;
+  }
+  removeRegistrySchema(host: string) {
+    return this.registrySchemas[host];
+  }
+  setMapOfComponents(components: BrpComponentRegistry) {
+    this.mapOfComponents = components;
   }
   sync() {
     this.root.sync();
