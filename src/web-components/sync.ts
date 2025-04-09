@@ -26,10 +26,10 @@ export type DataPathSegment = string | number | undefined;
 
 class SyncNodeCollection {
   private collection: SyncNode[] = [];
-  constructor(private parent: SyncNode) {}
+  constructor(private sync: SyncNode) {}
   private updateIsExpandable() {
-    if ('isExpandable' in this.parent.visual) {
-      this.parent.visual.isExpandable = this.collection.length > 0;
+    if ('isExpandable' in this.sync.visual) {
+      this.sync.visual.isExpandable = this.collection.length > 0;
     }
   }
 
@@ -74,26 +74,27 @@ export class SyncNode {
     | ErrorData;
   public visual: ComponentsVisual | ErrorVisual | SerializedVisual | StructVisual | EnumVisual;
 
-  constructor(parent: SyncNode | DataSyncManager, path: DataPathSegment[], typePath: TypePath | undefined) {
+  constructor(
+    parent: SyncNode | DataSyncManager,
+    anchor: HTMLElement,
+    path: DataPathSegment[],
+    typePath: TypePath | undefined
+  ) {
     this.parent = parent;
     this.path = path;
 
     const source = this.source();
     const access = this.access(path);
-    const mount = source.mount;
     const level = Math.max(this.path.length - 1, 0);
 
     // ComponentsData
     if (path.length === 0) {
-      if (!isBrpObject(access)) {
-        this.data = new ErrorData(undefined, `expected BrpObject`, path);
-        this.visual = new ErrorVisual(level, this.data, mount);
-        return;
-      }
-      this.data = new ComponentsData(Object.keys(access));
-      this.visual = new ComponentsVisual(mount);
+      const mapOfComponents = isBrpObject(access) ? access : {};
+      const componentNames = sortByShortPath(Object.keys(mapOfComponents), source.getRegistrySchema());
+      this.data = new ComponentsData(componentNames);
+      this.visual = new ComponentsVisual(anchor);
       for (const childTypePath of this.data.componentNames) {
-        this.children.push(new SyncNode(this, [...path, childTypePath], childTypePath));
+        this.children.push(new SyncNode(this, this.endAnchor, [...path, childTypePath], childTypePath));
       }
       return;
     }
@@ -101,13 +102,13 @@ export class SyncNode {
     // Get schema
     if (typePath === undefined) {
       this.data = new ErrorData(undefined, `typePath is undefined`, path);
-      this.visual = new ErrorVisual(level, this.data, mount);
+      this.visual = new ErrorVisual(level, this.data, anchor);
       return;
     }
     const schema = getSchemaRecursively(typePath, source.getRegistrySchema());
     if (schema === undefined) {
       this.data = new ErrorData(undefined, `schema is not found`, path);
-      this.visual = new ErrorVisual(level, this.data, mount);
+      this.visual = new ErrorVisual(level, this.data, anchor);
       return;
     }
 
@@ -127,21 +128,22 @@ export class SyncNode {
     // SerializedData
     if (schema.reflectTypes?.includes('Serialize')) {
       this.data = new SerializedData(schema, access);
-      this.visual = new SerializedVisual(this, level, label, tooltip, this.data.value, mount);
+      this.visual = new SerializedVisual(this, level, label, tooltip, this.data.value, anchor);
       return;
     }
 
     // Parsing other types of Data
     switch (schema.kind) {
-      case 'Value':
+      case 'Value': {
         this.data = new ErrorData(undefined, `Value is not serializable`, path);
-        this.visual = new ErrorVisual(level, this.data, mount);
+        this.visual = new ErrorVisual(level, this.data, anchor);
         break;
+      }
       case 'Enum': {
         const createEnumVisual = (data: EnumData) => {
           const enumLabel = label + ' / ' + data.variantName;
           const enumTooltip = tooltip + '\nvariant: ' + data.variantName;
-          return new EnumVisual(this, level, enumLabel, enumTooltip, mount);
+          return new EnumVisual(this, level, enumLabel, enumTooltip, anchor);
         };
         if (typeof access === 'string') {
           const variant = schema.typePath + '::' + access;
@@ -153,83 +155,88 @@ export class SyncNode {
           const variant = schema.typePath + '::' + Object.keys(access)[0];
           this.data = new EnumData(schema, variant);
           this.visual = createEnumVisual(this.data);
-          this.children.push(new SyncNode(this, [...path, this.data.variantName], this.data.variant));
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, this.data.variantName], this.data.variant));
           break;
         }
         this.data = new ErrorData(undefined, `cannot deserialize Enum`, path);
-        this.visual = new ErrorVisual(level, this.data, mount);
+        this.visual = new ErrorVisual(level, this.data, anchor);
         break;
       }
       case 'Tuple':
       case 'TupleStruct': {
         this.data = new TupleData(schema);
-        this.visual = new StructVisual(this, level, label, tooltip, mount);
+        this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (this.data.childTypePaths.length === 1) {
-          this.children.push(new SyncNode(this, [...path, undefined], this.data.childTypePaths[0]));
+          this.children.push(
+            new SyncNode(this, this.visual.representation, [...path, undefined], this.data.childTypePaths[0])
+          );
           break;
         }
-        let index = 0;
-        for (const childTypePath of this.data.childTypePaths) {
-          this.children.push(new SyncNode(this, [...path, index], childTypePath));
-          index++;
+        this.data.childTypePaths.forEach((childTypePath, index) => {
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, index], childTypePath));
+        });
+        break;
+      }
+      case 'Array': {
+        this.data = new ArrayData(schema);
+        this.visual = new StructVisual(this, level, label, tooltip, anchor);
+        if (!isBrpArray(access)) {
+          this.data = new ErrorData(undefined, `expected BrpArray`, path);
+          this.visual = new ErrorVisual(level, this.data, anchor);
+          break;
+        }
+        for (const item of access.keys()) {
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, item], this.data.childTypePath));
         }
         break;
       }
-      case 'Array':
-        this.data = new ArrayData(schema);
-        this.visual = new StructVisual(this, level, label, tooltip, mount);
-        if (!isBrpArray(access)) {
-          this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = new ErrorVisual(level, this.data, mount);
-          break;
-        }
-        for (const item of access.keys()) {
-          this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
-        }
-        break;
-      case 'List':
+      case 'List': {
         this.data = new ListData(schema);
-        this.visual = new StructVisual(this, level, label, tooltip, mount);
+        this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = new ErrorVisual(level, this.data, mount);
+          this.visual = new ErrorVisual(level, this.data, anchor);
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, item], this.data.childTypePath));
         }
         break;
-      case 'Set':
+      }
+      case 'Set': {
         this.data = new SetData(schema);
-        this.visual = new StructVisual(this, level, label, tooltip, mount);
+        this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = new ErrorVisual(level, this.data, mount);
+          this.visual = new ErrorVisual(level, this.data, anchor);
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this, [...path, item], this.data.childTypePath));
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, item], this.data.childTypePath));
         }
         break;
-      case 'Struct':
+      }
+      case 'Struct': {
         this.data = new StructData(schema);
-        this.visual = new StructVisual(this, level, label, tooltip, mount);
+        this.visual = new StructVisual(this, level, label, tooltip, anchor);
         for (const { property, typePath: childTypePath } of this.data.properties) {
-          this.children.push(new SyncNode(this, [...path, property], childTypePath));
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, property], childTypePath));
         }
         break;
-      case 'Map':
+      }
+      case 'Map': {
         this.data = new MapData(schema);
-        this.visual = new StructVisual(this, level, label, tooltip, mount);
+        this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpObject(access)) {
           this.data = new ErrorData(undefined, `expected BrpObject`, path);
-          this.visual = new ErrorVisual(level, this.data, mount);
+          this.visual = new ErrorVisual(level, this.data, anchor);
           break;
         }
-        for (const key of Object.keys(access)) {
-          this.children.push(new SyncNode(this, [...path, key], this.data.valueTypePath));
+        for (const key of Object.keys(access).sort()) {
+          this.children.push(new SyncNode(this, this.endAnchor, [...path, key], this.data.valueTypePath));
         }
         break;
+      }
     }
   }
   public source(): DataSyncManager {
@@ -338,7 +345,9 @@ export class SyncNode {
           debugOutput(`Update: ${JSON.stringify(this.path)} = ${this.data.variant} --> ${JSON.stringify(access)}`);
           this.data.variant = variant;
           this.children.shrink(0);
-          this.children.push(new SyncNode(source, [...this.path, this.data.variantName], variant));
+          this.children.push(
+            new SyncNode(source, this.visual.representation, [...this.path, this.data.variantName], variant)
+          );
         }
       } else {
         debugOutput(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
@@ -379,11 +388,9 @@ export class SyncNode {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpArray`);
       }
       if (isBrpArray(access)) {
-        let index = this.children.unwrap().length;
-        while (this.children.unwrap().length < access.length) {
-          this.children.push(new SyncNode(source, [...this.path, index], this.data.childTypePath));
+        for (let index = this.children.unwrap().length; index < access.length; index++) {
+          this.children.push(new SyncNode(source, this.endAnchor, [...this.path, index], this.data.childTypePath));
           debugOutput(`Extend: ${JSON.stringify([...this.path, index])}`);
-          index++;
         }
       }
     }
@@ -394,15 +401,24 @@ export class SyncNode {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
       }
       if (isBrpObject(access)) {
-        for (const key of Object.keys(access)) {
+        let anchor: HTMLElement = this.visual.representation;
+        const sorted =
+          this.data instanceof MapData
+            ? Object.keys(access).sort()
+            : sortByShortPath(Object.keys(access), source.getRegistrySchema());
+        for (const key of sorted) {
           const exists = this.children.unwrap().find((child) => {
             if (typeof child.lastPathSegment !== 'string') return false;
             return key === child.lastPathSegment;
           });
           if (exists === undefined) {
             const childTypePath = this.data instanceof MapData ? this.data.valueTypePath : key;
-            this.children.push(new SyncNode(source, [...this.path, key], childTypePath));
+            const newNode = new SyncNode(source, anchor, [...this.path, key], childTypePath);
             debugOutput(`Extend: ${JSON.stringify([...this.path, key])}`);
+            this.children.push(newNode);
+            anchor = newNode.endAnchor;
+          } else {
+            anchor = exists.endAnchor;
           }
         }
       }
@@ -412,6 +428,16 @@ export class SyncNode {
   get lastPathSegment(): DataPathSegment {
     if (this.path.length === 0) return undefined;
     return this.path[this.path.length - 1];
+  }
+
+  get startAnchor(): HTMLElement {
+    return this.visual.representation;
+  }
+
+  get endAnchor(): HTMLElement {
+    const length = this.children.unwrap().length;
+    if (length === 0) return this.visual.representation;
+    return this.children.unwrap()[length - 1].endAnchor;
   }
 
   preDestruct() {
@@ -492,7 +518,7 @@ export class DataSyncManager {
     public readonly mount: HTMLElement,
     public readonly mutate: (component: string, path: string, value: BrpValue) => void
   ) {
-    this.root = new SyncNode(this, [], undefined);
+    this.root = new SyncNode(this, mount, [], undefined);
   }
   source(): DataSyncManager {
     return this;
@@ -545,4 +571,22 @@ function getSchemaRecursively(typePath: TypePath, registrySchema: BrpRegistrySch
     return undefined;
   }
   return result;
+}
+
+function sortByShortPath(typePaths: TypePath[], registrySchema: BrpRegistrySchema): TypePath[] {
+  return typePaths
+    .map((typePath) => {
+      return { typePath, schema: getSchemaRecursively(typePath, registrySchema) };
+    })
+    .sort(({ schema: a }, { schema: b }) => {
+      if (a === undefined && b !== undefined) return -1;
+      if (a !== undefined && b === undefined) return 1;
+      if (a === undefined || b === undefined) return 0;
+      if (a.shortPath < b.shortPath) return -1;
+      if (a.shortPath > b.shortPath) return 1;
+      return 0;
+    })
+    .map((item) => {
+      return item.typePath;
+    });
 }

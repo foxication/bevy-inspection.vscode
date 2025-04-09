@@ -2,6 +2,7 @@ import { BrpValue } from '../protocol';
 import * as VslStyles from './styles';
 import { SyncNode } from './sync';
 import { ErrorData } from './data';
+import { StructVisual, EnumVisual } from './visual-expandable';
 
 export abstract class Visual {
   abstract representation: HTMLElement;
@@ -16,6 +17,8 @@ export abstract class Visual {
     this.representation.style.display = 'none';
   }
 }
+
+export type AnyVisual = ComponentsVisual | ErrorVisual | SerializedVisual | StructVisual | EnumVisual;
 
 export class ComponentsVisual extends Visual {
   readonly representation: HTMLHeadingElement;
@@ -36,23 +39,23 @@ export class ComponentsVisual extends Visual {
 export class ErrorVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(level: number, error: ErrorData, mount: HTMLElement) {
+  constructor(level: number, error: ErrorData, after: HTMLElement) {
     super();
     const label = error.code === undefined ? 'Error' : 'Error' + error.code;
     this.representation = HTMLDeclaration.create(level, label, label, error.message, () => {});
-    mount.append(this.representation);
+    after.after(this.representation);
   }
 }
 
 export class SerializedVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(sync: SyncNode, level: number, short: string, full: string, value: BrpValue, mount: HTMLElement) {
+  constructor(sync: SyncNode, level: number, short: string, full: string, value: BrpValue, after: HTMLElement) {
     super();
     this.representation = HTMLDeclaration.create(level, short, full, value, (value: BrpValue) => {
       sync.mutate(value);
     });
-    mount.append(this.representation);
+    after.after(this.representation);
   }
 
   set(value: BrpValue) {

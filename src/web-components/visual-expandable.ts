@@ -3,6 +3,8 @@ import { Visual } from './visual';
 import { VscodeIcon } from '@vscode-elements/elements';
 import * as VslStyles from './styles';
 
+//------------------------------------------------------------------------------
+
 export abstract class ExpandableVisual extends Visual {
   abstract representation: HTMLExpandable;
 
@@ -19,13 +21,15 @@ abstract class HTMLExpandable extends HTMLElement {
   abstract set isExpandable(is: boolean);
 }
 
+//------------------------------------------------------------------------------
+
 export class EnumVisual extends ExpandableVisual {
   readonly representation: HTMLEnum;
 
-  constructor(sync: SyncNode, level: number, short: string, full: string, mount: HTMLElement) {
+  constructor(sync: SyncNode, level: number, short: string, full: string, after: HTMLElement) {
     super();
     this.representation = HTMLEnum.create(sync, level, short, full);
-    mount.append(this.representation);
+    after.after(this.representation);
   }
 }
 
@@ -93,13 +97,15 @@ class HTMLEnum extends HTMLExpandable {
   }
 }
 
+//------------------------------------------------------------------------------
+
 export class StructVisual extends ExpandableVisual {
   readonly representation: HTMLStruct;
 
-  constructor(sync: SyncNode, level: number, short: string, full: string, mount: HTMLElement) {
+  constructor(sync: SyncNode, level: number, short: string, full: string, anchor: HTMLElement) {
     super();
     this.representation = HTMLStruct.create(sync, level, short, full);
-    mount.append(this.representation);
+    anchor.after(this.representation);
   }
 }
 
