@@ -14,29 +14,19 @@ export abstract class ExpandableVisual extends Visual {
   }
 }
 
-export class EnumVisual extends ExpandableVisual {
-  readonly representation: HTMLEnum;
-
-  constructor(sync: SyncNode, level: number, label: string, variantName: string, mount: HTMLElement) {
-    super();
-    this.representation = HTMLEnum.create(sync, level, label, variantName);
-    mount.append(this.representation);
-  }
-}
-
-export class StructVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
-
-  constructor(sync: SyncNode, level: number, label: string, mount: HTMLElement) {
-    super();
-    this.representation = HTMLStruct.create(sync, level, label);
-    mount.append(this.representation);
-  }
-}
-
 abstract class HTMLExpandable extends HTMLElement {
   public isExpanded = true;
   abstract set isExpandable(is: boolean);
+}
+
+export class EnumVisual extends ExpandableVisual {
+  readonly representation: HTMLEnum;
+
+  constructor(sync: SyncNode, level: number, short: string, full: string, mount: HTMLElement) {
+    super();
+    this.representation = HTMLEnum.create(sync, level, short, full);
+    mount.append(this.representation);
+  }
 }
 
 class HTMLEnum extends HTMLExpandable {
@@ -44,13 +34,14 @@ class HTMLEnum extends HTMLExpandable {
   private buttonEdit: VscodeIcon;
   private chevron: VscodeIcon;
 
-  static create(sync: SyncNode, level: number, label: string, variantName: string): HTMLEnum {
+  static create(sync: SyncNode, level: number, short: string, full: string): HTMLEnum {
     if (customElements.get('visual-enum') === undefined) {
       customElements.define('visual-enum', HTMLEnum);
     }
     const result = document.createElement('visual-enum') as HTMLEnum;
     result.level = level;
-    result.label = label + ' / ' + variantName;
+    result.label = short;
+    result.tooltip = full;
 
     result.onclick = () => {
       result.isExpanded = !result.isExpanded;
@@ -97,6 +88,19 @@ class HTMLEnum extends HTMLExpandable {
   set label(text: string) {
     this.htmlLabel.textContent = text;
   }
+  set tooltip(text: string) {
+    this.htmlLabel.title = text;
+  }
+}
+
+export class StructVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
+
+  constructor(sync: SyncNode, level: number, short: string, full: string, mount: HTMLElement) {
+    super();
+    this.representation = HTMLStruct.create(sync, level, short, full);
+    mount.append(this.representation);
+  }
 }
 
 class HTMLStruct extends HTMLElement {
@@ -104,13 +108,14 @@ class HTMLStruct extends HTMLElement {
   private htmlLabel: HTMLSpanElement;
   public isExpanded = true;
 
-  static create(sync: SyncNode, level: number, label: string): HTMLStruct {
+  static create(sync: SyncNode, level: number, short: string, full: string): HTMLStruct {
     if (customElements.get('visual-expandable') === undefined) {
       customElements.define('visual-expandable', HTMLStruct);
     }
     const result = document.createElement('visual-expandable') as HTMLStruct;
     result.level = level;
-    result.label = label;
+    result.label = short;
+    result.tooltip = full;
 
     result.onclick = () => {
       result.isExpanded = !result.isExpanded;
@@ -153,5 +158,8 @@ class HTMLStruct extends HTMLElement {
   }
   set label(text: string) {
     this.htmlLabel.textContent = text;
+  }
+  set tooltip(text: string) {
+    this.htmlLabel.title = text;
   }
 }

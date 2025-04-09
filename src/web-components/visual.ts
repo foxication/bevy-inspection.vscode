@@ -22,8 +22,14 @@ export class ComponentsVisual extends Visual {
 
   constructor(mount: HTMLElement) {
     super();
-    this.representation = createVslHeading();
+    this.representation = ComponentsVisual.createVslHeading();
     mount.append(this.representation);
+  }
+
+  static createVslHeading() {
+    const result = document.createElement('h3');
+    result.textContent = 'Component List';
+    return result;
   }
 }
 
@@ -33,7 +39,7 @@ export class ErrorVisual extends Visual {
   constructor(level: number, error: ErrorData, mount: HTMLElement) {
     super();
     const label = error.code === undefined ? 'Error' : 'Error' + error.code;
-    this.representation = HTMLDeclaration.create(level, label, error.message, () => {});
+    this.representation = HTMLDeclaration.create(level, label, label, error.message, () => {});
     mount.append(this.representation);
   }
 }
@@ -41,9 +47,9 @@ export class ErrorVisual extends Visual {
 export class SerializedVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(sync: SyncNode, level: number, label: string, value: BrpValue, mount: HTMLElement) {
+  constructor(sync: SyncNode, level: number, short: string, full: string, value: BrpValue, mount: HTMLElement) {
     super();
-    this.representation = HTMLDeclaration.create(level, label, value, (value: BrpValue) => {
+    this.representation = HTMLDeclaration.create(level, short, full, value, (value: BrpValue) => {
       sync.mutate(value);
     });
     mount.append(this.representation);
@@ -54,24 +60,27 @@ export class SerializedVisual extends Visual {
   }
 }
 
-function createVslHeading() {
-  const result = document.createElement('h3');
-  result.textContent = 'Component List';
-  return result;
-}
+//------------------------------------------------------------------------------
 
 class HTMLDeclaration extends HTMLElement {
   private property: HTMLSpanElement;
   private valueWrapper: HTMLDivElement;
   private valueElement: HTMLString; // VslNumber // VslBoolean // VslObject
 
-  static create(level: number, label: string, value: BrpValue, onMutation: (value: BrpValue) => void): HTMLDeclaration {
+  static create(
+    level: number,
+    short: string,
+    full: string,
+    value: BrpValue,
+    onMutation: (value: BrpValue) => void
+  ): HTMLDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
       customElements.define('visual-declaration', HTMLDeclaration);
     }
     const result = document.createElement('visual-declaration') as HTMLDeclaration;
     result.level = level;
-    result.label = label;
+    result.label = short;
+    result.tooltip = full;
     result.brpValue = value;
     result.onMutation = onMutation;
     return result;
@@ -102,6 +111,9 @@ class HTMLDeclaration extends HTMLElement {
   }
   set label(text: string) {
     this.property.textContent = text;
+  }
+  set tooltip(text: string) {
+    this.property.title = text;
   }
   set brpValue(value: BrpValue) {
     this.valueElement.text = JSON.stringify(value, null, 4);
