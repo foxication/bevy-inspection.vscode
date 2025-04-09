@@ -102,13 +102,13 @@ export class SyncNode {
     // Get schema
     if (typePath === undefined) {
       this.data = new ErrorData(undefined, `typePath is undefined`, path);
-      this.visual = new ErrorVisual(level, this.data, anchor);
+      this.visual = new ErrorVisual(level, (this.lastPathSegment ?? '...').toString(), this.data, anchor);
       return;
     }
     const schema = getSchemaRecursively(typePath, source.getRegistrySchema());
     if (schema === undefined) {
       this.data = new ErrorData(undefined, `schema is not found`, path);
-      this.visual = new ErrorVisual(level, this.data, anchor);
+      this.visual = new ErrorVisual(level, (this.lastPathSegment ?? '...').toString(), this.data, anchor);
       return;
     }
 
@@ -136,7 +136,7 @@ export class SyncNode {
     switch (schema.kind) {
       case 'Value': {
         this.data = new ErrorData(undefined, `Value is not serializable`, path);
-        this.visual = new ErrorVisual(level, this.data, anchor);
+        this.visual = new ErrorVisual(level, label, this.data, anchor);
         break;
       }
       case 'Enum': {
@@ -159,7 +159,7 @@ export class SyncNode {
           break;
         }
         this.data = new ErrorData(undefined, `cannot deserialize Enum`, path);
-        this.visual = new ErrorVisual(level, this.data, anchor);
+        this.visual = new ErrorVisual(level, label, this.data, anchor);
         break;
       }
       case 'Tuple':
@@ -182,7 +182,7 @@ export class SyncNode {
         this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = new ErrorVisual(level, this.data, anchor);
+          this.visual = new ErrorVisual(level, label, this.data, anchor);
           break;
         }
         for (const item of access.keys()) {
@@ -195,7 +195,7 @@ export class SyncNode {
         this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = new ErrorVisual(level, this.data, anchor);
+          this.visual = new ErrorVisual(level, label, this.data, anchor);
           break;
         }
         for (const item of access.keys()) {
@@ -208,7 +208,7 @@ export class SyncNode {
         this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpArray(access)) {
           this.data = new ErrorData(undefined, `expected BrpArray`, path);
-          this.visual = new ErrorVisual(level, this.data, anchor);
+          this.visual = new ErrorVisual(level, label, this.data, anchor);
           break;
         }
         for (const item of access.keys()) {
@@ -229,7 +229,7 @@ export class SyncNode {
         this.visual = new StructVisual(this, level, label, tooltip, anchor);
         if (!isBrpObject(access)) {
           this.data = new ErrorData(undefined, `expected BrpObject`, path);
-          this.visual = new ErrorVisual(level, this.data, anchor);
+          this.visual = new ErrorVisual(level, label, this.data, anchor);
           break;
         }
         for (const key of Object.keys(access).sort()) {

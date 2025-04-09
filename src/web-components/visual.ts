@@ -39,10 +39,9 @@ export class ComponentsVisual extends Visual {
 export class ErrorVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(level: number, error: ErrorData, after: HTMLElement) {
+  constructor(level: number, label: string, error: ErrorData, after: HTMLElement) {
     super();
-    const label = error.code === undefined ? 'Error' : 'Error' + error.code;
-    this.representation = HTMLDeclaration.create(level, label, label, error.message, () => {});
+    this.representation = HTMLDeclaration.create(level, label, label, error.message, undefined);
     after.after(this.representation);
   }
 }
@@ -75,7 +74,7 @@ class HTMLDeclaration extends HTMLElement {
     short: string,
     full: string,
     value: BrpValue,
-    onMutation: (value: BrpValue) => void
+    onMutation: ((value: BrpValue) => void) | undefined
   ): HTMLDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
       customElements.define('visual-declaration', HTMLDeclaration);
@@ -97,7 +96,7 @@ class HTMLDeclaration extends HTMLElement {
     this.valueWrapper = document.createElement('div');
     this.valueWrapper.classList.add('right-side');
 
-    this.valueElement = HTMLString.create('', () => {});
+    this.valueElement = HTMLString.create('', undefined);
     this.valueWrapper.append(this.valueElement);
   }
 
@@ -121,7 +120,7 @@ class HTMLDeclaration extends HTMLElement {
   set brpValue(value: BrpValue) {
     this.valueElement.text = JSON.stringify(value, null, 4);
   }
-  set onMutation(fun: (value: BrpValue) => void) {
+  set onMutation(fun: ((value: BrpValue) => void) | undefined) {
     this.valueElement.onMutation = fun;
   }
 }
@@ -132,7 +131,7 @@ class HTMLString extends HTMLElement {
   private inEdit: boolean;
   public mutate: (value: BrpValue) => void;
 
-  static create(text: string, onMutation: (value: BrpValue) => void): HTMLString {
+  static create(text: string, onMutation: ((value: BrpValue) => void) | undefined): HTMLString {
     if (customElements.get('visual-string') === undefined) {
       customElements.define('visual-string', HTMLString);
     }
@@ -145,7 +144,6 @@ class HTMLString extends HTMLElement {
   constructor() {
     super();
     this.textElement = document.createElement('div');
-    this.textElement.contentEditable = 'plaintext-only';
     this.inEdit = false;
     this.mutate = () => {};
 
@@ -200,7 +198,13 @@ class HTMLString extends HTMLElement {
     this.textElement.innerText = this.textBuffer;
   }
 
-  set onMutation(call: (value: BrpValue) => void) {
-    this.mutate = call;
+  set onMutation(call: ((value: BrpValue) => void) | undefined) {
+    if (call === undefined) {
+      this.textElement.removeAttribute('contenteditable');
+      this.mutate = () => {};
+    } else {
+      this.textElement.contentEditable = 'plaintext-only';
+      this.mutate = call;
+    }
   }
 }
