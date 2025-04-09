@@ -479,7 +479,7 @@ export class SyncNode {
       return this.parent.pathSerialized;
     }
 
-    const segment = (this.lastPathSegment ?? '').toString();
+    const segment = this.lastPathSegment.toString();
 
     // Component
     if (this.parent.data instanceof ComponentsData) return segment;
