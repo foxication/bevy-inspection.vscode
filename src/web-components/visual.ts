@@ -1,4 +1,4 @@
-import { BrpValue } from '../protocol';
+import { BrpValue, TypePath } from '../protocol';
 import * as VslStyles from './styles';
 import { SyncNode } from './sync';
 import { ErrorData } from './data';
@@ -41,7 +41,7 @@ export class ErrorVisual extends Visual {
 
   constructor(level: number, label: string, error: ErrorData, after: HTMLElement) {
     super();
-    this.representation = HTMLDeclaration.create(level, label, label, error.message, undefined);
+    this.representation = HTMLDeclaration.create(level, label, label, error.message, undefined, undefined);
     after.after(this.representation);
   }
 }
@@ -49,9 +49,17 @@ export class ErrorVisual extends Visual {
 export class SerializedVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(sync: SyncNode, level: number, short: string, full: string, value: BrpValue, after: HTMLElement) {
+  constructor(
+    sync: SyncNode,
+    level: number,
+    short: string,
+    full: string,
+    value: BrpValue,
+    typePath: TypePath,
+    after: HTMLElement
+  ) {
     super();
-    this.representation = HTMLDeclaration.create(level, short, full, value, (value: BrpValue) => {
+    this.representation = HTMLDeclaration.create(level, short, full, value, typePath, (value: BrpValue) => {
       sync.mutate(value);
     });
     after.after(this.representation);
@@ -66,15 +74,17 @@ export class SerializedVisual extends Visual {
 
 class HTMLDeclaration extends HTMLElement {
   private property: HTMLSpanElement;
-  private valueWrapper: HTMLDivElement;
-  private valueElement: HTMLString; // VslNumber // VslBoolean // VslObject
+  private htmlWrapper: HTMLDivElement;
+  private htmlValue: HTMLJson | HTMLString; // VslNumber // VslBoolean // VslObject
+  private fnMutate: (v: BrpValue) => void;
 
   static create(
     level: number,
     short: string,
     full: string,
     value: BrpValue,
-    onMutation: ((value: BrpValue) => void) | undefined
+    typePath: TypePath | undefined,
+    fnMutate: ((value: BrpValue) => void) | undefined
   ): HTMLDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
       customElements.define('visual-declaration', HTMLDeclaration);
@@ -84,27 +94,30 @@ class HTMLDeclaration extends HTMLElement {
     result.label = short;
     result.tooltip = full;
     result.brpValue = value;
-    result.onMutation = onMutation;
+    if (fnMutate !== undefined) result.onMutation = fnMutate;
     return result;
   }
 
   constructor() {
     super();
+
+    this.fnMutate = () => {};
+
     this.property = document.createElement('span');
     this.property.classList.add('left-side');
 
-    this.valueWrapper = document.createElement('div');
-    this.valueWrapper.classList.add('right-side');
+    this.htmlWrapper = document.createElement('div');
+    this.htmlWrapper.classList.add('right-side');
 
-    this.valueElement = HTMLString.create('', undefined);
-    this.valueWrapper.append(this.valueElement);
+    this.htmlValue = HTMLString.create('');
+    this.htmlWrapper.append(this.htmlValue);
   }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.declaration];
-    shadow.append(this.property, this.valueWrapper);
+    shadow.append(this.property, this.htmlWrapper);
   }
 
   set level(l: number) {
@@ -117,35 +130,138 @@ class HTMLDeclaration extends HTMLElement {
   set tooltip(text: string) {
     this.property.title = text;
   }
-  set brpValue(value: BrpValue) {
-    this.valueElement.text = JSON.stringify(value, null, 4);
+  set brpValue(v: BrpValue) {
+    if (this.htmlValue instanceof HTMLString) {
+      if (typeof v === 'string') {
+        this.htmlValue.stringValue = v;
+      } else {
+        console.log(`Replacing with HTMLJson for ${this.property.textContent}`);
+        const replacement = HTMLJson.create(v);
+        this.htmlValue.replaceWith(replacement);
+        this.htmlValue = replacement;
+        this.onMutation = this.fnMutate;
+      }
+    } /* HTMLJson */ else {
+      if (typeof v === 'string') {
+        console.log(`Replacing with HTMLString for ${this.property.textContent}`);
+        const replacement = HTMLString.create(v);
+        this.htmlValue.replaceWith(replacement);
+        this.htmlValue = replacement;
+        this.onMutation = this.fnMutate;
+      } else {
+        this.htmlValue.brpValue = v;
+      }
+    }
   }
-  set onMutation(fun: ((value: BrpValue) => void) | undefined) {
-    this.valueElement.onMutation = fun;
+  set onMutation(fn: (value: BrpValue) => void) {
+    this.fnMutate = fn;
+    this.htmlValue.onMutation = (v) => this.fnMutate(v);
   }
 }
 
-class HTMLString extends HTMLElement {
-  private textBuffer: string | undefined = undefined;
-  private textElement: HTMLDivElement;
+class HTMLJson extends HTMLElement {
+  private buffer: BrpValue;
+  private jsonElement: HTMLDivElement;
   private inEdit: boolean;
-  public mutate: (value: BrpValue) => void;
+  private fnMutate: (value: BrpValue) => void;
 
-  static create(text: string, onMutation: ((value: BrpValue) => void) | undefined): HTMLString {
-    if (customElements.get('visual-string') === undefined) {
-      customElements.define('visual-string', HTMLString);
+  static create(value: BrpValue): HTMLJson {
+    if (customElements.get('visual-json') === undefined) {
+      customElements.define('visual-json', HTMLJson);
     }
-    const result = document.createElement('visual-string') as HTMLString;
-    result.text = text;
-    result.onMutation = onMutation;
+    const result = document.createElement('visual-json') as HTMLJson;
+    result.brpValue = value;
     return result;
   }
 
   constructor() {
     super();
+    this.buffer = null;
+    this.jsonElement = document.createElement('div');
+    this.inEdit = false;
+    this.fnMutate = () => {};
+
+    // Interactions
+    this.jsonElement.onfocus = () => {
+      this.inEdit = true;
+      this.setAttribute('focused', '');
+    };
+    this.jsonElement.onkeydown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        this.jsonElement.innerText = this.parsedBuffer;
+        this.jsonElement.blur();
+        e.preventDefault();
+      }
+
+      // apply changes
+      if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
+        try {
+          const parsed = JSON.parse(this.jsonElement.innerText);
+          this.fnMutate(parsed);
+        } catch {
+          /* empty */
+        }
+        this.jsonElement.innerText = this.parsedBuffer;
+        this.jsonElement.blur();
+      }
+    };
+    this.jsonElement.onchange = () => {
+      this.buffer = this.jsonElement.innerText;
+      this.jsonElement.blur();
+    };
+    this.jsonElement.onblur = () => {
+      this.inEdit = false;
+      this.jsonElement.innerText = this.parsedBuffer;
+      this.jsonElement.scrollTo(0, 0);
+      this.removeAttribute('focused');
+    };
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return;
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.editableText];
+    shadow.append(this.jsonElement);
+  }
+
+  private get parsedBuffer() {
+    return JSON.stringify(this.buffer, null, 4);
+  }
+
+  set brpValue(v: BrpValue) {
+    console.log('HTMLJSON.set()');
+    this.buffer = v;
+    if (this.inEdit) return;
+    this.jsonElement.innerText = this.parsedBuffer;
+  }
+
+  set onMutation(call: (value: BrpValue) => void) {
+    this.jsonElement.contentEditable = 'plaintext-only';
+    this.fnMutate = call;
+  }
+}
+
+class HTMLString extends HTMLElement {
+  private textBuffer: string;
+  private textElement: HTMLDivElement;
+  private inEdit: boolean;
+  private fnMutate: (value: BrpValue) => void;
+
+  static create(text: string): HTMLString {
+    if (customElements.get('visual-string') === undefined) {
+      customElements.define('visual-string', HTMLString);
+    }
+    const result = document.createElement('visual-string') as HTMLString;
+    result.stringValue = text;
+    return result;
+  }
+
+  constructor() {
+    super();
+    this.textBuffer = '';
     this.textElement = document.createElement('div');
     this.inEdit = false;
-    this.mutate = () => {};
+    this.fnMutate = () => {};
 
     // Interactions
     this.textElement.onfocus = () => {
@@ -162,8 +278,7 @@ class HTMLString extends HTMLElement {
       // apply changes
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
-          const parsed = JSON.parse(this.textElement.innerText);
-          this.mutate(parsed);
+          this.fnMutate(this.textElement.innerText);
         } catch {
           /* empty */
         }
@@ -190,21 +305,15 @@ class HTMLString extends HTMLElement {
     shadow.append(this.textElement);
   }
 
-  set text(t: string | undefined) {
-    this.textBuffer = t ?? '';
-    this.textElement.contentEditable = t !== undefined ? 'plaintext-only' : 'false';
-
+  set stringValue(t: string) {
+    console.log('HTMLString.set()');
+    this.textBuffer = t;
     if (this.inEdit) return;
     this.textElement.innerText = this.textBuffer;
   }
 
-  set onMutation(call: ((value: BrpValue) => void) | undefined) {
-    if (call === undefined) {
-      this.textElement.removeAttribute('contenteditable');
-      this.mutate = () => {};
-    } else {
-      this.textElement.contentEditable = 'plaintext-only';
-      this.mutate = call;
-    }
+  set onMutation(call: (value: BrpValue) => void) {
+    this.textElement.contentEditable = 'plaintext-only';
+    this.fnMutate = call;
   }
 }

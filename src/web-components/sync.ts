@@ -128,7 +128,7 @@ export class SyncNode {
     // SerializedData
     if (schema.reflectTypes?.includes('Serialize')) {
       this.data = new SerializedData(schema, access);
-      this.visual = new SerializedVisual(this, level, label, tooltip, this.data.value, anchor);
+      this.visual = new SerializedVisual(this, level, label, tooltip, this.data.value, schema.typePath, anchor);
       return;
     }
 
