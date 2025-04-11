@@ -133,7 +133,7 @@ class HTMLDeclaration extends HTMLElement {
   set brpValue(v: BrpValue) {
     if (this.htmlValue instanceof HTMLString) {
       if (typeof v === 'string') {
-        this.htmlValue.stringValue = v;
+        this.htmlValue.value = v;
       } else {
         console.log(`Replacing with HTMLJson for ${this.property.textContent}`);
         const replacement = HTMLJson.create(v);
@@ -149,37 +149,72 @@ class HTMLDeclaration extends HTMLElement {
         this.htmlValue = replacement;
         this.onMutation = this.fnMutate;
       } else {
-        this.htmlValue.brpValue = v;
+        this.htmlValue.value = v;
       }
     }
   }
   set onMutation(fn: (value: BrpValue) => void) {
     this.fnMutate = fn;
-    this.htmlValue.onMutation = (v) => this.fnMutate(v);
+    this.htmlValue.fnMutate = (v) => this.fnMutate(v);
   }
 }
 
-class HTMLJson extends HTMLElement {
-  private buffer: BrpValue;
+abstract class HTMLMutatable<T> extends HTMLElement {
+  private _buffer: T;
+  private _inEdit: boolean;
+  private _fnMutate: (value: BrpValue) => void;
+
+  constructor(defaultValue: T) {
+    super();
+    this._buffer = defaultValue;
+    this._inEdit = false;
+    this._fnMutate = () => {};
+  }
+
+  get buffer() {
+    return this._buffer;
+  }
+
+  get inEdit() {
+    return this._inEdit;
+  }
+  set inEdit(b: boolean) {
+    this._inEdit = b;
+  }
+
+  get fnMutate() {
+    return this._fnMutate;
+  }
+  set fnMutate(fn: (value: BrpValue) => void) {
+    this._fnMutate = fn;
+    this.allowEditing();
+  }
+
+  set value(v: T) {
+    this._buffer = v;
+    if (this.inEdit) return;
+    this.setTextFromBuffer();
+  }
+
+  abstract setTextFromBuffer(): void;
+  abstract allowEditing(): void;
+}
+
+class HTMLJson extends HTMLMutatable<BrpValue> {
   private jsonElement: HTMLDivElement;
-  private inEdit: boolean;
-  private fnMutate: (value: BrpValue) => void;
 
   static create(value: BrpValue): HTMLJson {
     if (customElements.get('visual-json') === undefined) {
       customElements.define('visual-json', HTMLJson);
     }
     const result = document.createElement('visual-json') as HTMLJson;
-    result.brpValue = value;
+    result.value = value;
     return result;
   }
 
   constructor() {
-    super();
-    this.buffer = null;
+    super(null);
     this.jsonElement = document.createElement('div');
-    this.inEdit = false;
-    this.fnMutate = () => {};
 
     // Interactions
     this.jsonElement.onfocus = () => {
@@ -188,7 +223,7 @@ class HTMLJson extends HTMLElement {
     };
     this.jsonElement.onkeydown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.jsonElement.innerText = this.parsedBuffer;
+        this.setTextFromBuffer();
         this.jsonElement.blur();
         e.preventDefault();
       }
@@ -201,17 +236,13 @@ class HTMLJson extends HTMLElement {
         } catch {
           /* empty */
         }
-        this.jsonElement.innerText = this.parsedBuffer;
+        this.setTextFromBuffer();
         this.jsonElement.blur();
       }
     };
-    this.jsonElement.onchange = () => {
-      this.buffer = this.jsonElement.innerText;
-      this.jsonElement.blur();
-    };
     this.jsonElement.onblur = () => {
       this.inEdit = false;
-      this.jsonElement.innerText = this.parsedBuffer;
+      this.setTextFromBuffer();
       this.jsonElement.scrollTo(0, 0);
       this.removeAttribute('focused');
     };
@@ -224,44 +255,29 @@ class HTMLJson extends HTMLElement {
     shadow.append(this.jsonElement);
   }
 
-  private get parsedBuffer() {
-    return JSON.stringify(this.buffer, null, 4);
+  setTextFromBuffer() {
+    this.jsonElement.innerText = JSON.stringify(this.buffer, null, 4);
   }
-
-  set brpValue(v: BrpValue) {
-    console.log('HTMLJSON.set()');
-    this.buffer = v;
-    if (this.inEdit) return;
-    this.jsonElement.innerText = this.parsedBuffer;
-  }
-
-  set onMutation(call: (value: BrpValue) => void) {
+  allowEditing() {
     this.jsonElement.contentEditable = 'plaintext-only';
-    this.fnMutate = call;
   }
 }
 
-class HTMLString extends HTMLElement {
-  private textBuffer: string;
+class HTMLString extends HTMLMutatable<string> {
   private textElement: HTMLDivElement;
-  private inEdit: boolean;
-  private fnMutate: (value: BrpValue) => void;
 
   static create(text: string): HTMLString {
     if (customElements.get('visual-string') === undefined) {
       customElements.define('visual-string', HTMLString);
     }
     const result = document.createElement('visual-string') as HTMLString;
-    result.stringValue = text;
+    result.value = text;
     return result;
   }
 
   constructor() {
-    super();
-    this.textBuffer = '';
+    super('');
     this.textElement = document.createElement('div');
-    this.inEdit = false;
-    this.fnMutate = () => {};
 
     // Interactions
     this.textElement.onfocus = () => {
@@ -270,7 +286,7 @@ class HTMLString extends HTMLElement {
     };
     this.textElement.onkeydown = (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.textElement.innerText = this.textBuffer ?? '';
+        this.setTextFromBuffer();
         this.textElement.blur();
         e.preventDefault();
       }
@@ -282,17 +298,13 @@ class HTMLString extends HTMLElement {
         } catch {
           /* empty */
         }
-        this.textElement.innerText = this.textBuffer ?? '';
+        this.setTextFromBuffer();
         this.textElement.blur();
       }
     };
-    this.textElement.onchange = () => {
-      this.textBuffer = this.textElement.innerText;
-      this.textElement.blur();
-    };
     this.textElement.onblur = () => {
       this.inEdit = false;
-      this.textElement.innerText = this.textBuffer ?? '';
+      this.textElement.innerText = this.buffer;
       this.textElement.scrollTo(0, 0);
       this.removeAttribute('focused');
     };
@@ -305,15 +317,10 @@ class HTMLString extends HTMLElement {
     shadow.append(this.textElement);
   }
 
-  set stringValue(t: string) {
-    console.log('HTMLString.set()');
-    this.textBuffer = t;
-    if (this.inEdit) return;
-    this.textElement.innerText = this.textBuffer;
+  setTextFromBuffer() {
+    this.textElement.innerText = this.buffer;
   }
-
-  set onMutation(call: (value: BrpValue) => void) {
+  allowEditing() {
     this.textElement.contentEditable = 'plaintext-only';
-    this.fnMutate = call;
   }
 }
