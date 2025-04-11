@@ -18,7 +18,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private connections: ConnectionList;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
-  private bufferedMessages: VSCodeMessage[] = [];
 
   constructor(extensionUri: vscode.Uri, connections: ConnectionList) {
     this.connections = connections;
@@ -37,18 +36,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async postVSCodeMessage(message: VSCodeMessage, bufferOnFail: boolean = false) {
-    if (this.view === undefined) {
-      if (bufferOnFail) this.bufferedMessages.push(message);
-      return;
-    }
-    const isPosted = await this.view.webview.postMessage(message);
-    if (!isPosted && bufferOnFail) this.bufferedMessages.push(message);
-  }
-
-  private flushBufferedMessages() {
-    const toFlush = this.bufferedMessages.splice(0);
-    for (const message of toFlush) this.postVSCodeMessage(message);
+  private async postVSCodeMessage(message: VSCodeMessage) {
+    if (this.view === undefined) return;
+    await this.view.webview.postMessage(message);
   }
 
   public async loadRegistrySchema(host: string) {
@@ -56,17 +46,18 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     if (connection === undefined) return;
 
     const schema = connection.getRegistrySchema();
-    return this.postVSCodeMessage({ cmd: 'load_registry_schema', host, data: schema }, true);
+    return this.postVSCodeMessage({ cmd: 'load_registry_schema', host, data: schema });
   }
 
   public async unloadRegistrySchema(connection: Connection) {
     const host = connection.getProtocol().url.host;
-    return this.postVSCodeMessage({ cmd: 'unload_registry_schema', host }, true);
+    return this.postVSCodeMessage({ cmd: 'unload_registry_schema', host });
   }
 
   // Called on componentsData.onDidChangeTreeData
   public async updateAll() {
     if (this.view === undefined) {
+      // vscode.commands.executeCommand('componentsView.focus');
       return;
     }
     this.postVSCodeMessage({
@@ -96,12 +87,11 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     token: vscode.CancellationToken
   ) {
-    this.view = webviewView;
-    this.view.webview.options = {
+    webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     };
-    this.view.webview.html = await this.getHtmlForWebview(this.view.webview);
+    webviewView.webview.html = await this.getHtmlForWebview(webviewView.webview);
     webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => {
       console.log(`received message: ${message.cmd}`);
       switch (message.cmd) {
@@ -125,7 +115,11 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
         }
       }
     });
-    this.flushBufferedMessages();
+    this.view = webviewView;
+    webviewView.onDidDispose(() => (this.view = undefined));
+    for (const host of this.connections.all().map((c) => c.getProtocol().url.host)) {
+      await this.loadRegistrySchema(host);
+    }
   }
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {
