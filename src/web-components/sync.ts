@@ -90,7 +90,7 @@ export class SyncNode {
     // ComponentsData
     if (path.length === 0) {
       const mapOfComponents = isBrpObject(access) ? access : {};
-      const componentNames = sortByShortPath(Object.keys(mapOfComponents), source.getRegistrySchema());
+      const componentNames = sortByShortPath(Object.keys(mapOfComponents), source.getRegistrySchema() ?? {});
       this.data = new ComponentsData(componentNames);
       this.visual = new ComponentsVisual(anchor);
       for (const childTypePath of this.data.componentNames) {
@@ -105,7 +105,7 @@ export class SyncNode {
       this.visual = new ErrorVisual(level, (this.lastPathSegment ?? '...').toString(), this.data, anchor);
       return;
     }
-    const schema = getSchemaRecursively(typePath, source.getRegistrySchema());
+    const schema = getSchemaRecursively(typePath, source.getRegistrySchema() ?? {});
     if (schema === undefined) {
       this.data = new ErrorData(undefined, `schema is not found`, path);
       this.visual = new ErrorVisual(level, (this.lastPathSegment ?? '...').toString(), this.data, anchor);
@@ -405,7 +405,7 @@ export class SyncNode {
         const sorted =
           this.data instanceof MapData
             ? Object.keys(access).sort()
-            : sortByShortPath(Object.keys(access), source.getRegistrySchema());
+            : sortByShortPath(Object.keys(access), source.getRegistrySchema() ?? {});
         for (const key of sorted) {
           const exists = this.children.unwrap().find((child) => {
             if (typeof child.lastPathSegment !== 'string') return false;
@@ -523,14 +523,16 @@ export class DataSyncManager {
   source(): DataSyncManager {
     return this;
   }
-  getRegistrySchema(): BrpRegistrySchema {
-    return this.registrySchemas[this.currentHost ?? ''] ?? {};
+  getRegistrySchema(): BrpRegistrySchema | undefined {
+    if (this.currentHost === undefined) return;
+    if (!Object.keys(this.registrySchemas).includes(this.currentHost)) return;
+    return this.registrySchemas[this.currentHost];
   }
-  setRegistrySchema(host: string, schema: BrpRegistrySchema) {
+  syncRegistrySchema(available: string[], host: string, schema: BrpRegistrySchema) {
     this.registrySchemas[host] = schema;
-  }
-  removeRegistrySchema(host: string) {
-    return this.registrySchemas[host];
+    Object.keys(this.registrySchemas)
+      .filter((toFilter) => !available.includes(toFilter))
+      .forEach((toRemove) => delete this.registrySchemas[toRemove]);
   }
   setMapOfComponents(components: BrpComponentRegistry) {
     this.mapOfComponents = components;

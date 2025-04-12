@@ -2,10 +2,15 @@ import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
 import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath } from '../protocol/types';
 
-export type WebviewMessage = {
-  cmd: 'mutate_component';
-  data: { component: string; path: string; value: BrpValue };
-};
+export type WebviewMessage =
+  | {
+      cmd: 'mutate_component';
+      data: { component: string; path: string; value: BrpValue };
+    }
+  | {
+      cmd: 'request_of_sync_registry_schema';
+      host: string;
+    };
 
 export type VSCodeMessage =
   | { cmd: 'debug_output' }
@@ -20,13 +25,10 @@ export type VSCodeMessage =
       data: BrpComponentRegistry;
     }
   | {
-      cmd: 'load_registry_schema';
+      cmd: 'sync_registry_schema';
       host: string;
       data: BrpRegistrySchema;
-    }
-  | {
-      cmd: 'unload_registry_schema';
-      host: string;
+      available: string[];
     }
   | {
       cmd: 'update_components';
@@ -54,6 +56,13 @@ function postWebviewMessage(message: WebviewMessage) {
     });
   };
   const syncRoot = new DataSyncManager(componentList, onMutation);
+  const requestRegistrySchema = () => {
+    if (syncRoot.currentHost === undefined) return;
+    postWebviewMessage({
+      cmd: 'request_of_sync_registry_schema',
+      host: syncRoot.currentHost,
+    });
+  };
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -65,16 +74,15 @@ function postWebviewMessage(message: WebviewMessage) {
       case 'set_entity_info':
         setEntityInfo(message.host, message.entityId);
         break;
-      case 'load_registry_schema':
-        syncRoot.setRegistrySchema(message.host, message.data);
-        break;
-      case 'unload_registry_schema':
-        syncRoot.removeRegistrySchema(message.host);
+      case 'sync_registry_schema':
+        syncRoot.syncRegistrySchema(message.available, message.host, message.data);
+        if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
         break;
       case 'update_all':
         syncRoot.currentHost = message.host;
         syncRoot.mapOfComponents = message.data;
-        syncRoot.sync();
+        if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
+        else requestRegistrySchema();
         break;
       case 'update_components':
         Object.entries(message.components).forEach(([typePath, value]) => {
@@ -83,7 +91,8 @@ function postWebviewMessage(message: WebviewMessage) {
         message.removed.forEach((component) => {
           delete syncRoot.mapOfComponents[component];
         });
-        syncRoot.sync();
+        if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
+        else requestRegistrySchema();
         break;
     }
   });

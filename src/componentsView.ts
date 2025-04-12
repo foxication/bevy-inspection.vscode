@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web-components/main';
 import { BrpObject, TypePath } from './protocol';
-import { Connection } from './connection';
 
 export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
@@ -41,23 +40,22 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     await this.view.webview.postMessage(message);
   }
 
-  public async loadRegistrySchema(host: string) {
+  public async syncRegistrySchema(host: string) {
+    const available = this.connections.all().map((connection) => connection.getProtocol().url.host);
     const connection = this.connections.get(host);
     if (connection === undefined) return;
-
-    const schema = connection.getRegistrySchema();
-    return this.postVSCodeMessage({ cmd: 'load_registry_schema', host, data: schema });
-  }
-
-  public async unloadRegistrySchema(connection: Connection) {
-    const host = connection.getProtocol().url.host;
-    return this.postVSCodeMessage({ cmd: 'unload_registry_schema', host });
+    return this.postVSCodeMessage({
+      cmd: 'sync_registry_schema',
+      available,
+      host,
+      data: connection.getRegistrySchema(),
+    });
   }
 
   // Called on componentsData.onDidChangeTreeData
   public async updateAll() {
     if (this.view === undefined) {
-      // vscode.commands.executeCommand('componentsView.focus');
+      vscode.commands.executeCommand('componentsView.focus');
       return;
     }
     this.postVSCodeMessage({
@@ -113,13 +111,14 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           protocol.insert(this.connections.focus.entityId, sending);
           break;
         }
+        case 'request_of_sync_registry_schema': {
+          this.syncRegistrySchema(message.host);
+        }
       }
     });
     this.view = webviewView;
     webviewView.onDidDispose(() => (this.view = undefined));
-    for (const host of this.connections.all().map((c) => c.getProtocol().url.host)) {
-      await this.loadRegistrySchema(host);
-    }
+    if (this.connections.focus !== null) this.updateAll();
   }
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {

@@ -1,11 +1,6 @@
 import * as vscode from 'vscode';
 import { createComponentsView } from './componentsView';
-import {
-  ConnectionElement,
-  createHierarchyView,
-  HierarchyDataProvider,
-  EntityElement,
-} from './hierarchyData';
+import { ConnectionElement, createHierarchyView, HierarchyDataProvider, EntityElement } from './hierarchyData';
 import { ConnectionList, EntityFocus } from './connection-list';
 
 // Context
@@ -61,9 +56,6 @@ export function activate(context: vscode.ExtensionContext) {
     // Set context
     areThereConnections(true);
 
-    // Load registry schema in componentsView
-    componentsView.loadRegistrySchema(connection.getProtocol().url.host);
-
     // Connect all events
     connection.onHierarchyUpdated((connection) => {
       hierarchyData.updateInConnection(connection.getProtocol().url.host);
@@ -115,8 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
   connections.onAddError(() => {
     vscode.window.showErrorMessage('Bevy instance refused to connect');
   });
-  connections.onRemoved(async (removed) => {
-    await componentsView.unloadRegistrySchema(removed);
+  connections.onRemoved(() => {
     areThereConnections(connections.all().length > 0);
     hierarchyData.updateConnections();
   });
