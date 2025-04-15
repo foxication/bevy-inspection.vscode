@@ -187,55 +187,6 @@ export class SyncNode {
     }
     return access;
   }
-  public debugTree(level: number, direction: DataPathSegment[]): string {
-    const pathSegment = this.path.length >= 1 ? this.path[this.path.length - 1] : undefined;
-    const spaced = (s: string) => {
-      const width = 45;
-      return s + ' '.repeat(Math.max(width - s.length, 0));
-    };
-
-    // Set treeSegment
-    let treeSegment = '| '.repeat(level);
-    if (this.visual instanceof ComponentsVisual) treeSegment += 'COMPONENTS:';
-    else treeSegment += pathSegment ?? '...';
-
-    // Set description
-    let description = '';
-    if (this.visual instanceof ErrorVisual) {
-      description += 'ERROR: ' + this.visual.error.message;
-      return spaced(treeSegment) + ' ' + description + '\n'; // Parsing error
-    }
-    if (!(this.visual instanceof ComponentsVisual)) description += this.visual.schema.kind;
-    if (this.visual instanceof SerializedVisual) description += '+Serde';
-    if (!(this.visual instanceof ComponentsVisual)) {
-      description += '(' + this.visual.schema.typePath + ')';
-    }
-    if (this.visual instanceof SerializedVisual) {
-      description += ' = ';
-      description += JSON.stringify(this.visual.value);
-    }
-    if (this.visual instanceof EnumVisual) {
-      description += '/';
-      description += JSON.stringify(this.visual.variantName);
-    }
-
-    // Set after
-    let after = '';
-    this.children.unwrap().forEach((child) => {
-      const childPathSegment = child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
-      const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
-      if (childPathSegment === undefined) {
-        after += child.debugTree(level + 1, direction);
-        return;
-      }
-      if (directionPathSegment === childPathSegment || directionPathSegment === undefined) {
-        after += child.debugTree(level + 1, direction.slice(1));
-        return;
-      }
-    });
-
-    return spaced(treeSegment) + ' ' + description + '\n' + after;
-  }
   public sync() {
     const access = this.access(this.path);
     const source = this.source();
@@ -431,6 +382,47 @@ export class SyncNode {
     // Error
     console.error('Error in "pathSerialized": parsing error');
     return this.parent.pathSerialized;
+  }
+  public debugTree(level: number, direction: DataPathSegment[]): string {
+    const pathSegment = this.path.length >= 1 ? this.path[this.path.length - 1] : undefined;
+    const spaced = (s: string) => {
+      const width = 45;
+      return s + ' '.repeat(Math.max(width - s.length, 0));
+    };
+
+    // Set treeSegment
+    let treeSegment = '| '.repeat(level);
+    if (this.visual instanceof ComponentsVisual) treeSegment += 'COMPONENTS:';
+    else treeSegment += pathSegment ?? '...';
+
+    // Set description
+    let description = '';
+    if (this.visual instanceof ErrorVisual) {
+      description += 'ERROR: ' + this.visual.error.message;
+      return spaced(treeSegment) + ' ' + description + '\n'; // Parsing error
+    }
+    if (!(this.visual instanceof ComponentsVisual)) description += this.visual.schema.kind;
+    if (this.visual instanceof SerializedVisual) description += '+Serde';
+    if (!(this.visual instanceof ComponentsVisual)) description += '(' + this.visual.schema.typePath + ')';
+    if (this.visual instanceof SerializedVisual) description += ' = ' + JSON.stringify(this.visual.value);
+    if (this.visual instanceof EnumVisual) description += '/' + JSON.stringify(this.visual.variantName);
+
+    // Set after
+    let after = '';
+    this.children.unwrap().forEach((child) => {
+      const childPathSegment = child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
+      const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
+      if (childPathSegment === undefined) {
+        after += child.debugTree(level + 1, direction);
+        return;
+      }
+      if (directionPathSegment === childPathSegment || directionPathSegment === undefined) {
+        after += child.debugTree(level + 1, direction.slice(1));
+        return;
+      }
+    });
+
+    return spaced(treeSegment) + ' ' + description + '\n' + after;
   }
 }
 
