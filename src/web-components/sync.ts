@@ -306,11 +306,9 @@ export class SyncNode {
     if (this.path.length === 0) return undefined;
     return this.path[this.path.length - 1];
   }
-
   get startAnchor(): HTMLElement {
     return this.visual.representation;
   }
-
   get endAnchor(): HTMLElement {
     const length = this.children.unwrap().length;
     if (length === 0) return this.visual.representation;
@@ -338,11 +336,6 @@ export class SyncNode {
     this.children.unwrap().forEach((child) => child.hide());
   }
 
-  mutate(value: BrpValue) {
-    const component = (this.path[0] ?? '').toString();
-    const path = this.pathSerialized;
-    this.source().mutate(component, path, value);
-  }
   get pathSerialized(): string {
     if (this.parent instanceof DataSyncManager) return ''; // Root
     if (
@@ -420,10 +413,7 @@ export class DataSyncManager {
   public mapOfComponents: BrpComponentRegistry = {};
   public currentHost: string | undefined;
 
-  constructor(
-    public readonly mount: HTMLElement,
-    public readonly mutate: (component: string, path: string, value: BrpValue) => void
-  ) {
+  constructor(public readonly mount: HTMLElement) {
     this.root = new SyncNode(this, mount, [], undefined);
   }
   source(): DataSyncManager {

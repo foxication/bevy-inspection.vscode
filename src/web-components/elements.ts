@@ -1,7 +1,8 @@
 import { SyncNode } from './sync';
 import { VscodeIcon } from '@vscode-elements/elements';
 import * as VslStyles from './styles';
-import { BrpValue, TypePath } from '../protocol';
+import { BrpValue } from '../protocol/types';
+import { MutationConsent } from './visual';
 
 //------------------------------------------------------------------------------
 
@@ -82,15 +83,13 @@ export class HTMLDeclaration extends HTMLElement {
   private property: HTMLSpanElement;
   private htmlWrapper: HTMLDivElement;
   private htmlValue: HTMLJson | HTMLString; // VslNumber // VslBoolean // VslObject
-  private fnMutate: (v: BrpValue) => void;
 
   static create(
     level: number,
     short: string,
     full: string,
     value: BrpValue,
-    typePath: TypePath | undefined,
-    fnMutate: ((value: BrpValue) => void) | undefined
+    mutability: MutationConsent | undefined
   ): HTMLDeclaration {
     if (customElements.get('visual-declaration') === undefined) {
       customElements.define('visual-declaration', HTMLDeclaration);
@@ -100,15 +99,12 @@ export class HTMLDeclaration extends HTMLElement {
     result.label = short;
     result.tooltip = full;
     result.brpValue = value;
-    if (fnMutate !== undefined) result.onMutation = fnMutate;
+    if (mutability !== undefined) result.htmlValue.mutability = mutability;
     return result;
   }
 
   constructor() {
     super();
-
-    this.fnMutate = () => {};
-
     this.property = document.createElement('span');
     this.property.classList.add('left-side');
 
@@ -143,67 +139,59 @@ export class HTMLDeclaration extends HTMLElement {
       } else {
         console.log(`Replacing with HTMLJson for ${this.property.textContent}`);
         const replacement = HTMLJson.create(v);
+        replacement.mutability = this.htmlValue.mutability;
         this.htmlValue.replaceWith(replacement);
         this.htmlValue = replacement;
-        this.onMutation = this.fnMutate;
       }
     } /* HTMLJson */ else {
       if (typeof v === 'string') {
         console.log(`Replacing with HTMLString for ${this.property.textContent}`);
         const replacement = HTMLString.create(v);
+        replacement.mutability = this.htmlValue.mutability;
         this.htmlValue.replaceWith(replacement);
         this.htmlValue = replacement;
-        this.onMutation = this.fnMutate;
       } else {
         this.htmlValue.value = v;
       }
     }
-  }
-  set onMutation(fn: (value: BrpValue) => void) {
-    this.fnMutate = fn;
-    this.htmlValue.fnMutate = (v) => this.fnMutate(v);
   }
 }
 
 abstract class HTMLMutatable<T> extends HTMLElement {
   private _buffer: T;
   private _inEdit: boolean;
-  private _fnMutate: (value: BrpValue) => void;
+  private _mutability: MutationConsent | undefined;
 
   constructor(defaultValue: T) {
     super();
     this._buffer = defaultValue;
     this._inEdit = false;
-    this._fnMutate = () => {};
   }
 
   get buffer() {
     return this._buffer;
   }
-
   get inEdit() {
     return this._inEdit;
   }
   set inEdit(b: boolean) {
     this._inEdit = b;
   }
-
-  get fnMutate() {
-    return this._fnMutate;
-  }
-  set fnMutate(fn: (value: BrpValue) => void) {
-    this._fnMutate = fn;
-    this.allowEditing();
-  }
-
   set value(v: T) {
     this._buffer = v;
     if (this.inEdit) return;
     this.setTextFromBuffer();
   }
+  set mutability(m: MutationConsent) {
+    this._mutability = m;
+    this.allowEditing();
+  }
 
   abstract setTextFromBuffer(): void;
   abstract allowEditing(): void;
+  mutate(value: BrpValue) {
+    this._mutability?.mutate(value);
+  }
 }
 
 export class HTMLJson extends HTMLMutatable<BrpValue> {
@@ -238,7 +226,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
           const parsed = JSON.parse(this.jsonElement.innerText);
-          this.fnMutate(parsed);
+          this.mutate(parsed);
         } catch {
           /* empty */
         }
@@ -300,7 +288,7 @@ export class HTMLString extends HTMLMutatable<string> {
       // apply changes
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
-          this.fnMutate(this.textElement.innerText);
+          this.mutate(this.textElement.innerText);
         } catch {
           /* empty */
         }

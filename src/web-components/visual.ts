@@ -1,5 +1,15 @@
-import { BrpSchema, BrpValue, TypePath, TypePathReference } from '../protocol';
+import {
+  BrpObject,
+  BrpSchema,
+  BrpValue,
+  isBrpArray,
+  isBrpIterable,
+  isBrpObject,
+  TypePath,
+  TypePathReference,
+} from '../protocol/types';
 import { HTMLDeclaration, HTMLEnum, HTMLExpandable, HTMLStruct } from './elements';
+import { postWebviewMessage } from './main';
 import { SyncNode } from './sync';
 
 // All types of visual
@@ -68,7 +78,6 @@ export class ErrorVisual extends Visual {
       (this.sync.lastPathSegment ?? '...').toString(),
       (this.error.code ?? 'Error').toString(),
       this.error.message,
-      undefined,
       undefined
     );
     anchor.after(this.representation);
@@ -116,10 +125,7 @@ export class SerializedVisual extends VisualDescribed {
       this.label,
       this.tooltip,
       this.access,
-      this.typePath,
-      (value: BrpValue) => {
-        sync.mutate(value);
-      }
+      new MutationConsent(sync)
     );
     anchor.after(this.representation);
   }
@@ -261,8 +267,58 @@ export class MapVisual extends ExpandableVisual {
 }
 
 //
-// Functions
+// Сomplementary
 //
+
+type InternalPathSegment = string | number;
+
+export class MutationConsent {
+  constructor(private sync: SyncNode, private internalPath: InternalPathSegment[] = []) {}
+
+  cloneWithInternalPath(internalPath: InternalPathSegment[]) {
+    return new MutationConsent(this.sync, internalPath);
+  }
+
+  mutate(value: BrpValue) {
+    let result = structuredClone(this.sync.access());
+    console.log(`BrpValue before: ${JSON.stringify(result, null, 4)}`);
+
+    const edit = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
+      const firstSegment = path[0];
+      if (access === null) return;
+      if (isBrpObject(access) && typeof firstSegment === 'string' && path.length === 1) {
+        access[firstSegment] = value;
+        return;
+      }
+      if (isBrpArray(access) && typeof firstSegment === 'number' && path.length === 1) {
+        access[firstSegment] = value;
+        return;
+      }
+      if (isBrpObject(access) && typeof firstSegment === 'string') {
+        const next = access[firstSegment];
+        if (isBrpIterable(next)) edit(next, path.slice(1));
+        return;
+      }
+      if (isBrpArray(access) && typeof firstSegment === 'number') {
+        const next = access[firstSegment];
+        if (isBrpIterable(next)) edit(next, path.slice(1));
+        return;
+      }
+      return;
+    };
+
+    if (this.internalPath.length === 0) result = value;
+    else if (isBrpIterable(result)) edit(result, this.internalPath);
+    console.log(`BrpValue after: ${JSON.stringify(result, null, 4)}`);
+
+    const component = (this.sync.path[0] ?? '').toString();
+    const path = this.sync.pathSerialized;
+    postWebviewMessage({
+      cmd: 'mutate_component',
+      data: { component, path, value: result },
+    });
+  }
+}
 
 function resolveTypePathFromRef(ref: TypePathReference): TypePath {
   return ref.type.$ref.slice('#/$defs/'.length);

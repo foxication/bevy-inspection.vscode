@@ -38,7 +38,7 @@ export type VSCodeMessage =
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
-function postWebviewMessage(message: WebviewMessage) {
+export function postWebviewMessage(message: WebviewMessage) {
   vscode.postMessage(message);
 }
 
@@ -49,13 +49,7 @@ function postWebviewMessage(message: WebviewMessage) {
     console.error('#section-component-list is not found in DOM');
     return;
   }
-  const onMutation = (component: string, path: string, value: BrpValue) => {
-    postWebviewMessage({
-      cmd: 'mutate_component',
-      data: { component, path, value },
-    });
-  };
-  const syncRoot = new DataSyncManager(componentList, onMutation);
+  const syncRoot = new DataSyncManager(componentList);
   const requestRegistrySchema = () => {
     if (syncRoot.currentHost === undefined) return;
     postWebviewMessage({
