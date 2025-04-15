@@ -82,10 +82,12 @@ export class SyncNode {
   ) {
     this.parent = parent;
     this.path = path;
-
     const source = this.source();
     const access = this.access(path);
-    const level = Math.max(this.path.length - 1, 0);
+
+    const pushChild = (pathSegment: DataPathSegment, typePath: TypePath) => {
+      this.children.push(new SyncNode(this, this.endAnchor, [...this.path, pathSegment], typePath));
+    };
 
     // ComponentsData
     if (path.length === 0) {
@@ -94,7 +96,7 @@ export class SyncNode {
       this.data = new ComponentsData(componentNames);
       this.visual = new ComponentsVisual(anchor);
       for (const childTypePath of this.data.componentNames) {
-        this.children.push(new SyncNode(this, this.endAnchor, [...path, childTypePath], childTypePath));
+        pushChild(childTypePath, childTypePath);
       }
       return;
     }
@@ -155,7 +157,7 @@ export class SyncNode {
           const variant = schema.typePath + '::' + Object.keys(access)[0];
           this.data = new EnumData(schema, variant);
           this.visual = createEnumVisual(this.data);
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, this.data.variantName], this.data.variant));
+          pushChild(this.data.variantName, this.data.variant);
           break;
         }
         this.data = new ErrorData(undefined, `cannot deserialize Enum`, path);
@@ -172,9 +174,9 @@ export class SyncNode {
           );
           break;
         }
-        this.data.childTypePaths.forEach((childTypePath, index) => {
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, index], childTypePath));
-        });
+        this.data.childTypePaths.forEach((childTypePath, index) =>
+          pushChild(index, childTypePath)
+        );
         break;
       }
       case 'Array': {
@@ -186,7 +188,7 @@ export class SyncNode {
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, item], this.data.childTypePath));
+          pushChild(item, this.data.childTypePath);
         }
         break;
       }
@@ -199,7 +201,7 @@ export class SyncNode {
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, item], this.data.childTypePath));
+          pushChild(item, this.data.childTypePath);
         }
         break;
       }
@@ -212,7 +214,7 @@ export class SyncNode {
           break;
         }
         for (const item of access.keys()) {
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, item], this.data.childTypePath));
+          pushChild(item, this.data.childTypePath);
         }
         break;
       }
@@ -220,7 +222,7 @@ export class SyncNode {
         this.data = new StructData(schema);
         this.visual = new StructVisual(this, level, label, tooltip, anchor);
         for (const { property, typePath: childTypePath } of this.data.properties) {
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, property], childTypePath));
+          pushChild(property, childTypePath);
         }
         break;
       }
@@ -233,7 +235,7 @@ export class SyncNode {
           break;
         }
         for (const key of Object.keys(access).sort()) {
-          this.children.push(new SyncNode(this, this.endAnchor, [...path, key], this.data.valueTypePath));
+          pushChild(key, this.data.valueTypePath);
         }
         break;
       }
