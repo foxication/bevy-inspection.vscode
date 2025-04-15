@@ -26,10 +26,10 @@ abstract class HTMLExpandable extends HTMLElement {
 export class EnumVisual extends ExpandableVisual {
   readonly representation: HTMLEnum;
 
-  constructor(sync: SyncNode, level: number, short: string, full: string, after: HTMLElement) {
-    super();
-    this.representation = HTMLEnum.create(sync, level, short, full);
-    after.after(this.representation);
+  constructor(sync: SyncNode, anchor: HTMLElement) {
+    super(sync);
+    this.representation = HTMLEnum.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
   }
 }
 
@@ -102,9 +102,9 @@ class HTMLEnum extends HTMLExpandable {
 export class StructVisual extends ExpandableVisual {
   readonly representation: HTMLStruct;
 
-  constructor(sync: SyncNode, level: number, short: string, full: string, anchor: HTMLElement) {
-    super();
-    this.representation = HTMLStruct.create(sync, level, short, full);
+  constructor(sync: SyncNode, anchor: HTMLElement) {
+    super(sync);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
     anchor.after(this.representation);
   }
 }

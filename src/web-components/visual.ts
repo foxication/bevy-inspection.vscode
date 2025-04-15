@@ -1,11 +1,12 @@
 import { BrpValue, TypePath } from '../protocol';
 import * as VslStyles from './styles';
 import { SyncNode } from './sync';
-import { ErrorData } from './data';
+import { EnumData, ErrorData } from './data';
 import { StructVisual, EnumVisual } from './visual-expandable';
 
 export abstract class Visual {
   abstract representation: HTMLElement;
+  constructor(private _sync: SyncNode) {}
 
   preDestruct() {
     this.representation.remove();
@@ -16,6 +17,45 @@ export abstract class Visual {
   hide() {
     this.representation.style.display = 'none';
   }
+
+  get sync() {
+    return this._sync;
+  }
+  get data() {
+    return this._sync.data;
+  }
+  get level() {
+    return Math.max(this.sync.path.length - 1, 0);
+  }
+  get access() {
+    return this.sync.access();
+  }
+  get typePath() {
+    if ('schema' in this.data) return this.data.schema.typePath;
+    return;
+  }
+  get label() {
+    const data = this.data;
+    let result = '';
+    if ('schema' in data && data.schema.typePath === this.sync.lastPathSegment) {
+      result = data.schema.shortPath;
+    } else {
+      result = (this.sync.lastPathSegment ?? '...').toString();
+    }
+    if (data instanceof EnumData) result += ' / ' + data.variantName;
+    return result;
+  }
+  get tooltip(): string {
+    const data = this.data;
+    let result = 'label: ' + this.label;
+    if ('schema' in data) {
+      result += '\ntype: ' + data.schema.typePath;
+      result += '\nkind: ' + data.schema.kind;
+      if (data.schema.reflectTypes !== undefined) result += '\nreflect: ' + data.schema.reflectTypes.join(', ');
+    }
+    if (data instanceof EnumData) result += '\nvariant: ' + data.variantName;
+    return result;
+  }
 }
 
 export type AnyVisual = ComponentsVisual | ErrorVisual | SerializedVisual | StructVisual | EnumVisual;
@@ -23,10 +63,10 @@ export type AnyVisual = ComponentsVisual | ErrorVisual | SerializedVisual | Stru
 export class ComponentsVisual extends Visual {
   readonly representation: HTMLHeadingElement;
 
-  constructor(mount: HTMLElement) {
-    super();
+  constructor(sync: SyncNode, anchor: HTMLElement) {
+    super(sync);
     this.representation = ComponentsVisual.createVslHeading();
-    mount.append(this.representation);
+    anchor.append(this.representation);
   }
 
   static createVslHeading() {
@@ -39,30 +79,36 @@ export class ComponentsVisual extends Visual {
 export class ErrorVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(level: number, label: string, error: ErrorData, after: HTMLElement) {
-    super();
-    this.representation = HTMLDeclaration.create(level, label, label, error.message, undefined, undefined);
-    after.after(this.representation);
+  constructor(sync: SyncNode, anchor: HTMLElement) {
+    super(sync);
+    this.representation = HTMLDeclaration.create(
+      this.level,
+      this.label,
+      this.tooltip,
+      this.data instanceof ErrorData ? this.data.message : '', // never scenario
+      undefined,
+      undefined
+    );
+    anchor.after(this.representation);
   }
 }
 
 export class SerializedVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(
-    sync: SyncNode,
-    level: number,
-    short: string,
-    full: string,
-    value: BrpValue,
-    typePath: TypePath,
-    after: HTMLElement
-  ) {
-    super();
-    this.representation = HTMLDeclaration.create(level, short, full, value, typePath, (value: BrpValue) => {
-      sync.mutate(value);
-    });
-    after.after(this.representation);
+  constructor(sync: SyncNode, anchor: HTMLElement) {
+    super(sync);
+    this.representation = HTMLDeclaration.create(
+      this.level,
+      this.label,
+      this.tooltip,
+      this.access,
+      this.typePath,
+      (value: BrpValue) => {
+        sync.mutate(value);
+      }
+    );
+    anchor.after(this.representation);
   }
 
   set(value: BrpValue) {
