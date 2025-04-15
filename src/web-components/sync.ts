@@ -344,42 +344,30 @@ export class SyncNode {
     this.source().mutate(component, path, value);
   }
   get pathSerialized(): string {
-    // Root
-    if (this.parent instanceof DataSyncManager) return '';
-
-    // Skip
+    if (this.parent instanceof DataSyncManager) return ''; // Root
     if (
       this.lastPathSegment === undefined ||
       this.parent.visual instanceof SerializedVisual ||
       this.parent.visual instanceof ErrorVisual
     ) {
-      return this.parent.pathSerialized;
+      return this.parent.pathSerialized; // Skip
     }
-
     const segment = this.lastPathSegment.toString();
-
-    // Component
-    if (this.parent.visual instanceof ComponentsVisual) return segment;
-
-    // Dot
+    if (this.parent.visual instanceof ComponentsVisual) return segment; // Component
     if (
       this.parent.visual instanceof MapVisual ||
       this.parent.visual instanceof StructVisual ||
       this.parent.visual instanceof TupleVisual
     ) {
-      return this.parent.pathSerialized + '.' + segment;
+      return this.parent.pathSerialized + '.' + segment; // Dot
     }
-
-    // Array Item
     if (
       this.parent.visual instanceof ArrayVisual ||
       this.parent.visual instanceof ListVisual ||
       this.parent.visual instanceof SetVisual
     ) {
-      return this.parent.pathSerialized + '[' + segment + ']';
+      return this.parent.pathSerialized + '[' + segment + ']'; // Array Item
     }
-
-    // Error
     console.error('Error in "pathSerialized": parsing error');
     return this.parent.pathSerialized;
   }
