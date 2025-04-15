@@ -5,7 +5,6 @@ import { BrpValue, TypePath } from '../protocol';
 
 //------------------------------------------------------------------------------
 
-
 export abstract class HTMLExpandable extends HTMLElement {
   public isExpanded = true;
   abstract set isExpandable(is: boolean);
@@ -78,7 +77,6 @@ export class HTMLEnum extends HTMLExpandable {
 }
 
 //------------------------------------------------------------------------------
-
 
 export class HTMLDeclaration extends HTMLElement {
   private property: HTMLSpanElement;
@@ -332,7 +330,6 @@ export class HTMLString extends HTMLMutatable<string> {
     this.textElement.contentEditable = 'plaintext-only';
   }
 }
-
 
 export class HTMLStruct extends HTMLElement {
   private chevron: VscodeIcon;
