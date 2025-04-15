@@ -130,62 +130,35 @@ export class SyncNode {
       case 'Tuple':
       case 'TupleStruct': {
         this.visual = new TupleVisual(this, anchor, schema);
-        if (this.visual.childTypePaths.length === 1) {
-          pushChild(undefined, this.visual.childTypePaths[0]);
-          break;
-        }
-        this.visual.childTypePaths.forEach((childTypePath, index) => pushChild(index, childTypePath));
+        if (this.visual.childTypePaths.length === 1) pushChild(undefined, this.visual.childTypePaths[0]);
+        else this.visual.childTypePaths.forEach((childTypePath, index) => pushChild(index, childTypePath));
         break;
       }
-      case 'Array': {
+      case 'Array':
         this.visual = new ArrayVisual(this, anchor, schema);
-        if (!isBrpArray(access)) {
-          this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `expected BrpArray` });
-          break;
-        }
-        for (const item of access.keys()) {
-          pushChild(item, this.visual.childTypePath);
-        }
+        if (!isBrpArray(access)) break;
+        for (const item of access.keys()) pushChild(item, this.visual.childTypePath);
         break;
-      }
-      case 'List': {
+      case 'List':
         this.visual = new ListVisual(this, anchor, schema);
-        if (!isBrpArray(access)) {
-          this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `expected BrpArray` });
-          break;
-        }
-        for (const item of access.keys()) {
-          pushChild(item, this.visual.childTypePath);
-        }
+        if (!isBrpArray(access)) break;
+        for (const item of access.keys()) pushChild(item, this.visual.childTypePath);
         break;
-      }
       case 'Set': {
         this.visual = new SetVisual(this, anchor, schema);
-        if (!isBrpArray(access)) {
-          this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `expected BrpArray` });
-          break;
-        }
-        for (const item of access.keys()) {
-          pushChild(item, this.visual.childTypePath);
-        }
+        if (!isBrpArray(access)) break;
+        for (const item of access.keys()) pushChild(item, this.visual.childTypePath);
         break;
       }
       case 'Struct': {
         this.visual = new StructVisual(this, anchor, schema);
-        for (const { property, typePath: childTypePath } of this.visual.properties) {
-          pushChild(property, childTypePath);
-        }
+        for (const { property: p, typePath: tp } of this.visual.properties) pushChild(p, tp);
         break;
       }
       case 'Map': {
         this.visual = new MapVisual(this, anchor, schema);
-        if (!isBrpObject(access)) {
-          this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `expected BrpObject` });
-          break;
-        }
-        for (const key of Object.keys(access).sort()) {
-          pushChild(key, this.visual.valueTypePath);
-        }
+        if (!isBrpObject(access)) break;
+        for (const key of Object.keys(access).sort()) pushChild(key, this.visual.valueTypePath);
         break;
       }
     }
