@@ -344,7 +344,7 @@ export class SyncNode {
     this.source().mutate(component, path, value);
   }
   get pathSerialized(): string {
-    // Never-happen situation
+    // Root
     if (this.parent instanceof DataSyncManager) return '';
 
     // Skip
