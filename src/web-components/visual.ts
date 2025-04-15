@@ -1,8 +1,17 @@
-import { BrpValue, TypePath } from '../protocol';
+import { BrpSchema, BrpValue, TypePath } from '../protocol';
 import * as VslStyles from './styles';
 import { SyncNode } from './sync';
-import { EnumData, ErrorData } from './data';
-import { StructVisual, EnumVisual } from './visual-expandable';
+import { StructVisual, EnumVisual, TupleVisual, ArrayVisual, MapVisual } from './visual-expandable';
+
+export type VisualUnit =
+  | ArrayVisual
+  | ComponentsVisual
+  | EnumVisual
+  | ErrorVisual
+  | MapVisual
+  | SerializedVisual
+  | StructVisual
+  | TupleVisual;
 
 export abstract class Visual {
   abstract representation: HTMLElement;
@@ -21,49 +30,45 @@ export abstract class Visual {
   get sync() {
     return this._sync;
   }
-  get data() {
-    return this._sync.data;
-  }
   get level() {
     return Math.max(this.sync.path.length - 1, 0);
   }
   get access() {
     return this.sync.access();
   }
+}
+
+export abstract class VisualDescribed extends Visual {
+  constructor(sync: SyncNode, public readonly schema: BrpSchema) {
+    super(sync);
+  }
   get typePath() {
-    if ('schema' in this.data) return this.data.schema.typePath;
-    return;
+    return this.schema.typePath;
   }
   get label() {
-    const data = this.data;
     let result = '';
-    if ('schema' in data && data.schema.typePath === this.sync.lastPathSegment) {
-      result = data.schema.shortPath;
+    if (this.schema.typePath === this.sync.lastPathSegment) {
+      result = this.schema.shortPath;
     } else {
       result = (this.sync.lastPathSegment ?? '...').toString();
     }
-    if (data instanceof EnumData) result += ' / ' + data.variantName;
+    // if (data instanceof EnumData) result += ' / ' + data.variantName;
     return result;
   }
   get tooltip(): string {
-    const data = this.data;
     let result = 'label: ' + this.label;
-    if ('schema' in data) {
-      result += '\ntype: ' + data.schema.typePath;
-      result += '\nkind: ' + data.schema.kind;
-      if (data.schema.reflectTypes !== undefined) result += '\nreflect: ' + data.schema.reflectTypes.join(', ');
-    }
-    if (data instanceof EnumData) result += '\nvariant: ' + data.variantName;
+    result += '\ntype: ' + this.schema.typePath;
+    result += '\nkind: ' + this.schema.kind;
+    if (this.schema.reflectTypes !== undefined) result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
+    // if (data instanceof EnumData) result += '\nvariant: ' + data.variantName;
     return result;
   }
 }
 
-export type AnyVisual = ComponentsVisual | ErrorVisual | SerializedVisual | StructVisual | EnumVisual;
-
 export class ComponentsVisual extends Visual {
   readonly representation: HTMLHeadingElement;
 
-  constructor(sync: SyncNode, anchor: HTMLElement) {
+  constructor(sync: SyncNode, anchor: HTMLElement, public componentNames: TypePath[]) {
     super(sync);
     this.representation = ComponentsVisual.createVslHeading();
     anchor.append(this.representation);
@@ -79,13 +84,13 @@ export class ComponentsVisual extends Visual {
 export class ErrorVisual extends Visual {
   readonly representation: HTMLDeclaration;
 
-  constructor(sync: SyncNode, anchor: HTMLElement) {
+  constructor(sync: SyncNode, anchor: HTMLElement, public error: { code: number | undefined; message: string }) {
     super(sync);
     this.representation = HTMLDeclaration.create(
       this.level,
-      this.label,
-      this.tooltip,
-      this.data instanceof ErrorData ? this.data.message : '', // never scenario
+      (this.sync.lastPathSegment ?? '...').toString(),
+      (this.error.code ?? 'Error').toString(),
+      this.error.message,
       undefined,
       undefined
     );
@@ -93,11 +98,11 @@ export class ErrorVisual extends Visual {
   }
 }
 
-export class SerializedVisual extends Visual {
+export class SerializedVisual extends VisualDescribed {
   readonly representation: HTMLDeclaration;
 
-  constructor(sync: SyncNode, anchor: HTMLElement) {
-    super(sync);
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public value: BrpValue) {
+    super(sync, schema);
     this.representation = HTMLDeclaration.create(
       this.level,
       this.label,
