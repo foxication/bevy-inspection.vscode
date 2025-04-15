@@ -7,17 +7,20 @@ import {
   isBrpObject,
   TypePath,
 } from '../protocol/types';
-import { ComponentsVisual, ErrorVisual, SerializedVisual, VisualUnit } from './visual';
 import {
-  StructVisual,
-  EnumVisual,
-  ExpandableVisual,
-  TupleVisual,
   ArrayVisual,
+  ComponentsVisual,
+  EnumVisual,
+  ErrorVisual,
+  ExpandableVisual,
   ListVisual,
-  SetVisual,
   MapVisual,
-} from './visual-expandable';
+  SerializedVisual,
+  SetVisual,
+  StructVisual,
+  TupleVisual,
+  VisualUnit,
+} from './visual';
 
 export type DataPathSegment = string | number | undefined;
 

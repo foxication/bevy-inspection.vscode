@@ -1,8 +1,8 @@
-import { BrpSchema, BrpValue, TypePath } from '../protocol';
-import * as VslStyles from './styles';
+import { BrpSchema, BrpValue, TypePath, TypePathReference } from '../protocol';
+import { HTMLDeclaration, HTMLEnum, HTMLExpandable, HTMLStruct } from './elements';
 import { SyncNode } from './sync';
-import { StructVisual, EnumVisual, TupleVisual, ArrayVisual, MapVisual } from './visual-expandable';
 
+// All types of visual
 export type VisualUnit =
   | ArrayVisual
   | ComponentsVisual
@@ -12,6 +12,10 @@ export type VisualUnit =
   | SerializedVisual
   | StructVisual
   | TupleVisual;
+
+//
+// Visual
+//
 
 export abstract class Visual {
   abstract representation: HTMLElement;
@@ -35,33 +39,6 @@ export abstract class Visual {
   }
   get access() {
     return this.sync.access();
-  }
-}
-
-export abstract class VisualDescribed extends Visual {
-  constructor(sync: SyncNode, public readonly schema: BrpSchema) {
-    super(sync);
-  }
-  get typePath() {
-    return this.schema.typePath;
-  }
-  get label() {
-    let result = '';
-    if (this.schema.typePath === this.sync.lastPathSegment) {
-      result = this.schema.shortPath;
-    } else {
-      result = (this.sync.lastPathSegment ?? '...').toString();
-    }
-    // if (data instanceof EnumData) result += ' / ' + data.variantName;
-    return result;
-  }
-  get tooltip(): string {
-    let result = 'label: ' + this.label;
-    result += '\ntype: ' + this.schema.typePath;
-    result += '\nkind: ' + this.schema.kind;
-    if (this.schema.reflectTypes !== undefined) result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
-    // if (data instanceof EnumData) result += '\nvariant: ' + data.variantName;
-    return result;
   }
 }
 
@@ -98,6 +75,37 @@ export class ErrorVisual extends Visual {
   }
 }
 
+//
+// Visual with schema
+//
+
+export abstract class VisualDescribed extends Visual {
+  constructor(sync: SyncNode, public readonly schema: BrpSchema) {
+    super(sync);
+  }
+  get typePath() {
+    return this.schema.typePath;
+  }
+  get label() {
+    let result = '';
+    if (this.schema.typePath === this.sync.lastPathSegment) {
+      result = this.schema.shortPath;
+    } else {
+      result = (this.sync.lastPathSegment ?? '...').toString();
+    }
+    // if (data instanceof EnumData) result += ' / ' + data.variantName;
+    return result;
+  }
+  get tooltip(): string {
+    let result = 'label: ' + this.label;
+    result += '\ntype: ' + this.schema.typePath;
+    result += '\nkind: ' + this.schema.kind;
+    if (this.schema.reflectTypes !== undefined) result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
+    // if (data instanceof EnumData) result += '\nvariant: ' + data.variantName;
+    return result;
+  }
+}
+
 export class SerializedVisual extends VisualDescribed {
   readonly representation: HTMLDeclaration;
 
@@ -121,257 +129,141 @@ export class SerializedVisual extends VisualDescribed {
   }
 }
 
-//------------------------------------------------------------------------------
+//
+// Expandable visual
+//
 
-class HTMLDeclaration extends HTMLElement {
-  private property: HTMLSpanElement;
-  private htmlWrapper: HTMLDivElement;
-  private htmlValue: HTMLJson | HTMLString; // VslNumber // VslBoolean // VslObject
-  private fnMutate: (v: BrpValue) => void;
+export abstract class ExpandableVisual extends VisualDescribed {
+  abstract representation: HTMLExpandable;
 
-  static create(
-    level: number,
-    short: string,
-    full: string,
-    value: BrpValue,
-    typePath: TypePath | undefined,
-    fnMutate: ((value: BrpValue) => void) | undefined
-  ): HTMLDeclaration {
-    if (customElements.get('visual-declaration') === undefined) {
-      customElements.define('visual-declaration', HTMLDeclaration);
-    }
-    const result = document.createElement('visual-declaration') as HTMLDeclaration;
-    result.level = level;
-    result.label = short;
-    result.tooltip = full;
-    result.brpValue = value;
-    if (fnMutate !== undefined) result.onMutation = fnMutate;
-    return result;
+  set isExpandable(able: boolean) {
+    this.representation.isExpandable = able;
   }
-
-  constructor() {
-    super();
-
-    this.fnMutate = () => {};
-
-    this.property = document.createElement('span');
-    this.property.classList.add('left-side');
-
-    this.htmlWrapper = document.createElement('div');
-    this.htmlWrapper.classList.add('right-side');
-
-    this.htmlValue = HTMLString.create('');
-    this.htmlWrapper.append(this.htmlValue);
-  }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.declaration];
-    shadow.append(this.property, this.htmlWrapper);
-  }
-
-  set level(l: number) {
-    const indent = l * 16;
-    this.property.style.textIndent = indent.toString() + 'px';
-  }
-  set label(text: string) {
-    this.property.textContent = text;
-  }
-  set tooltip(text: string) {
-    this.property.title = text;
-  }
-  set brpValue(v: BrpValue) {
-    if (this.htmlValue instanceof HTMLString) {
-      if (typeof v === 'string') {
-        this.htmlValue.value = v;
-      } else {
-        console.log(`Replacing with HTMLJson for ${this.property.textContent}`);
-        const replacement = HTMLJson.create(v);
-        this.htmlValue.replaceWith(replacement);
-        this.htmlValue = replacement;
-        this.onMutation = this.fnMutate;
-      }
-    } /* HTMLJson */ else {
-      if (typeof v === 'string') {
-        console.log(`Replacing with HTMLString for ${this.property.textContent}`);
-        const replacement = HTMLString.create(v);
-        this.htmlValue.replaceWith(replacement);
-        this.htmlValue = replacement;
-        this.onMutation = this.fnMutate;
-      } else {
-        this.htmlValue.value = v;
-      }
-    }
-  }
-  set onMutation(fn: (value: BrpValue) => void) {
-    this.fnMutate = fn;
-    this.htmlValue.fnMutate = (v) => this.fnMutate(v);
+  get isExpanded(): boolean {
+    return this.representation.isExpanded;
   }
 }
 
-abstract class HTMLMutatable<T> extends HTMLElement {
-  private _buffer: T;
-  private _inEdit: boolean;
-  private _fnMutate: (value: BrpValue) => void;
+export class EnumVisual extends ExpandableVisual {
+  readonly representation: HTMLEnum;
 
-  constructor(defaultValue: T) {
-    super();
-    this._buffer = defaultValue;
-    this._inEdit = false;
-    this._fnMutate = () => {};
-  }
-
-  get buffer() {
-    return this._buffer;
-  }
-
-  get inEdit() {
-    return this._inEdit;
-  }
-  set inEdit(b: boolean) {
-    this._inEdit = b;
-  }
-
-  get fnMutate() {
-    return this._fnMutate;
-  }
-  set fnMutate(fn: (value: BrpValue) => void) {
-    this._fnMutate = fn;
-    this.allowEditing();
-  }
-
-  set value(v: T) {
-    this._buffer = v;
-    if (this.inEdit) return;
-    this.setTextFromBuffer();
-  }
-
-  abstract setTextFromBuffer(): void;
-  abstract allowEditing(): void;
-}
-
-class HTMLJson extends HTMLMutatable<BrpValue> {
-  private jsonElement: HTMLDivElement;
-
-  static create(value: BrpValue): HTMLJson {
-    if (customElements.get('visual-json') === undefined) {
-      customElements.define('visual-json', HTMLJson);
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public variantTypePath: TypePath) {
+    super(sync, schema);
+    this.representation = HTMLEnum.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
+    if (!this.variantTypePaths.includes(this.variantTypePath)) {
+      console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
     }
-    const result = document.createElement('visual-json') as HTMLJson;
-    result.value = value;
-    return result;
   }
-
-  constructor() {
-    super(null);
-    this.jsonElement = document.createElement('div');
-
-    // Interactions
-    this.jsonElement.onfocus = () => {
-      this.inEdit = true;
-      this.setAttribute('focused', '');
-    };
-    this.jsonElement.onkeydown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        this.setTextFromBuffer();
-        this.jsonElement.blur();
-        e.preventDefault();
-      }
-
-      // apply changes
-      if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
-        try {
-          const parsed = JSON.parse(this.jsonElement.innerText);
-          this.fnMutate(parsed);
-        } catch {
-          /* empty */
-        }
-        this.setTextFromBuffer();
-        this.jsonElement.blur();
-      }
-    };
-    this.jsonElement.onblur = () => {
-      this.inEdit = false;
-      this.setTextFromBuffer();
-      this.jsonElement.scrollTo(0, 0);
-      this.removeAttribute('focused');
-    };
+  get variantName(): string {
+    const parent = this.schema.typePath + '::';
+    return this.variantTypePath.slice(parent.length);
   }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.editableText];
-    shadow.append(this.jsonElement);
-  }
-
-  setTextFromBuffer() {
-    this.jsonElement.innerText = JSON.stringify(this.buffer, null, 4);
-  }
-  allowEditing() {
-    this.jsonElement.contentEditable = 'plaintext-only';
+  get variantTypePaths(): readonly TypePath[] {
+    return (this.schema.oneOf ?? []).map((value) => {
+      if (typeof value === 'string') return this.schema.typePath + '::' + value;
+      return value.typePath;
+    });
   }
 }
 
-class HTMLString extends HTMLMutatable<string> {
-  private textElement: HTMLDivElement;
+export class StructVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
 
-  static create(text: string): HTMLString {
-    if (customElements.get('visual-string') === undefined) {
-      customElements.define('visual-string', HTMLString);
-    }
-    const result = document.createElement('visual-string') as HTMLString;
-    result.value = text;
-    return result;
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
+    super(sync, schema);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
   }
 
-  constructor() {
-    super('');
-    this.textElement = document.createElement('div');
+  get properties(): readonly { property: string; typePath: TypePath }[] {
+    return (this.schema.required ?? []).map((name) => {
+      if (this.schema.properties === undefined) return { property: name, typePath: '()' };
+      return { property: name, typePath: resolveTypePathFromRef(this.schema.properties[name]) };
+    });
+  }
+}
 
-    // Interactions
-    this.textElement.onfocus = () => {
-      this.inEdit = true;
-      this.setAttribute('focused', '');
-    };
-    this.textElement.onkeydown = (e) => {
-      if (e.key === 'Escape' || e.key === 'Esc') {
-        this.setTextFromBuffer();
-        this.textElement.blur();
-        e.preventDefault();
-      }
+export class TupleVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
 
-      // apply changes
-      if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
-        try {
-          this.fnMutate(this.textElement.innerText);
-        } catch {
-          /* empty */
-        }
-        this.setTextFromBuffer();
-        this.textElement.blur();
-      }
-    };
-    this.textElement.onblur = () => {
-      this.inEdit = false;
-      this.textElement.innerText = this.buffer;
-      this.textElement.scrollTo(0, 0);
-      this.removeAttribute('focused');
-    };
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
+    super(sync, schema);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
   }
 
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.editableText];
-    shadow.append(this.textElement);
+  get childTypePaths(): readonly TypePath[] {
+    return (this.schema.prefixItems ?? []).map((ref) => {
+      return resolveTypePathFromRef(ref);
+    });
   }
+}
 
-  setTextFromBuffer() {
-    this.textElement.innerText = this.buffer;
+export class ArrayVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
+
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
+    super(sync, schema);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
   }
-  allowEditing() {
-    this.textElement.contentEditable = 'plaintext-only';
+  get childTypePath(): TypePath {
+    if (typeof this.schema.items !== 'object') return '()';
+    return resolveTypePathFromRef(this.schema.items);
   }
+}
+
+export class ListVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
+
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
+    super(sync, schema);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
+  }
+  get childTypePath(): TypePath {
+    if (typeof this.schema.items !== 'object') return '()';
+    return resolveTypePathFromRef(this.schema.items);
+  }
+}
+
+export class SetVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
+
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
+    super(sync, schema);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
+  }
+  get childTypePath(): TypePath {
+    if (typeof this.schema.items !== 'object') return '()';
+    return resolveTypePathFromRef(this.schema.items);
+  }
+}
+
+export class MapVisual extends ExpandableVisual {
+  readonly representation: HTMLStruct;
+
+  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
+    super(sync, schema);
+    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.representation);
+  }
+  get keyTypePath(): TypePath {
+    if (this.schema.keyType === undefined) return '()';
+    return resolveTypePathFromRef(this.schema.keyType);
+  }
+  get valueTypePath(): TypePath {
+    if (this.schema.valueType === undefined) return '()';
+    return resolveTypePathFromRef(this.schema.valueType);
+  }
+}
+
+//
+// Functions
+//
+
+function resolveTypePathFromRef(ref: TypePathReference): TypePath {
+  return ref.type.$ref.slice('#/$defs/'.length);
 }
