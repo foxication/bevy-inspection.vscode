@@ -1,6 +1,7 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
 import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath } from '../protocol/types';
+import { defineCustomElements } from './elements';
 
 export type WebviewMessage =
   | {
@@ -41,6 +42,9 @@ const vscode = acquireVsCodeApi();
 export function postWebviewMessage(message: WebviewMessage) {
   vscode.postMessage(message);
 }
+
+// Define custom elements
+defineCustomElements();
 
 // Main script
 (function () {

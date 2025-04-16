@@ -4,70 +4,20 @@ import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
 import { MutationConsent } from './visual';
 
-//------------------------------------------------------------------------------
-
-export abstract class HTMLExpandable extends HTMLElement {
-  public isExpanded = true;
-  abstract set isExpandable(is: boolean);
+export function defineCustomElements() {
+  customElements.define('visual-enum', HTMLEnum);
+  customElements.define('visual-declaration', HTMLDeclaration);
+  customElements.define('visual-json', HTMLJson);
+  customElements.define('visual-string', HTMLString);
+  customElements.define('visual-expandable', HTMLStruct);
 }
 
-//------------------------------------------------------------------------------
-
-export class HTMLEnum extends HTMLExpandable {
-  private htmlLabel: HTMLSpanElement;
-  private buttonEdit: VscodeIcon;
-  private chevron: VscodeIcon;
-
-  static create(sync: SyncNode, level: number, short: string, full: string): HTMLEnum {
-    if (customElements.get('visual-enum') === undefined) {
-      customElements.define('visual-enum', HTMLEnum);
-    }
-    const result = document.createElement('visual-enum') as HTMLEnum;
-    result.level = level;
-    result.label = short;
-    result.tooltip = full;
-
-    result.onclick = () => {
-      result.isExpanded = !result.isExpanded;
-      if (result.isExpanded) {
-        result.chevron.setAttribute('name', 'chevron-up');
-        sync.showChildren();
-      } else {
-        result.chevron.setAttribute('name', 'chevron-down');
-        sync.hideChildren();
-      }
-    };
-
-    return result;
-  }
-
-  constructor() {
-    super();
-    this.htmlLabel = document.createElement('span');
-
-    this.buttonEdit = document.createElement('vscode-icon');
-    this.buttonEdit.setAttribute('name', 'symbol-property');
-
-    this.chevron = document.createElement('vscode-icon');
-    this.chevron.setAttribute('name', 'chevron-up');
-    this.chevron.setAttribute('class', 'rotatable');
-    this.chevron.style.display = 'none';
-  }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
-    shadow.append(this.htmlLabel, this.buttonEdit, this.chevron);
-  }
+export abstract class HTMLLabeled extends HTMLElement {
+  abstract htmlLabel: HTMLSpanElement;
 
   set level(l: number) {
     const indent = l * 16;
     this.htmlLabel.style.textIndent = indent.toString() + 'px';
-  }
-  set isExpandable(is: boolean) {
-    if (is) this.chevron.style.removeProperty('display');
-    else this.chevron.style.display = 'none';
   }
   set label(text: string) {
     this.htmlLabel.textContent = text;
@@ -77,41 +27,24 @@ export class HTMLEnum extends HTMLExpandable {
   }
 }
 
-//------------------------------------------------------------------------------
+export class HTMLDeclaration extends HTMLLabeled {
+  htmlLabel: HTMLSpanElement;
+  htmlWrapper: HTMLDivElement;
+  htmlValue: HTMLMutatable<BrpValue>;
 
-export class HTMLDeclaration extends HTMLElement {
-  private property: HTMLSpanElement;
-  private htmlWrapper: HTMLDivElement;
-  private htmlValue: HTMLJson | HTMLString; // VslNumber // VslBoolean // VslObject
-
-  static create(
-    level: number,
-    short: string,
-    full: string,
-    value: BrpValue,
-    mutability: MutationConsent | undefined
-  ): HTMLDeclaration {
-    if (customElements.get('visual-declaration') === undefined) {
-      customElements.define('visual-declaration', HTMLDeclaration);
-    }
-    const result = document.createElement('visual-declaration') as HTMLDeclaration;
-    result.level = level;
-    result.label = short;
-    result.tooltip = full;
-    result.brpValue = value;
-    if (mutability !== undefined) result.htmlValue.mutability = mutability;
-    return result;
+  static create() {
+    return document.createElement('visual-declaration') as HTMLDeclaration;
   }
 
   constructor() {
     super();
-    this.property = document.createElement('span');
-    this.property.classList.add('left-side');
+    this.htmlLabel = document.createElement('span');
+    this.htmlLabel.classList.add('left-side');
 
     this.htmlWrapper = document.createElement('div');
     this.htmlWrapper.classList.add('right-side');
 
-    this.htmlValue = HTMLString.create('');
+    this.htmlValue = HTMLString.create();
     this.htmlWrapper.append(this.htmlValue);
   }
 
@@ -119,34 +52,26 @@ export class HTMLDeclaration extends HTMLElement {
     if (this.shadowRoot !== null) return;
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.declaration];
-    shadow.append(this.property, this.htmlWrapper);
+    shadow.append(this.htmlLabel, this.htmlWrapper);
   }
 
-  set level(l: number) {
-    const indent = l * 16;
-    this.property.style.textIndent = indent.toString() + 'px';
-  }
-  set label(text: string) {
-    this.property.textContent = text;
-  }
-  set tooltip(text: string) {
-    this.property.title = text;
-  }
   set brpValue(v: BrpValue) {
     if (this.htmlValue instanceof HTMLString) {
       if (typeof v === 'string') {
         this.htmlValue.value = v;
       } else {
-        console.log(`Replacing with HTMLJson for ${this.property.textContent}`);
-        const replacement = HTMLJson.create(v);
+        console.log(`Replacing with HTMLJson for ${this.htmlLabel.textContent}`);
+        const replacement = HTMLJson.create();
+        replacement.value = v;
         replacement.mutability = this.htmlValue.mutability;
         this.htmlValue.replaceWith(replacement);
         this.htmlValue = replacement;
       }
     } /* HTMLJson */ else {
       if (typeof v === 'string') {
-        console.log(`Replacing with HTMLString for ${this.property.textContent}`);
-        const replacement = HTMLString.create(v);
+        console.log(`Replacing with HTMLString for ${this.htmlLabel.textContent}`);
+        const replacement = HTMLString.create();
+        replacement.value = v;
         replacement.mutability = this.htmlValue.mutability;
         this.htmlValue.replaceWith(replacement);
         this.htmlValue = replacement;
@@ -159,13 +84,12 @@ export class HTMLDeclaration extends HTMLElement {
 
 abstract class HTMLMutatable<T> extends HTMLElement {
   private _buffer: T;
-  private _inEdit: boolean;
+  private _inEdit: boolean = false;
   private _mutability: MutationConsent | undefined;
 
   constructor(defaultValue: T) {
     super();
     this._buffer = defaultValue;
-    this._inEdit = false;
   }
 
   get buffer() {
@@ -197,13 +121,8 @@ abstract class HTMLMutatable<T> extends HTMLElement {
 export class HTMLJson extends HTMLMutatable<BrpValue> {
   private jsonElement: HTMLDivElement;
 
-  static create(value: BrpValue): HTMLJson {
-    if (customElements.get('visual-json') === undefined) {
-      customElements.define('visual-json', HTMLJson);
-    }
-    const result = document.createElement('visual-json') as HTMLJson;
-    result.value = value;
-    return result;
+  static create() {
+    return document.createElement('visual-json') as HTMLJson;
   }
 
   constructor() {
@@ -260,13 +179,8 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
 export class HTMLString extends HTMLMutatable<string> {
   private textElement: HTMLDivElement;
 
-  static create(text: string): HTMLString {
-    if (customElements.get('visual-string') === undefined) {
-      customElements.define('visual-string', HTMLString);
-    }
-    const result = document.createElement('visual-string') as HTMLString;
-    result.value = text;
-    return result;
+  static create() {
+    return document.createElement('visual-string') as HTMLString;
   }
 
   constructor() {
@@ -319,32 +233,68 @@ export class HTMLString extends HTMLMutatable<string> {
   }
 }
 
-export class HTMLStruct extends HTMLElement {
-  private chevron: VscodeIcon;
-  private htmlLabel: HTMLSpanElement;
+export abstract class HTMLExpandable extends HTMLLabeled {
   public isExpanded = true;
+  abstract chevron: VscodeIcon;
 
-  static create(sync: SyncNode, level: number, short: string, full: string): HTMLStruct {
-    if (customElements.get('visual-expandable') === undefined) {
-      customElements.define('visual-expandable', HTMLStruct);
-    }
-    const result = document.createElement('visual-expandable') as HTMLStruct;
-    result.level = level;
-    result.label = short;
-    result.tooltip = full;
-
-    result.onclick = () => {
-      result.isExpanded = !result.isExpanded;
-      if (result.isExpanded) {
-        result.chevron.setAttribute('name', 'chevron-up');
-        sync.showChildren();
-      } else {
-        result.chevron.setAttribute('name', 'chevron-down');
+  set onExpansion(sync: SyncNode) {
+    this.onclick = () => {
+      if (this.isExpanded) {
+        this.isExpanded = false;
+        this.chevron.setAttribute('name', 'chevron-down');
         sync.hideChildren();
+      } else {
+        this.isExpanded = true;
+        this.chevron.setAttribute('name', 'chevron-up');
+        sync.showChildren();
       }
     };
+  }
+  set isExpandable(is: boolean) {
+    if (is) this.chevron.style.removeProperty('display');
+    else this.chevron.style.display = 'none';
+  }
+  get isExpandable() {
+    return this.chevron.style.getPropertyValue('display') !== 'none';
+  }
+}
 
-    return result;
+export class HTMLEnum extends HTMLExpandable {
+  htmlLabel: HTMLSpanElement;
+  buttonEdit: VscodeIcon;
+  chevron: VscodeIcon;
+
+  static create() {
+    return document.createElement('visual-enum') as HTMLEnum;
+  }
+
+  constructor() {
+    super();
+    this.htmlLabel = document.createElement('span');
+
+    this.buttonEdit = document.createElement('vscode-icon');
+    this.buttonEdit.setAttribute('name', 'symbol-property');
+
+    this.chevron = document.createElement('vscode-icon');
+    this.chevron.setAttribute('name', 'chevron-up');
+    this.chevron.setAttribute('class', 'rotatable');
+    this.chevron.style.display = 'none';
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return;
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
+    shadow.append(this.htmlLabel, this.buttonEdit, this.chevron);
+  }
+}
+
+export class HTMLStruct extends HTMLExpandable {
+  htmlLabel: HTMLSpanElement;
+  chevron: VscodeIcon;
+
+  static create() {
+    return document.createElement('visual-expandable') as HTMLStruct;
   }
 
   constructor() {
@@ -362,20 +312,5 @@ export class HTMLStruct extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
     shadow.append(this.htmlLabel, this.chevron);
-  }
-
-  set level(l: number) {
-    const indent = l * 16;
-    this.htmlLabel.style.textIndent = indent.toString() + 'px';
-  }
-  set isExpandable(is: boolean) {
-    if (is) this.chevron.style.removeProperty('display');
-    else this.chevron.style.display = 'none';
-  }
-  set label(text: string) {
-    this.htmlLabel.textContent = text;
-  }
-  set tooltip(text: string) {
-    this.htmlLabel.title = text;
   }
 }

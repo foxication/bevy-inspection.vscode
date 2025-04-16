@@ -57,11 +57,11 @@ export class ComponentsVisual extends Visual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, public componentNames: TypePath[]) {
     super(sync);
-    this.dom = ComponentsVisual.createVslHeading();
+    this.dom = ComponentsVisual.createHTML();
     anchor.append(this.dom);
   }
 
-  static createVslHeading() {
+  static createHTML() {
     const result = document.createElement('h3');
     result.textContent = 'Component List';
     return result;
@@ -73,13 +73,11 @@ export class ErrorVisual extends Visual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, public error: { code: number | undefined; message: string }) {
     super(sync);
-    this.dom = HTMLDeclaration.create(
-      this.level,
-      (this.sync.lastPathSegment ?? '...').toString(),
-      (this.error.code ?? 'Error').toString(),
-      this.error.message,
-      undefined
-    );
+    this.dom = HTMLDeclaration.create();
+    this.dom.level = this.level;
+    this.dom.label = (this.sync.lastPathSegment ?? '...').toString();
+    this.dom.tooltip = (this.error.code ?? 'Error').toString();
+    this.dom.brpValue = this.error.message;
     anchor.after(this.dom);
   }
 }
@@ -120,13 +118,12 @@ export class SerializedVisual extends VisualDescribed {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public value: BrpValue) {
     super(sync, schema);
-    this.dom = HTMLDeclaration.create(
-      this.level,
-      this.label,
-      this.tooltip,
-      this.access,
-      new MutationConsent(sync)
-    );
+    this.dom = HTMLDeclaration.create();
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
+    this.dom.brpValue = this.access;
+    this.dom.htmlValue.mutability = new MutationConsent(sync);
     anchor.after(this.dom);
   }
 
@@ -155,7 +152,11 @@ export class EnumVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public variantTypePath: TypePath) {
     super(sync, schema);
-    this.dom = HTMLEnum.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLEnum.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
     if (!this.variantTypePaths.includes(this.variantTypePath)) {
       console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
@@ -178,7 +179,11 @@ export class StructVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLStruct.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
   }
 
@@ -195,7 +200,11 @@ export class TupleVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLStruct.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
   }
 
@@ -211,7 +220,11 @@ export class ArrayVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLStruct.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
@@ -225,7 +238,11 @@ export class ListVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLStruct.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
@@ -239,7 +256,11 @@ export class SetVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLStruct.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
@@ -253,7 +274,11 @@ export class MapVisual extends ExpandableVisual {
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    this.dom = HTMLStruct.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.level;
+    this.dom.label = this.label;
+    this.dom.tooltip = this.tooltip;
     anchor.after(this.dom);
   }
   get keyTypePath(): TypePath {
