@@ -28,17 +28,17 @@ export type VisualUnit =
 //
 
 export abstract class Visual {
-  abstract representation: HTMLElement;
+  abstract dom: HTMLElement;
   constructor(private _sync: SyncNode) {}
 
   preDestruct() {
-    this.representation.remove();
+    this.dom.remove();
   }
   show() {
-    this.representation.style.removeProperty('display');
+    this.dom.style.removeProperty('display');
   }
   hide() {
-    this.representation.style.display = 'none';
+    this.dom.style.display = 'none';
   }
 
   get sync() {
@@ -53,12 +53,12 @@ export abstract class Visual {
 }
 
 export class ComponentsVisual extends Visual {
-  readonly representation: HTMLHeadingElement;
+  readonly dom: HTMLHeadingElement;
 
   constructor(sync: SyncNode, anchor: HTMLElement, public componentNames: TypePath[]) {
     super(sync);
-    this.representation = ComponentsVisual.createVslHeading();
-    anchor.append(this.representation);
+    this.dom = ComponentsVisual.createVslHeading();
+    anchor.append(this.dom);
   }
 
   static createVslHeading() {
@@ -69,18 +69,18 @@ export class ComponentsVisual extends Visual {
 }
 
 export class ErrorVisual extends Visual {
-  readonly representation: HTMLDeclaration;
+  readonly dom: HTMLDeclaration;
 
   constructor(sync: SyncNode, anchor: HTMLElement, public error: { code: number | undefined; message: string }) {
     super(sync);
-    this.representation = HTMLDeclaration.create(
+    this.dom = HTMLDeclaration.create(
       this.level,
       (this.sync.lastPathSegment ?? '...').toString(),
       (this.error.code ?? 'Error').toString(),
       this.error.message,
       undefined
     );
-    anchor.after(this.representation);
+    anchor.after(this.dom);
   }
 }
 
@@ -116,22 +116,22 @@ export abstract class VisualDescribed extends Visual {
 }
 
 export class SerializedVisual extends VisualDescribed {
-  readonly representation: HTMLDeclaration;
+  readonly dom: HTMLDeclaration;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public value: BrpValue) {
     super(sync, schema);
-    this.representation = HTMLDeclaration.create(
+    this.dom = HTMLDeclaration.create(
       this.level,
       this.label,
       this.tooltip,
       this.access,
       new MutationConsent(sync)
     );
-    anchor.after(this.representation);
+    anchor.after(this.dom);
   }
 
   set(value: BrpValue) {
-    this.representation.brpValue = value;
+    this.dom.brpValue = value;
   }
 }
 
@@ -140,23 +140,23 @@ export class SerializedVisual extends VisualDescribed {
 //
 
 export abstract class ExpandableVisual extends VisualDescribed {
-  abstract representation: HTMLExpandable;
+  abstract dom: HTMLExpandable;
 
   set isExpandable(able: boolean) {
-    this.representation.isExpandable = able;
+    this.dom.isExpandable = able;
   }
   get isExpanded(): boolean {
-    return this.representation.isExpanded;
+    return this.dom.isExpanded;
   }
 }
 
 export class EnumVisual extends ExpandableVisual {
-  readonly representation: HTMLEnum;
+  readonly dom: HTMLEnum;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public variantTypePath: TypePath) {
     super(sync, schema);
-    this.representation = HTMLEnum.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLEnum.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
     if (!this.variantTypePaths.includes(this.variantTypePath)) {
       console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
     }
@@ -174,12 +174,12 @@ export class EnumVisual extends ExpandableVisual {
 }
 
 export class StructVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
+  readonly dom: HTMLStruct;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
   }
 
   get properties(): readonly { property: string; typePath: TypePath }[] {
@@ -191,12 +191,12 @@ export class StructVisual extends ExpandableVisual {
 }
 
 export class TupleVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
+  readonly dom: HTMLStruct;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
   }
 
   get childTypePaths(): readonly TypePath[] {
@@ -207,12 +207,12 @@ export class TupleVisual extends ExpandableVisual {
 }
 
 export class ArrayVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
+  readonly dom: HTMLStruct;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
     if (typeof this.schema.items !== 'object') return '()';
@@ -221,12 +221,12 @@ export class ArrayVisual extends ExpandableVisual {
 }
 
 export class ListVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
+  readonly dom: HTMLStruct;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
     if (typeof this.schema.items !== 'object') return '()';
@@ -235,12 +235,12 @@ export class ListVisual extends ExpandableVisual {
 }
 
 export class SetVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
+  readonly dom: HTMLStruct;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
     if (typeof this.schema.items !== 'object') return '()';
@@ -249,12 +249,12 @@ export class SetVisual extends ExpandableVisual {
 }
 
 export class MapVisual extends ExpandableVisual {
-  readonly representation: HTMLStruct;
+  readonly dom: HTMLStruct;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.representation = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
-    anchor.after(this.representation);
+    this.dom = HTMLStruct.create(sync, this.level, this.label, this.tooltip);
+    anchor.after(this.dom);
   }
   get keyTypePath(): TypePath {
     if (this.schema.keyType === undefined) return '()';

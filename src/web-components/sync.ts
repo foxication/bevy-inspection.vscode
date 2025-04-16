@@ -223,7 +223,7 @@ export class SyncNode {
           this.visual.variantTypePath = variant;
           this.children.shrink(0);
           this.children.push(
-            new SyncNode(source, this.visual.representation, [...this.path, this.visual.variantName], variant)
+            new SyncNode(source, this.visual.dom, [...this.path, this.visual.variantName], variant)
           );
         }
       } else {
@@ -278,7 +278,7 @@ export class SyncNode {
         console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
       }
       if (isBrpObject(access)) {
-        let anchor: HTMLElement = this.visual.representation;
+        let anchor: HTMLElement = this.visual.dom;
         const sorted =
           this.visual instanceof MapVisual
             ? Object.keys(access).sort()
@@ -307,11 +307,11 @@ export class SyncNode {
     return this.path[this.path.length - 1];
   }
   get startAnchor(): HTMLElement {
-    return this.visual.representation;
+    return this.visual.dom;
   }
   get endAnchor(): HTMLElement {
     const length = this.children.unwrap().length;
-    if (length === 0) return this.visual.representation;
+    if (length === 0) return this.visual.dom;
     return this.children.unwrap()[length - 1].endAnchor;
   }
 
