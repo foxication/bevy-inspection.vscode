@@ -7,7 +7,6 @@ merged.replaceSync(
   dontIndent(`
   :host {
     border-radius: 2px;
-    column-gap: 8px;
     display: flex;
     width: 100%;
   }
@@ -24,14 +23,18 @@ merged.replaceSync(
   }
   vscode-icon {
     flex: none;
-    padding: 3px 6px 3px 0;
+    padding: 3px;
   }
   .left-side {
     flex: 3;
+    margin-right: 8px;
   }
   .right-side {
     flex: 5;
     overflow-x: overlay;
+  }
+  .icons {
+    display: flex;
   }
 `)
 );

@@ -20,8 +20,11 @@ export class HTMLMerged extends HTMLElement {
     wrapper: HTMLDivElement;
     value: HTMLMutatable<BrpValue>;
   };
-  buttonEdit?: VscodeIcon;
-  chevron?: VscodeIcon;
+  htmlIcons: {
+    wrapper: HTMLDivElement;
+    enum?: VscodeIcon;
+    expand?: VscodeIcon;
+  };
 
   set level(l: number) {
     const indent = l * 16;
@@ -69,12 +72,12 @@ export class HTMLMerged extends HTMLElement {
     }
   }
   set onEnumEdit(sync: SyncNode) {
-    if (this.buttonEdit === undefined) {
-      this.buttonEdit = document.createElement('vscode-icon');
-      this.buttonEdit.setAttribute('name', 'symbol-property');
-      this.shadowRoot?.append(this.buttonEdit);
+    if (this.htmlIcons.enum === undefined) {
+      this.htmlIcons.enum = document.createElement('vscode-icon');
+      this.htmlIcons.enum.setAttribute('name', 'symbol-property');
+      this.htmlIcons.wrapper.append(this.htmlIcons.enum);
     }
-    this.buttonEdit.onclick = () => {}; // TODO
+    this.htmlIcons.enum.onclick = () => {}; // TODO
   }
   private createConfiguredChevron() {
     const result = document.createElement('vscode-icon');
@@ -84,30 +87,30 @@ export class HTMLMerged extends HTMLElement {
   }
   set onExpansion(sync: SyncNode) {
     this.onclick = () => {
-      if (this.chevron === undefined) return;
-      const state = this.chevron.getAttribute('name');
+      if (this.htmlIcons.expand === undefined) return;
+      const state = this.htmlIcons.expand.getAttribute('name');
       if (state === 'chevron-up') {
-        this.chevron.setAttribute('name', 'chevron-down');
+        this.htmlIcons.expand.setAttribute('name', 'chevron-down');
         sync.hideChildren();
       }
       if (state === 'chevron-down') {
-        this.chevron.setAttribute('name', 'chevron-up');
+        this.htmlIcons.expand.setAttribute('name', 'chevron-up');
         sync.showChildren();
       }
     };
   }
   set isExpandable(is: boolean) {
     if (is) {
-      this.chevron?.remove();
-      this.chevron = this.createConfiguredChevron();
-      this.shadowRoot?.append(this.chevron);
+      this.htmlIcons.expand?.remove();
+      this.htmlIcons.expand = this.createConfiguredChevron();
+      this.htmlIcons.wrapper.append(this.htmlIcons.expand);
     } else {
-      this.chevron?.remove();
-      this.chevron = undefined;
+      this.htmlIcons.expand?.remove();
+      this.htmlIcons.expand = undefined;
     }
   }
   get isExpandable() {
-    return this.chevron !== undefined;
+    return this.htmlIcons.expand !== undefined;
   }
 
   static create() {
@@ -116,6 +119,8 @@ export class HTMLMerged extends HTMLElement {
   constructor() {
     super();
     this.htmlLeft = document.createElement('span');
+    this.htmlIcons = { wrapper: document.createElement('div') };
+    this.htmlIcons.wrapper.classList.add('icons');
   }
 
   connectedCallback() {
@@ -123,9 +128,7 @@ export class HTMLMerged extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.merged];
     shadow.append(
-      ...[this.htmlLeft, this.htmlRight?.wrapper, this.buttonEdit, this.chevron].filter(
-        (element) => element !== undefined
-      )
+      ...[this.htmlLeft, this.htmlRight?.wrapper, this.htmlIcons.wrapper].filter((element) => element !== undefined)
     );
   }
 }

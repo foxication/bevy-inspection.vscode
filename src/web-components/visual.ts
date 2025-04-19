@@ -143,7 +143,7 @@ export abstract class ExpandableVisual extends VisualDescribed {
     this.dom.isExpandable = able;
   }
   get isExpanded(): boolean {
-    return this.dom.chevron !== undefined;
+    return this.dom.htmlIcons.expand !== undefined;
   }
 }
 
