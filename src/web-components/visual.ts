@@ -8,7 +8,7 @@ import {
   TypePath,
   TypePathReference,
 } from '../protocol/types';
-import { HTMLDeclaration, HTMLEnum, HTMLExpandable, HTMLStruct } from './elements';
+import { HTMLMerged } from './elements';
 import { postWebviewMessage } from './main';
 import { SyncNode } from './sync';
 
@@ -69,11 +69,11 @@ export class ComponentsVisual extends Visual {
 }
 
 export class ErrorVisual extends Visual {
-  readonly dom: HTMLDeclaration;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, public error: { code: number | undefined; message: string }) {
     super(sync);
-    this.dom = HTMLDeclaration.create();
+    this.dom = HTMLMerged.create();
     this.dom.level = this.level;
     this.dom.label = (this.sync.lastPathSegment ?? '...').toString();
     this.dom.tooltip = (this.error.code ?? 'Error').toString();
@@ -114,16 +114,16 @@ export abstract class VisualDescribed extends Visual {
 }
 
 export class SerializedVisual extends VisualDescribed {
-  readonly dom: HTMLDeclaration;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public value: BrpValue) {
     super(sync, schema);
-    this.dom = HTMLDeclaration.create();
+    this.dom = HTMLMerged.create();
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
     this.dom.brpValue = this.access;
-    this.dom.htmlValue.mutability = new MutationConsent(sync);
+    if (this.dom.htmlRight !== undefined) this.dom.htmlRight.value.mutability = new MutationConsent(sync);
     anchor.after(this.dom);
   }
 
@@ -137,23 +137,24 @@ export class SerializedVisual extends VisualDescribed {
 //
 
 export abstract class ExpandableVisual extends VisualDescribed {
-  abstract dom: HTMLExpandable;
+  abstract dom: HTMLMerged;
 
   set isExpandable(able: boolean) {
     this.dom.isExpandable = able;
   }
   get isExpanded(): boolean {
-    return this.dom.isExpanded;
+    return this.dom.chevron !== undefined;
   }
 }
 
 export class EnumVisual extends ExpandableVisual {
-  readonly dom: HTMLEnum;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public variantTypePath: TypePath) {
     super(sync, schema);
-    this.dom = HTMLEnum.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
+    this.dom.onEnumEdit = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
@@ -175,11 +176,11 @@ export class EnumVisual extends ExpandableVisual {
 }
 
 export class StructVisual extends ExpandableVisual {
-  readonly dom: HTMLStruct;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;
@@ -196,11 +197,11 @@ export class StructVisual extends ExpandableVisual {
 }
 
 export class TupleVisual extends ExpandableVisual {
-  readonly dom: HTMLStruct;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;
@@ -216,11 +217,11 @@ export class TupleVisual extends ExpandableVisual {
 }
 
 export class ArrayVisual extends ExpandableVisual {
-  readonly dom: HTMLStruct;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;
@@ -234,11 +235,11 @@ export class ArrayVisual extends ExpandableVisual {
 }
 
 export class ListVisual extends ExpandableVisual {
-  readonly dom: HTMLStruct;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;
@@ -252,11 +253,11 @@ export class ListVisual extends ExpandableVisual {
 }
 
 export class SetVisual extends ExpandableVisual {
-  readonly dom: HTMLStruct;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;
@@ -270,11 +271,11 @@ export class SetVisual extends ExpandableVisual {
 }
 
 export class MapVisual extends ExpandableVisual {
-  readonly dom: HTMLStruct;
+  readonly dom: HTMLMerged;
 
   constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
     super(sync, schema);
-    this.dom = HTMLStruct.create();
+    this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.level = this.level;
     this.dom.label = this.label;

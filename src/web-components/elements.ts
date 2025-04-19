@@ -4,81 +4,129 @@ import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
 import { MutationConsent } from './visual';
 
+const HTML_MERGED_NAME = 'visual-merged';
+const HTML_JSON_NAME = 'visual-json';
+const HTML_STRING_NAME = 'visual-string';
+
 export function defineCustomElements() {
-  customElements.define('visual-enum', HTMLEnum);
-  customElements.define('visual-declaration', HTMLDeclaration);
-  customElements.define('visual-json', HTMLJson);
-  customElements.define('visual-string', HTMLString);
-  customElements.define('visual-expandable', HTMLStruct);
+  customElements.define(HTML_MERGED_NAME, HTMLMerged);
+  customElements.define(HTML_JSON_NAME, HTMLJson);
+  customElements.define(HTML_STRING_NAME, HTMLString);
 }
 
-export abstract class HTMLLabeled extends HTMLElement {
-  abstract htmlLabel: HTMLSpanElement;
+export class HTMLMerged extends HTMLElement {
+  htmlLeft: HTMLSpanElement;
+  htmlRight?: {
+    wrapper: HTMLDivElement;
+    value: HTMLMutatable<BrpValue>;
+  };
+  buttonEdit?: VscodeIcon;
+  chevron?: VscodeIcon;
 
   set level(l: number) {
     const indent = l * 16;
-    this.htmlLabel.style.textIndent = indent.toString() + 'px';
+    this.htmlLeft.style.textIndent = indent.toString() + 'px';
   }
   set label(text: string) {
-    this.htmlLabel.textContent = text;
+    this.htmlLeft.textContent = text;
   }
   set tooltip(text: string) {
-    this.htmlLabel.title = text;
+    this.htmlLeft.title = text;
   }
-}
+  set brpValue(v: BrpValue) {
+    if (this.htmlRight === undefined) {
+      // Move label to left & create elements
+      this.htmlLeft.classList.add('left-side');
+      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLString.create() };
+      this.htmlRight.wrapper.classList.add('right-side');
 
-export class HTMLDeclaration extends HTMLLabeled {
-  htmlLabel: HTMLSpanElement;
-  htmlWrapper: HTMLDivElement;
-  htmlValue: HTMLMutatable<BrpValue>;
+      // Structurize
+      this.htmlRight.wrapper.append(this.htmlRight.value);
+      this.shadowRoot?.append(this.htmlRight.wrapper);
+    }
+    if (this.htmlRight.value instanceof HTMLString) {
+      if (typeof v === 'string') {
+        this.htmlRight.value.value = v;
+      } else {
+        console.log(`Replacing with HTMLJson for ${this.htmlLeft.textContent}`);
+        const replacement = HTMLJson.create();
+        replacement.value = v;
+        replacement.mutability = this.htmlRight.value.mutability;
+        this.htmlRight.value.replaceWith(replacement);
+        this.htmlRight.value = replacement;
+      }
+    } /* HTMLJson */ else {
+      if (typeof v === 'string') {
+        console.log(`Replacing with HTMLString for ${this.htmlLeft.textContent}`);
+        const replacement = HTMLString.create();
+        replacement.value = v;
+        replacement.mutability = this.htmlRight.value.mutability;
+        this.htmlRight.value.replaceWith(replacement);
+        this.htmlRight.value = replacement;
+      } else {
+        this.htmlRight.value.value = v;
+      }
+    }
+  }
+  set onEnumEdit(sync: SyncNode) {
+    if (this.buttonEdit === undefined) {
+      this.buttonEdit = document.createElement('vscode-icon');
+      this.buttonEdit.setAttribute('name', 'symbol-property');
+      this.shadowRoot?.append(this.buttonEdit);
+    }
+    this.buttonEdit.onclick = () => {}; // TODO
+  }
+  private createConfiguredChevron() {
+    const result = document.createElement('vscode-icon');
+    result.setAttribute('name', 'chevron-up');
+    result.setAttribute('class', 'rotatable');
+    return result;
+  }
+  set onExpansion(sync: SyncNode) {
+    this.onclick = () => {
+      if (this.chevron === undefined) return;
+      const state = this.chevron.getAttribute('name');
+      if (state === 'chevron-up') {
+        this.chevron.setAttribute('name', 'chevron-down');
+        sync.hideChildren();
+      }
+      if (state === 'chevron-down') {
+        this.chevron.setAttribute('name', 'chevron-up');
+        sync.showChildren();
+      }
+    };
+  }
+  set isExpandable(is: boolean) {
+    if (is) {
+      this.chevron?.remove();
+      this.chevron = this.createConfiguredChevron();
+      this.shadowRoot?.append(this.chevron);
+    } else {
+      this.chevron?.remove();
+      this.chevron = undefined;
+    }
+  }
+  get isExpandable() {
+    return this.chevron !== undefined;
+  }
 
   static create() {
-    return document.createElement('visual-declaration') as HTMLDeclaration;
+    return document.createElement(HTML_MERGED_NAME) as HTMLMerged;
   }
-
   constructor() {
     super();
-    this.htmlLabel = document.createElement('span');
-    this.htmlLabel.classList.add('left-side');
-
-    this.htmlWrapper = document.createElement('div');
-    this.htmlWrapper.classList.add('right-side');
-
-    this.htmlValue = HTMLString.create();
-    this.htmlWrapper.append(this.htmlValue);
+    this.htmlLeft = document.createElement('span');
   }
 
   connectedCallback() {
     if (this.shadowRoot !== null) return;
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.declaration];
-    shadow.append(this.htmlLabel, this.htmlWrapper);
-  }
-
-  set brpValue(v: BrpValue) {
-    if (this.htmlValue instanceof HTMLString) {
-      if (typeof v === 'string') {
-        this.htmlValue.value = v;
-      } else {
-        console.log(`Replacing with HTMLJson for ${this.htmlLabel.textContent}`);
-        const replacement = HTMLJson.create();
-        replacement.value = v;
-        replacement.mutability = this.htmlValue.mutability;
-        this.htmlValue.replaceWith(replacement);
-        this.htmlValue = replacement;
-      }
-    } /* HTMLJson */ else {
-      if (typeof v === 'string') {
-        console.log(`Replacing with HTMLString for ${this.htmlLabel.textContent}`);
-        const replacement = HTMLString.create();
-        replacement.value = v;
-        replacement.mutability = this.htmlValue.mutability;
-        this.htmlValue.replaceWith(replacement);
-        this.htmlValue = replacement;
-      } else {
-        this.htmlValue.value = v;
-      }
-    }
+    shadow.adoptedStyleSheets = [VslStyles.merged];
+    shadow.append(
+      ...[this.htmlLeft, this.htmlRight?.wrapper, this.buttonEdit, this.chevron].filter(
+        (element) => element !== undefined
+      )
+    );
   }
 }
 
@@ -122,7 +170,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
   private jsonElement: HTMLDivElement;
 
   static create() {
-    return document.createElement('visual-json') as HTMLJson;
+    return document.createElement(HTML_JSON_NAME) as HTMLJson;
   }
 
   constructor() {
@@ -180,7 +228,7 @@ export class HTMLString extends HTMLMutatable<string> {
   private textElement: HTMLDivElement;
 
   static create() {
-    return document.createElement('visual-string') as HTMLString;
+    return document.createElement(HTML_STRING_NAME) as HTMLString;
   }
 
   constructor() {
@@ -230,87 +278,5 @@ export class HTMLString extends HTMLMutatable<string> {
   }
   allowEditing() {
     this.textElement.contentEditable = 'plaintext-only';
-  }
-}
-
-export abstract class HTMLExpandable extends HTMLLabeled {
-  public isExpanded = true;
-  abstract chevron: VscodeIcon;
-
-  set onExpansion(sync: SyncNode) {
-    this.onclick = () => {
-      if (this.isExpanded) {
-        this.isExpanded = false;
-        this.chevron.setAttribute('name', 'chevron-down');
-        sync.hideChildren();
-      } else {
-        this.isExpanded = true;
-        this.chevron.setAttribute('name', 'chevron-up');
-        sync.showChildren();
-      }
-    };
-  }
-  set isExpandable(is: boolean) {
-    if (is) this.chevron.style.removeProperty('display');
-    else this.chevron.style.display = 'none';
-  }
-  get isExpandable() {
-    return this.chevron.style.getPropertyValue('display') !== 'none';
-  }
-}
-
-export class HTMLEnum extends HTMLExpandable {
-  htmlLabel: HTMLSpanElement;
-  buttonEdit: VscodeIcon;
-  chevron: VscodeIcon;
-
-  static create() {
-    return document.createElement('visual-enum') as HTMLEnum;
-  }
-
-  constructor() {
-    super();
-    this.htmlLabel = document.createElement('span');
-
-    this.buttonEdit = document.createElement('vscode-icon');
-    this.buttonEdit.setAttribute('name', 'symbol-property');
-
-    this.chevron = document.createElement('vscode-icon');
-    this.chevron.setAttribute('name', 'chevron-up');
-    this.chevron.setAttribute('class', 'rotatable');
-    this.chevron.style.display = 'none';
-  }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
-    shadow.append(this.htmlLabel, this.buttonEdit, this.chevron);
-  }
-}
-
-export class HTMLStruct extends HTMLExpandable {
-  htmlLabel: HTMLSpanElement;
-  chevron: VscodeIcon;
-
-  static create() {
-    return document.createElement('visual-expandable') as HTMLStruct;
-  }
-
-  constructor() {
-    super();
-    this.htmlLabel = document.createElement('span');
-
-    this.chevron = document.createElement('vscode-icon');
-    this.chevron.setAttribute('name', 'chevron-up');
-    this.chevron.setAttribute('class', 'rotatable');
-    this.chevron.style.display = 'none';
-  }
-
-  connectedCallback() {
-    if (this.shadowRoot !== null) return;
-    const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.buttons, VslStyles.expandable];
-    shadow.append(this.htmlLabel, this.chevron);
   }
 }

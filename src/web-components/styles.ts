@@ -2,6 +2,40 @@ function dontIndent(str: string) {
   return ('' + str).replace(/(\n)\s+/g, '$1');
 }
 
+export const merged = new CSSStyleSheet();
+merged.replaceSync(
+  dontIndent(`
+  :host {
+    border-radius: 2px;
+    column-gap: 8px;
+    display: flex;
+    width: 100%;
+  }
+  :host(:hover) {
+    background-color: var(--vscode-list-hoverBackground);
+  }
+  span {
+    flex: auto;
+    line-height: 22px;
+    overflow: hidden;
+    text-indent: 0px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  vscode-icon {
+    flex: none;
+    padding: 3px 6px 3px 0;
+  }
+  .left-side {
+    flex: 3;
+  }
+  .right-side {
+    flex: 5;
+    overflow-x: overlay;
+  }
+`)
+);
+
 export const buttons = new CSSStyleSheet();
 buttons.replaceSync(
   dontIndent(`
@@ -56,59 +90,6 @@ buttons.replaceSync(
   }
   :host(:hover) > .autohide {
     visibility: inherit;
-  }
-`)
-);
-export const expandable = new CSSStyleSheet();
-expandable.replaceSync(
-  dontIndent(`
-  :host {
-    border-radius: 2px;
-    display: flex;
-    width: 100%;
-  }
-  :host(:hover) {
-    background-color: var(--vscode-list-hoverBackground);
-  }
-  span {
-    flex: auto;
-    line-height: 22px;
-    overflow: hidden;
-    text-indent: 0px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  vscode-icon {
-    flex: none;
-    padding: 3px 6px 3px 0;
-  }
-`)
-);
-export const declaration = new CSSStyleSheet();
-declaration.replaceSync(
-  dontIndent(`
-  :host {
-    border-radius: 2px;
-    column-gap: 8px;
-    display: flex;
-    width: 100%;
-    
-    
-    .left-side {
-      flex: 3;
-      line-height: 22px;
-      overflow: hidden;
-      text-indent: 0px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .right-side {
-      flex: 5;
-      overflow-x: overlay;
-    }
-  }
-  :host(:hover) {
-    background-color: var(--vscode-list-hoverBackground);
   }
 `)
 );
