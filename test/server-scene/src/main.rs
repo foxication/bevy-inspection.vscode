@@ -39,7 +39,7 @@ fn main() {
             RemotePlugin::default(),
             RemoteHttpPlugin::default().with_port(port),
             #[cfg(not(target_arch = "wasm32"))]
-            WireframePlugin,
+            WireframePlugin::default(),
         ))
         .insert_resource(WinitSettings {
             focused_mode: bevy::winit::UpdateMode::Reactive {
