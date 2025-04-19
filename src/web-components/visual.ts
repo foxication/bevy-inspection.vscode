@@ -156,12 +156,18 @@ export class EnumVisual extends ExpandableVisual {
     this.dom.onExpansion = sync;
     this.dom.onEnumEdit = sync;
     this.dom.level = this.level;
-    this.dom.label = this.label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.label = this.label + ' / ' + this.variantName;
+    this.dom.tooltip = this.tooltipExtended;
     anchor.after(this.dom);
     if (!this.variantTypePaths.includes(this.variantTypePath)) {
       console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
     }
+  }
+  get tooltipExtended(): string {
+    let result = this.tooltip;
+    result += '\nvariant: ' + this.variantName;
+    result += '\navailable_variants: ' + this.variantShortPaths.join(', ');
+    return result;
   }
   get variantName(): string {
     const parent = this.schema.typePath + '::';
@@ -171,6 +177,12 @@ export class EnumVisual extends ExpandableVisual {
     return (this.schema.oneOf ?? []).map((value) => {
       if (typeof value === 'string') return this.schema.typePath + '::' + value;
       return value.typePath;
+    });
+  }
+  get variantShortPaths(): readonly string[] {
+    return (this.schema.oneOf ?? []).map((value) => {
+      if (typeof value === 'string') return value;
+      return value.shortPath;
     });
   }
 }
