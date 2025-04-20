@@ -9,7 +9,7 @@ import {
   TypePathReference,
 } from '../protocol/types';
 import { HTMLMerged } from './elements';
-import { postWebviewMessage } from './main';
+import { postWebviewMessage } from './index';
 import { SyncNode } from './sync';
 
 // All types of visual
