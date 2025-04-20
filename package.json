@@ -136,7 +136,7 @@
 			},
 			{
 				"command": "extension.reconnectLast",
-				"title": "Reconnect",
+				"title": "Reconnect Last Connection",
 				"category": "Bevy Inspection",
 				"enablement": "extension.areThereConnections"
 			},
@@ -148,7 +148,7 @@
 			},
 			{
 				"command": "extension.reconnect",
-				"title": "Restore Last Connection",
+				"title": "Reconnect",
 				"category": "Bevy Inspection",
 				"icon": "$(plug)"
 			},
@@ -239,8 +239,23 @@
 				},
 				{
 					"command": "extension.updateEntities",
-					"when": "viewItem == connectionElementConnection",
-					"group": "inline"
+					"when": "viewItem == connectionElementOnline",
+					"group": "inline@0"
+				},
+				{
+					"command": "extension.disonnect",
+					"when": "viewItem == connectionElementOnline",
+					"group": "inline@1"
+				},
+				{
+					"command": "extension.reconnect",
+					"when": "viewItem == connectionElementOffline",
+					"group": "none@0"
+				},
+				{
+					"command": "extension.removeConnection",
+					"when": "viewItem == connectionElementOffline",
+					"group": "none@1"
 				},
 				{
 					"command": "extension.reconnect",
@@ -270,7 +285,12 @@
 				{
 					"command": "extension.renameEntity",
 					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
-					"group": "inline"
+					"group": "inline@0"
+				},
+				{
+					"command": "extension.destroyEntity",
+					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
+					"group": "inline@1"
 				}
 			]
 		}
