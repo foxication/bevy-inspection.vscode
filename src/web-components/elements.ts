@@ -51,7 +51,6 @@ export class HTMLMerged extends HTMLElement {
       if (typeof v === 'string') {
         this.htmlRight.value.value = v;
       } else {
-        console.log(`Replacing with HTMLJson for ${this.htmlLeft.textContent}`);
         const replacement = HTMLJson.create();
         replacement.value = v;
         replacement.mutability = this.htmlRight.value.mutability;
@@ -60,7 +59,6 @@ export class HTMLMerged extends HTMLElement {
       }
     } /* HTMLJson */ else {
       if (typeof v === 'string') {
-        console.log(`Replacing with HTMLString for ${this.htmlLeft.textContent}`);
         const replacement = HTMLString.create();
         replacement.value = v;
         replacement.mutability = this.htmlRight.value.mutability;
