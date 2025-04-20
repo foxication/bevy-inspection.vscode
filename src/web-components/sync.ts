@@ -428,9 +428,12 @@ export class DataSyncManager {
   setMapOfComponents(components: BrpComponentRegistry) {
     this.mapOfComponents = components;
   }
-  sync() {
+  trySync() {
+    if (this.getRegistrySchema() === undefined) return 'no_registry_schema';
     this.root.sync();
+    return 'done';
   }
+
   debugTree(direction: DataPathSegment[] = []): string {
     return this.root.debugTree(0, direction);
   }

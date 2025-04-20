@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ConnectionList } from './connection-list';
+import { ConnectionList, EntityFocus } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web-components';
 import { BrpObject, TypePath } from './protocol';
 
@@ -64,9 +64,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     this.postVSCodeMessage({ cmd: 'update_all', focus: this.connections.focus, data: entityData });
   }
 
-  public updateComponents(components: BrpObject, removed: TypePath[]) {
+  public updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
     if (this.view === undefined) return console.error(`ComponentsViewProvider.updateComponents(): no view`);
-    this.postVSCodeMessage({ cmd: 'update_components', components, removed });
+    this.postVSCodeMessage({ cmd: 'update_components', focus, components, removed });
   }
 
   public async resolveWebviewView(
@@ -110,9 +110,13 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           }
           break;
         }
-        case 'request_of_sync_registry_schema': {
+        case 'request_for_registry_schema': {
           this.syncRegistrySchema(message.host);
+          break;
         }
+        case 'ready_for_watch':
+          this.connections.startWatch(message.focus);
+          break;
       }
     });
     this.view = webviewView;

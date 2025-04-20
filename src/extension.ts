@@ -95,8 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
     areThereConnections(connections.all().length > 0);
     hierarchyData.update(undefined);
   });
-  connections.onGetWatchResult((getWatchResult) => {
-    componentsView.updateComponents(getWatchResult.components, getWatchResult.removed);
+  connections.onGetWatchResult((result) => {
+    componentsView.updateComponents(result[0], result[1].components, result[1].removed);
   });
 
   hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
@@ -121,8 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  connections.onFocusChanged((focus) => {
+  connections.onFocusChanged(() => {
     componentsView.updateAll();
-    if (focus !== null) connections.startWatch(focus);
   });
 }

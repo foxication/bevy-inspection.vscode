@@ -6,6 +6,9 @@ type AddBehavior = 'prompt' | 'last';
 
 export class EntityFocus {
   constructor(public host: string, public entityId: EntityId) {}
+  clone() {
+    return new EntityFocus(this.host, this.entityId);
+  }
 }
 
 export class ConnectionList {
@@ -29,7 +32,7 @@ export class ConnectionList {
   private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
 
-  private getWatchResultEmitter = new vscode.EventEmitter<BrpGetWatchResult>();
+  private getWatchResultEmitter = new vscode.EventEmitter<[EntityFocus, BrpGetWatchResult]>();
   readonly onGetWatchResult = this.getWatchResultEmitter.event;
 
   public async tryCreateConnection(behavior: AddBehavior = 'prompt'): Promise<void> {
@@ -124,7 +127,7 @@ export class ConnectionList {
         if (response.result === undefined) return; // Skip if no components to watch
         this.watchingController = new AbortController();
         protocol.getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
-          this.getWatchResultEmitter.fire(v);
+          this.getWatchResultEmitter.fire([focus, v]);
         });
       })
       .catch(() => {});

@@ -10,8 +10,12 @@ export type WebviewMessage =
       data: { focus: EntityFocus; component: string; path: string; value: BrpValue };
     }
   | {
-      cmd: 'request_of_sync_registry_schema';
+      cmd: 'request_for_registry_schema';
       host: string;
+    }
+  | {
+      cmd: 'ready_for_watch';
+      focus: EntityFocus;
     };
 
 export type VSCodeMessage =
@@ -29,6 +33,7 @@ export type VSCodeMessage =
     }
   | {
       cmd: 'update_components';
+      focus: EntityFocus;
       components: BrpObject;
       removed: TypePath[];
     };
@@ -47,13 +52,6 @@ defineCustomElements();
   const componentList = document.querySelector('#section-component-list') as HTMLDivElement;
   if (componentList === null) return console.error('#section-component-list is not found in DOM');
   const syncRoot = new DataSyncManager(componentList);
-  const requestRegistrySchema = () => {
-    if (syncRoot.focus === undefined) return console.error('requestRegistrySchema: no focus');
-    postWebviewMessage({
-      cmd: 'request_of_sync_registry_schema',
-      host: syncRoot.focus.host,
-    });
-  };
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -64,24 +62,35 @@ defineCustomElements();
         break;
       case 'sync_registry_schema':
         syncRoot.syncRegistrySchema(message.available, message.host, message.data);
-        if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
+        switch (syncRoot.trySync()) {
+          case 'done':
+            if (syncRoot.focus !== undefined) postWebviewMessage({ cmd: 'ready_for_watch', focus: syncRoot.focus });
+            break;
+          case 'no_registry_schema':
+            console.error('registry schema did not load');
+            break;
+        }
         break;
       case 'update_all':
         setEntityInfo(message.focus);
         syncRoot.focus = message.focus;
         syncRoot.mapOfComponents = message.data;
-        if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
-        else requestRegistrySchema();
+        switch (syncRoot.trySync()) {
+          case 'done':
+            postWebviewMessage({ cmd: 'ready_for_watch', focus: message.focus });
+            break;
+          case 'no_registry_schema':
+            postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
+            break;
+        }
         break;
       case 'update_components':
-        Object.entries(message.components).forEach(([typePath, value]) => {
-          syncRoot.mapOfComponents[typePath] = value;
-        });
-        message.removed.forEach((component) => {
-          delete syncRoot.mapOfComponents[component];
-        });
-        if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
-        else requestRegistrySchema();
+        if (syncRoot.focus === undefined) break;
+        if (syncRoot.focus.host !== message.focus.host) break;
+        if (syncRoot.focus.entityId !== message.focus.entityId) break;
+        Object.entries(message.components).forEach(([typePath, value]) => (syncRoot.mapOfComponents[typePath] = value));
+        message.removed.forEach((component) => delete syncRoot.mapOfComponents[component]);
+        syncRoot.trySync();
         break;
     }
   });
