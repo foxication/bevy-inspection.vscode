@@ -124,7 +124,7 @@ test('components synchronization', async (t: TestContext) => {
         }
 
         // Update tree
-        syncManager.sync();
+        syncManager.trySync();
 
         // Check`
         if (!onlyLog) assertEqualOrCreateFile(t, syncManager.debugTree(direction), title);
