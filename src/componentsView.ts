@@ -81,7 +81,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     };
     webviewView.webview.html = await this.getHtmlForWebview(webviewView.webview);
     webviewView.webview.onDidReceiveMessage((message: WebviewMessage): void => {
-      console.log(`received message: ${message.cmd}`);
       switch (message.cmd) {
         case 'mutate_component': {
           // arguments
