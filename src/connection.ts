@@ -67,11 +67,14 @@ export class Connection {
       response.result.map((value) => {
         return [
           value.entity,
-          new EntityElement(this.getHost(), this.getNetworkStatus(), value.entity, {
-            name: value.components['bevy_ecs::name::Name'] as string,
-            childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
-            children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
-          }),
+          new EntityElement(
+            this.getHost(),
+            this.getNetworkStatus(),
+            value.entity,
+            value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
+            value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
+            value.components['bevy_ecs::name::Name'] as string
+          ),
         ];
       })
     );

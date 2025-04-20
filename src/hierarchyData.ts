@@ -13,26 +13,14 @@ export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
 }
 
 export class EntityElement {
-  host: string;
-  network: NetworkStatus;
-  id: EntityId;
-  name?: string;
-  childOf?: EntityId;
-  children?: EntityId[];
-
   constructor(
-    host: string,
-    network: NetworkStatus,
-    id: EntityId,
-    options?: { name?: string; childOf?: EntityId; children?: EntityId[] }
-  ) {
-    this.host = host;
-    this.network = network;
-    this.id = id;
-    this.name = options?.name;
-    this.childOf = options?.childOf;
-    this.children = options?.children;
-  }
+    public host: string,
+    public network: NetworkStatus,
+    public id: EntityId,
+    public childOf: EntityId | string,
+    public children: EntityId[],
+    public name?: string
+  ) {}
 }
 
 export type HierarchyElement = EntityElement | Connection;
@@ -105,15 +93,7 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
     return treeItem;
   }
 
-  updateConnections() {
-    this.treeIsChangedEmitter.fire();
-  }
-
-  updateConnection(connection: Connection) {
-    this.treeIsChangedEmitter.fire(connection);
-  }
-
-  updateEntity(entity: EntityElement) {
-    this.treeIsChangedEmitter.fire(entity);
+  update(data: HierarchyElement | undefined) {
+    this.treeIsChangedEmitter.fire(data);
   }
 }

@@ -50,29 +50,28 @@ export function activate(context: vscode.ExtensionContext) {
   connections.onAdded((connection) => {
     // Update views
     hierarchyView.description = undefined;
-    hierarchyData.updateConnections();
+    hierarchyData.update(undefined);
 
     // Set context
     areThereConnections(true);
 
     // Connect all events
     connection.onHierarchyUpdated((connection) => {
-      hierarchyData.updateConnection(connection);
+      hierarchyData.update(connection);
     });
 
     connection.onEntityDestroyed((destroyed) => {
-      if (destroyed.childOf === undefined) return;
-      const scope = connections.get(destroyed.host)?.getById(destroyed.childOf);
-      if (scope === undefined) return;
-      hierarchyData.updateEntity(scope);
+      const connection = connections.get(destroyed.host);
+      if (connection === undefined) return;
+      hierarchyData.update(typeof destroyed.childOf === 'number' ? connection.getById(destroyed.childOf) : connection);
     });
 
     connection.onEntityRenamed((renamed) => {
-      hierarchyData.updateEntity(renamed);
+      hierarchyData.update(renamed);
     });
 
     connection.onDisconnection((connection) => {
-      hierarchyData.updateConnections();
+      hierarchyData.update(undefined);
 
       vscode.window.showInformationMessage('Bevy instance has been disconnected', 'Reconnect').then((reaction) => {
         if (reaction === 'Reconnect') {
@@ -86,7 +85,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     connection.onReconnection(() => {
-      hierarchyData.updateConnections();
+      hierarchyData.update(undefined);
       if (connections.focus?.host === connection.getHost()) {
         componentsView.description = undefined;
       }
@@ -97,7 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
   connections.onRemoved(() => {
     areThereConnections(connections.all().length > 0);
-    hierarchyData.updateConnections();
+    hierarchyData.update(undefined);
   });
   connections.onGetWatchResult((getWatchResult) => {
     componentsView.updateComponents(getWatchResult.components, getWatchResult.removed);
