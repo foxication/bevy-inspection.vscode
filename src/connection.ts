@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject, BrpRegistrySchema } from './protocol';
-import { ConnectionElement, EntityElement, HierarchyElement } from './hierarchyData';
+import { EntityElement } from './hierarchyData';
 
 type ProtocolDisconnection = 'disconnection';
 type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
@@ -61,17 +61,13 @@ export class Connection {
         option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
       })
       .catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') {
-      return response;
-    }
-    if (response.result === undefined) {
-      return 'error';
-    }
+    if (response === 'disconnection') return response;
+    if (response.result === undefined) return 'error';
     this.entityElements = new Map(
       response.result.map((value) => {
         return [
           value.entity,
-          new EntityElement(this.getProtocol().url.host, this.getNetworkStatus(), value.entity, {
+          new EntityElement(this.getHost(), this.getNetworkStatus(), value.entity, {
             name: value.components['bevy_ecs::name::Name'] as string,
             childOf: value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
             children: value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
@@ -196,6 +192,14 @@ export class Connection {
     return this.protocol;
   }
 
+  public getHost() {
+    return this.protocol.url.host;
+  }
+
+  public getVersion() {
+    return this.protocol.serverVersion;
+  }
+
   public reconnect() {
     this.initialize().then((status) => {
       if (status === 'success') {
@@ -212,10 +216,11 @@ export class Connection {
     return this.entityElements.get(id);
   }
 
-  public getChildrenOf(parent: HierarchyElement): EntityElement[] {
-    if (parent instanceof ConnectionElement) {
-      return Array.from(this.entityElements.values()).filter((element) => element.childOf === undefined);
-    }
+  public getChildren(): EntityElement[] {
+    return Array.from(this.entityElements.values()).filter((element) => element.childOf === undefined);
+  }
+
+  public getChildrenOf(parent: EntityElement): EntityElement[] {
     return parent.children?.map((id) => this.entityElements.get(id)).filter((element) => element !== undefined) ?? [];
   }
 }

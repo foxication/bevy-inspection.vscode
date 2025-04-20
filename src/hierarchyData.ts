@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { EntityId, BevyVersion } from './protocol';
+import { EntityId } from './protocol';
 import { ConnectionList } from './connection-list';
-import { NetworkStatus } from './connection';
+import { Connection, NetworkStatus } from './connection';
 
 export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
   return vscode.window.createTreeView('hierarchyView', {
@@ -10,18 +10,6 @@ export function createHierarchyView(hierarchyData: HierarchyDataProvider) {
     showCollapseAll: true,
     dragAndDropController: undefined, // TODO
   });
-}
-
-export class ConnectionElement {
-  host: string;
-  version: BevyVersion;
-  network: NetworkStatus;
-
-  constructor(host: string, version: BevyVersion, network: NetworkStatus) {
-    this.host = host;
-    this.version = version;
-    this.network = network;
-  }
 }
 
 export class EntityElement {
@@ -47,7 +35,7 @@ export class EntityElement {
   }
 }
 
-export type HierarchyElement = EntityElement | ConnectionElement;
+export type HierarchyElement = EntityElement | Connection;
 
 export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyElement> {
   private connections: ConnectionList;
@@ -61,40 +49,23 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
   getChildren(element?: HierarchyElement | undefined): HierarchyElement[] {
     // render all connections and entities
     if (!element) {
-      return this.connections.all().map((connection) => {
-        const protocol = connection.getProtocol();
-        return new ConnectionElement(protocol.url.host, protocol.serverVersion, connection.getNetworkStatus());
-      });
+      return this.connections.all();
     }
 
-    const connection = this.connections.get(element.host);
-    if (connection === undefined) {
-      return [];
-    }
-
-    // render entities of connection | entity
-    if (element instanceof ConnectionElement || element instanceof EntityElement) {
-      return connection.getChildrenOf(element);
-    }
-
-    return [];
+    if (element instanceof Connection) return element.getChildren();
+    return this.connections.get(element.host)?.getChildrenOf(element) ?? [];
   }
 
   getTreeItem(element: HierarchyElement): vscode.TreeItem {
-    if (element instanceof ConnectionElement) {
-      const connection = this.connections.get(element.host);
-      if (connection === undefined) {
-        return new vscode.TreeItem('No such connection');
-      }
-
-      const hasEntities = connection.get().size > 0;
+    if (element instanceof Connection) {
+      const hasEntities = element.get().size > 0;
       const collapsible = hasEntities ? vscode.TreeItemCollapsibleState.Expanded : undefined;
-      const treeItem = new vscode.TreeItem(element.host.toString(), collapsible);
+      const treeItem = new vscode.TreeItem(element.getHost(), collapsible);
 
       // Context + description
-      if (connection.getNetworkStatus() === 'online') {
+      if (element.getNetworkStatus() === 'online') {
         treeItem.contextValue = 'connectionElementOnline';
-        treeItem.description = 'Version: ' + element.version;
+        treeItem.description = 'Version: ' + element.getVersion();
       } else {
         treeItem.contextValue = 'connectionElementOffline';
         treeItem.description = 'Disconnected';
@@ -138,11 +109,11 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
     this.treeIsChangedEmitter.fire();
   }
 
-  updateInConnection(host: string) {
-    this.treeIsChangedEmitter.fire(this.connections.getAsElement(host));
+  updateConnection(connection: Connection) {
+    this.treeIsChangedEmitter.fire(connection);
   }
 
-  updateInScope(parent: EntityElement) {
-    this.treeIsChangedEmitter.fire(parent);
+  updateEntity(entity: EntityElement) {
+    this.treeIsChangedEmitter.fire(entity);
   }
 }

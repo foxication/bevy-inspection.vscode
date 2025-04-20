@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { BevyRemoteProtocol, EntityId, BevyVersion, BevyVersions, BrpGetWatchResult } from './protocol';
 import { Connection } from './connection';
-import { ConnectionElement } from './hierarchyData';
 
 type AddBehavior = 'prompt' | 'last';
 
@@ -79,7 +78,7 @@ export class ConnectionList {
     }
 
     // if such online connection already exists
-    const existingConnection = this.connections.get(newConnection.getProtocol().url.host);
+    const existingConnection = this.connections.get(newConnection.getHost());
     if (existingConnection && existingConnection.getNetworkStatus() === 'online') {
       vscode.window.showInformationMessage('Specified connection already exists');
       return;
@@ -138,13 +137,6 @@ export class ConnectionList {
 
   public get(host: string): Connection | undefined {
     return this.connections.get(host);
-  }
-
-  public getAsElement(host: string): ConnectionElement | undefined {
-    const connection = this.get(host);
-    const protocol = connection?.getProtocol();
-    if (connection === undefined || protocol === undefined) return;
-    return new ConnectionElement(protocol.url.host, protocol.serverVersion, connection.getNetworkStatus());
   }
 
   public startWatch(focus: EntityFocus) {

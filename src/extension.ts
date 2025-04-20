@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { createComponentsView } from './componentsView';
-import { ConnectionElement, createHierarchyView, HierarchyDataProvider, EntityElement } from './hierarchyData';
+import { createHierarchyView, HierarchyDataProvider, EntityElement, HierarchyElement } from './hierarchyData';
 import { ConnectionList, EntityFocus } from './connection-list';
+import { Connection } from './connection';
 
 // Context
 function areThereConnections(value: boolean) {
@@ -27,17 +28,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Extension only commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('extension.reconnect', (element: ConnectionElement) =>
-      connections.get(element.host)?.reconnect()
+    vscode.commands.registerCommand('extension.reconnect', (connection: Connection) => connection.reconnect()),
+    vscode.commands.registerCommand('extension.updateEntities', (element: HierarchyElement) =>
+      element instanceof Connection
+        ? element.requestEntityElements()
+        : connections.get(element.host)?.requestEntityElements()
     ),
-    vscode.commands.registerCommand('extension.updateEntities', (element: ConnectionElement | EntityElement) =>
-      connections.get(element.host)?.requestEntityElements()
-    ),
-    vscode.commands.registerCommand('extension.disonnect', (element: ConnectionElement) =>
-      connections.get(element.host)?.disconnect()
-    ),
-    vscode.commands.registerCommand('extension.removeConnection', (element: ConnectionElement) =>
-      connections.removeConnection(element.host)
+    vscode.commands.registerCommand('extension.disonnect', (connection: Connection) => connection.disconnect()),
+    vscode.commands.registerCommand('extension.removeConnection', (connection: Connection) =>
+      connections.removeConnection(connection.getHost())
     ),
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
       connections.get(element.host)?.requestDestroyOfEntity(element)
@@ -58,29 +57,18 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Connect all events
     connection.onHierarchyUpdated((connection) => {
-      hierarchyData.updateInConnection(connection.getProtocol().url.host);
+      hierarchyData.updateConnection(connection);
     });
 
     connection.onEntityDestroyed((destroyed) => {
-      if (destroyed.childOf === undefined) {
-        return;
-      }
+      if (destroyed.childOf === undefined) return;
       const scope = connections.get(destroyed.host)?.getById(destroyed.childOf);
-      if (scope === undefined) {
-        return;
-      }
-      hierarchyData.updateInScope(scope);
+      if (scope === undefined) return;
+      hierarchyData.updateEntity(scope);
     });
 
     connection.onEntityRenamed((renamed) => {
-      if (renamed.childOf === undefined) {
-        return;
-      }
-      const scope = connections.get(renamed.host)?.getById(renamed.childOf);
-      if (scope === undefined) {
-        return;
-      }
-      hierarchyData.updateInScope(scope);
+      hierarchyData.updateEntity(renamed);
     });
 
     connection.onDisconnection((connection) => {
@@ -91,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
           connections.tryCreateConnection('last');
         }
       });
-      if (connections.focus?.host === connection.getProtocol().url.host) {
+      if (connections.focus?.host === connection.getHost()) {
         componentsView.description = 'Disconnected';
         connections.stopWatch();
       }
@@ -99,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     connection.onReconnection(() => {
       hierarchyData.updateConnections();
-      if (connections.focus?.host === connection.getProtocol().url.host) {
+      if (connections.focus?.host === connection.getHost()) {
         componentsView.description = undefined;
       }
     });
