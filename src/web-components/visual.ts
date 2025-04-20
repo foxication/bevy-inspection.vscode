@@ -349,12 +349,12 @@ export class MutationConsent {
     else if (isBrpIterable(result)) edit(result, this.internalPath);
     console.log(`BrpValue after: ${JSON.stringify(result, null, 4)}`);
 
+    const focus = this.sync.source().focus;
     const component = (this.sync.path[0] ?? '').toString();
     const path = this.sync.pathSerialized;
-    postWebviewMessage({
-      cmd: 'mutate_component',
-      data: { component, path, value: result },
-    });
+    if (focus === undefined) return console.error('MutationConsent.mutate(): no focus');
+    if (component === '') return console.error('MutationConsent.mutate(): no component');
+    postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value: result } });
   }
 }
 

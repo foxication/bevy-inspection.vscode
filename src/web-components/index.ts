@@ -2,11 +2,12 @@ import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
 import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath } from '../protocol/types';
 import { defineCustomElements } from './elements';
+import { EntityFocus } from '../connection-list';
 
 export type WebviewMessage =
   | {
       cmd: 'mutate_component';
-      data: { component: string; path: string; value: BrpValue };
+      data: { focus: EntityFocus; component: string; path: string; value: BrpValue };
     }
   | {
       cmd: 'request_of_sync_registry_schema';
@@ -16,13 +17,8 @@ export type WebviewMessage =
 export type VSCodeMessage =
   | { cmd: 'debug_output' }
   | {
-      cmd: 'set_entity_info';
-      host: string;
-      entityId: number;
-    }
-  | {
       cmd: 'update_all';
-      host: string;
+      focus: EntityFocus;
       data: BrpComponentRegistry;
     }
   | {
@@ -55,10 +51,10 @@ defineCustomElements();
   }
   const syncRoot = new DataSyncManager(componentList);
   const requestRegistrySchema = () => {
-    if (syncRoot.currentHost === undefined) return;
+    if (syncRoot.focus === undefined) return;
     postWebviewMessage({
       cmd: 'request_of_sync_registry_schema',
-      host: syncRoot.currentHost,
+      host: syncRoot.focus.host,
     });
   };
 
@@ -69,15 +65,13 @@ defineCustomElements();
       case 'debug_output':
         console.log(syncRoot.debugTree());
         break;
-      case 'set_entity_info':
-        setEntityInfo(message.host, message.entityId);
-        break;
       case 'sync_registry_schema':
         syncRoot.syncRegistrySchema(message.available, message.host, message.data);
         if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
         break;
       case 'update_all':
-        syncRoot.currentHost = message.host;
+        setEntityInfo(message.focus);
+        syncRoot.focus = message.focus;
         syncRoot.mapOfComponents = message.data;
         if (syncRoot.getRegistrySchema() !== undefined) syncRoot.sync();
         else requestRegistrySchema();
@@ -95,15 +89,10 @@ defineCustomElements();
     }
   });
 
-  function setEntityInfo(host: string, entityId: number) {
+  function setEntityInfo(focus: EntityFocus) {
     const hostLabel = document.querySelector('#entity-info-host');
-    if (hostLabel instanceof Element) {
-      hostLabel.textContent = host;
-    }
-
     const idLabel = document.querySelector('#entity-info-id');
-    if (idLabel instanceof Element) {
-      idLabel.textContent = entityId.toString();
-    }
+    if (hostLabel !== null) hostLabel.textContent = focus.host;
+    if (idLabel !== null) idLabel.textContent = focus.entityId.toString();
   }
 })();

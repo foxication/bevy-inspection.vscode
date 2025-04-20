@@ -1,3 +1,4 @@
+import { EntityFocus } from '../connection-list';
 import {
   BrpComponentRegistry,
   BrpRegistrySchema,
@@ -222,9 +223,7 @@ export class SyncNode {
           );
           this.visual.variantTypePath = variant;
           this.children.shrink(0);
-          this.children.push(
-            new SyncNode(source, this.visual.dom, [...this.path, this.visual.variantName], variant)
-          );
+          this.children.push(new SyncNode(source, this.visual.dom, [...this.path, this.visual.variantName], variant));
         }
       } else {
         debugOutput(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
@@ -411,7 +410,7 @@ export class DataSyncManager {
   private root: SyncNode;
   private registrySchemas: { [host: string]: BrpRegistrySchema } = {};
   public mapOfComponents: BrpComponentRegistry = {};
-  public currentHost: string | undefined;
+  public focus: EntityFocus | undefined;
 
   constructor(public readonly mount: HTMLElement) {
     this.root = new SyncNode(this, mount, [], undefined);
@@ -420,9 +419,9 @@ export class DataSyncManager {
     return this;
   }
   getRegistrySchema(): BrpRegistrySchema | undefined {
-    if (this.currentHost === undefined) return;
-    if (!Object.keys(this.registrySchemas).includes(this.currentHost)) return;
-    return this.registrySchemas[this.currentHost];
+    if (this.focus === undefined) return;
+    if (!Object.keys(this.registrySchemas).includes(this.focus.host)) return;
+    return this.registrySchemas[this.focus.host];
   }
   syncRegistrySchema(available: string[], host: string, schema: BrpRegistrySchema) {
     this.registrySchemas[host] = schema;

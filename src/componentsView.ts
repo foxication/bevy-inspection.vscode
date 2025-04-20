@@ -53,24 +53,15 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   // Called on componentsData.onDidChangeTreeData
-  public async updateAll() {
-    if (this.view === undefined) {
-      vscode.commands.executeCommand('componentsView.focus');
-      return;
-    }
-    this.postVSCodeMessage({
-      cmd: 'set_entity_info',
-      host: this.connections.focus?.host ?? 'unknown',
-      entityId: this.connections.focus?.entityId ?? 0,
-    });
-
-    if (this.connections.focus === null) return;
+  public async updateAll(): Promise<void> {
+    if (this.view === undefined) return vscode.commands.executeCommand('componentsView.focus');
+    if (this.connections.focus === null) return console.error(`ComponentsViewProvider.updateAll(): no focus`);
     const connection = this.connections.get(this.connections.focus.host);
     if (connection === undefined) return;
 
     await connection.requestInspectionElements(this.connections.focus.entityId);
     const entityData = connection.getInspectionElements();
-    this.postVSCodeMessage({ cmd: 'update_all', host: this.connections.focus.host, data: entityData });
+    this.postVSCodeMessage({ cmd: 'update_all', focus: this.connections.focus, data: entityData });
   }
 
   public updateComponents(components: BrpObject, removed: TypePath[]) {
@@ -90,25 +81,33 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this.extensionUri],
     };
     webviewView.webview.html = await this.getHtmlForWebview(webviewView.webview);
-    webviewView.webview.onDidReceiveMessage((message: WebviewMessage) => {
+    webviewView.webview.onDidReceiveMessage((message: WebviewMessage): void => {
       console.log(`received message: ${message.cmd}`);
       switch (message.cmd) {
         case 'mutate_component': {
+          // arguments
+          const focus = message.data.focus;
           const component = message.data.component;
           const path = message.data.path;
           const value = message.data.value;
-          console.log(message.data);
+          const protocol = this.connections.get(focus.host)?.getProtocol();
 
-          if (path !== '') return;
-          if (this.connections.focus === null) return;
-          const connection = this.connections.get(this.connections.focus.host);
-          const protocol = connection?.getProtocol();
-          if (protocol === undefined) return;
+          // errors
+          const e1 = `ComponentsViewProvider.mutate_component(): no such connection`;
+          const e2 = `ComponentsViewProvider.mutate_component(): mutation with path is not supported in 0.15`;
 
-          const sending: BrpObject = {};
-          sending[component] = value;
-          console.log(sending);
-          protocol.insert(this.connections.focus.entityId, sending);
+          if (protocol === undefined) return console.error(e1);
+          switch (protocol.serverVersion) {
+            case '0.15':
+              if (path !== '') {
+                return console.error(e2);
+              }
+              protocol.insert(focus.entityId, { [component]: value });
+              return; // success
+            case '0.16':
+              protocol.mutateComponent(focus.entityId, component, path, value);
+              return; // success
+          }
           break;
         }
         case 'request_of_sync_registry_schema': {

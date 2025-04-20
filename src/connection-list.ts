@@ -5,21 +5,7 @@ import { Connection } from './connection';
 type AddBehavior = 'prompt' | 'last';
 
 export class EntityFocus {
-  private _host: string;
-  private _entityId: EntityId;
-
-  constructor(host: string, entityId: EntityId) {
-    this._host = host;
-    this._entityId = entityId;
-  }
-
-  get host() {
-    return this._host;
-  }
-
-  get entityId() {
-    return this._entityId;
-  }
+  constructor(public host: string, public entityId: EntityId) {}
 }
 
 export class ConnectionList {
