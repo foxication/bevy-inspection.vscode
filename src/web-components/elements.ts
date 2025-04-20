@@ -87,7 +87,7 @@ export class HTMLMerged extends HTMLElement {
   }
   set onExpansion(sync: SyncNode) {
     this.onclick = () => {
-      if (this.htmlIcons.expand === undefined) return;
+      if (this.htmlIcons.expand === undefined) return; // skip - no children
       const state = this.htmlIcons.expand.getAttribute('name');
       if (state === 'chevron-up') {
         this.htmlIcons.expand.setAttribute('name', 'chevron-down');
@@ -124,7 +124,7 @@ export class HTMLMerged extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.shadowRoot !== null) return;
+    if (this.shadowRoot !== null) return; // already exists
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.merged];
     shadow.append(
@@ -154,8 +154,7 @@ abstract class HTMLMutatable<T> extends HTMLElement {
   }
   set value(v: T) {
     this._buffer = v;
-    if (this.inEdit) return;
-    this.setTextFromBuffer();
+    if (!this.inEdit) this.setTextFromBuffer();
   }
   set mutability(m: MutationConsent) {
     this._mutability = m;
@@ -213,7 +212,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
   }
 
   connectedCallback() {
-    if (this.shadowRoot !== null) return;
+    if (this.shadowRoot !== null) return; // already exists
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.editableText];
     shadow.append(this.jsonElement);
@@ -270,7 +269,7 @@ export class HTMLString extends HTMLMutatable<string> {
   }
 
   connectedCallback() {
-    if (this.shadowRoot !== null) return;
+    if (this.shadowRoot !== null) return; // already exists
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.editableText];
     shadow.append(this.textElement);

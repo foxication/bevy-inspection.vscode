@@ -321,26 +321,21 @@ export class MutationConsent {
     let result = structuredClone(this.sync.access());
     const modify = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
       const firstSegment = path[0];
-      if (access === null) return;
       if (isBrpObject(access) && typeof firstSegment === 'string' && path.length === 1) {
         access[firstSegment] = value;
-        return;
       }
       if (isBrpArray(access) && typeof firstSegment === 'number' && path.length === 1) {
         access[firstSegment] = value;
-        return;
       }
       if (isBrpObject(access) && typeof firstSegment === 'string') {
         const next = access[firstSegment];
         if (isBrpIterable(next)) modify(next, path.slice(1));
-        return;
       }
       if (isBrpArray(access) && typeof firstSegment === 'number') {
         const next = access[firstSegment];
         if (isBrpIterable(next)) modify(next, path.slice(1));
-        return;
       }
-      return;
+      return console.error(`${this.constructor.name}.mutate().modify(): access is not Object/Array`);
     };
 
     if (this.internalPath.length === 0) result = value;

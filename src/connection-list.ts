@@ -23,9 +23,6 @@ export class ConnectionList {
   private addedEmitter = new vscode.EventEmitter<Connection>();
   readonly onAdded = this.addedEmitter.event;
 
-  private addErrorEmitter = new vscode.EventEmitter<void>();
-  readonly onAddError = this.addErrorEmitter.event;
-
   private removedEmitter = new vscode.EventEmitter<Connection>();
   readonly onRemoved = this.removedEmitter.event;
 
@@ -35,8 +32,9 @@ export class ConnectionList {
   private getWatchResultEmitter = new vscode.EventEmitter<BrpGetWatchResult>();
   readonly onGetWatchResult = this.getWatchResultEmitter.event;
 
-  public async tryCreateConnection(behavior: AddBehavior = 'prompt') {
+  public async tryCreateConnection(behavior: AddBehavior = 'prompt'): Promise<void> {
     let newConnection;
+    const errSrc = 'ConnectionList.tryCreateConnection(): ';
 
     if (this.lastProtocol instanceof BevyRemoteProtocol && behavior === 'last') {
       newConnection = new Connection(this.lastProtocol.url, this.lastProtocol.serverVersion);
@@ -46,73 +44,61 @@ export class ConnectionList {
         title: 'Connection to Bevy Instance',
         value: BevyRemoteProtocol.DEFAULT_URL.toString(),
       });
-      if (!url) {
-        return;
-      }
+      if (url === undefined) return console.error(errSrc + 'no url');
 
       // Input version
-      const versions = BevyVersions;
-      const chosenVersion = (await vscode.window.showQuickPick(versions, { canPickMany: false })) as
-        | BevyVersion
-        | undefined;
-      if (chosenVersion === undefined) {
-        return;
-      }
+      const chosenVersion = await vscode.window.showQuickPick(BevyVersions, { canPickMany: false });
+      if (chosenVersion === undefined) return console.error(errSrc + 'user did not pick version');
 
       // Create new session
-      newConnection = new Connection(new URL(url), chosenVersion);
+      newConnection = new Connection(new URL(url), chosenVersion as BevyVersion);
     }
 
     // if such online connection already exists
     const existingConnection = this.connections.get(newConnection.getHost());
     if (existingConnection && existingConnection.getNetworkStatus() === 'online') {
-      vscode.window.showInformationMessage('Specified connection already exists');
-      return;
+      vscode.window.showErrorMessage('Specified connection already exists');
+      return; // error in ui
     }
 
     newConnection.initialize().then((protocolStatus) => {
       if (protocolStatus !== 'success') {
-        this.addErrorEmitter.fire();
-        return;
+        vscode.window.showErrorMessage('Bevy instance refused to connect');
+        return; // error in ui
       }
 
       // Success
       this.lastProtocol = newConnection.cloneProtocol();
       this.connections.set(this.lastProtocol.url.host, newConnection);
-
-      // Events
       this.addedEmitter.fire(newConnection);
     });
   }
 
   public async updateFocus(newFocus: EntityFocus | null) {
-    // Check if focus different
-    if (this._focus === newFocus) return;
-
-    // Scenario when focus is null
+    if (newFocus === this._focus) return; // skip
     if (newFocus === null) {
       this._focus = null;
       this.focusChangedEmitter.fire(null);
-      return;
+      return; // set focus to null
     }
 
     // Check if connection exists and is online
+    const errSrc = 'ConnectionList.updateFocus(): ';
     const connection = this.connections.get(newFocus.host);
-    if (connection === undefined || connection.getNetworkStatus() === 'offline') return;
+    if (connection === undefined) return console.error(errSrc + 'no connection');
+    if (connection.getNetworkStatus() !== 'online') return console.error(errSrc + 'connection is not online');
 
-    // Change focus of inspection
+    // Change focus
     this._focus = new EntityFocus(newFocus.host, newFocus.entityId);
 
-    // before emitting change, request data
-    this.get(newFocus.host)?.requestInspectionElements(newFocus.entityId);
+    // request data, then emit change
+    await connection.requestInspectionElements(newFocus.entityId);
     this.focusChangedEmitter.fire(newFocus);
   }
 
   public removeConnection(host: string) {
     const connection = this.get(host);
-    if (connection === undefined || connection.getNetworkStatus() === 'online') {
-      return;
-    }
+    if (connection === undefined) return console.error('ConnectionList.removeConnection(): no connection');
     this.connections.delete(host);
     this.removedEmitter.fire(connection);
   }
@@ -130,20 +116,14 @@ export class ConnectionList {
     this.stopWatch();
 
     // Get connection
-    const connection = this.get(focus.host);
-    const protocol = connection?.getProtocol();
-    if (connection === undefined || protocol === undefined) return;
-
-    connection
-      .getProtocol()
+    const protocol = this.get(focus.host)?.getProtocol();
+    if (protocol === undefined) return console.error(`${this.constructor.name}.startWatch: no connection`);
+    protocol
       .list(focus.entityId)
       .then((response) => {
-        // Skip if no components to watch
-        if (response.result === undefined) return;
-
-        // Start watching
+        if (response.result === undefined) return; // Skip if no components to watch
         this.watchingController = new AbortController();
-        connection.getProtocol().getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
+        protocol.getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
           this.getWatchResultEmitter.fire(v);
         });
       })
@@ -151,7 +131,6 @@ export class ConnectionList {
   }
 
   public stopWatch() {
-    if (this.watchingController === undefined) return;
-    this.watchingController.abort();
+    this.watchingController?.abort();
   }
 }

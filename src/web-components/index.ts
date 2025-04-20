@@ -45,13 +45,10 @@ defineCustomElements();
 // Main script
 (function () {
   const componentList = document.querySelector('#section-component-list') as HTMLDivElement;
-  if (componentList === null) {
-    console.error('#section-component-list is not found in DOM');
-    return;
-  }
+  if (componentList === null) return console.error('#section-component-list is not found in DOM');
   const syncRoot = new DataSyncManager(componentList);
   const requestRegistrySchema = () => {
-    if (syncRoot.focus === undefined) return;
+    if (syncRoot.focus === undefined) return console.error('requestRegistrySchema: no focus');
     postWebviewMessage({
       cmd: 'request_of_sync_registry_schema',
       host: syncRoot.focus.host,

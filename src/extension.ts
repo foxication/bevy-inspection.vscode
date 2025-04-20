@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     connection.onEntityDestroyed((destroyed) => {
       const connection = connections.get(destroyed.host);
-      if (connection === undefined) return;
+      if (connection === undefined) return console.error('Connection.onEntityDestroyed: no connection');
       hierarchyData.update(typeof destroyed.childOf === 'number' ? connection.getById(destroyed.childOf) : connection);
     });
 
@@ -91,9 +91,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
     });
   });
-  connections.onAddError(() => {
-    vscode.window.showErrorMessage('Bevy instance refused to connect');
-  });
   connections.onRemoved(() => {
     areThereConnections(connections.all().length > 0);
     hierarchyData.update(undefined);
@@ -105,22 +102,20 @@ export function activate(context: vscode.ExtensionContext) {
   hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
   hierarchyView.onDidChangeSelection((event) => {
     switch (event.selection.length) {
-      // case 0: {
-      //   connections.updateFocus(null);
-      //   componentsView.title = undefined;
-      //   break;
-      // }
+      case 0: {
+        break;
+      }
       case 1: {
         const selection = event.selection[0];
-        if (!(selection instanceof EntityElement)) {
-          break;
-        }
-        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') {
-          break;
-        }
+        if (!(selection instanceof EntityElement)) break;
+        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') break;
         connections.updateFocus(new EntityFocus(selection.host, selection.id));
         componentsView.title = 'Components of ' + (selection.name ?? selection.id);
         componentsView.description = undefined;
+        break;
+      }
+      default: {
+        // TODO
         break;
       }
     }

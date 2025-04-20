@@ -39,7 +39,7 @@ class SyncNodeCollection {
     this.updateIsExpandable();
   }
   shrink(newLength: number) {
-    if (newLength >= this.collection.length) return;
+    if (newLength >= this.collection.length) return; // skip
     for (let index = newLength; index < this.collection.length; index++) this.collection[index].preDestruct();
     this.collection.length = newLength;
     this.updateIsExpandable();
@@ -87,24 +87,24 @@ export class SyncNode {
       for (const childTypePath of componentNames) {
         pushChild(childTypePath, childTypePath);
       }
-      return;
+      return this;
     }
 
     // Get schema
     if (typePath === undefined) {
       this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `typePath is undefined` });
-      return;
+      return this;
     }
     const schema = getSchemaRecursively(typePath, source.getRegistrySchema() ?? {});
     if (schema === undefined) {
       this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `schema is not found` });
-      return;
+      return this;
     }
 
     // SerializedData
     if (schema.reflectTypes?.includes('Serialize')) {
       this.visual = new SerializedVisual(this, anchor, schema, access);
-      return;
+      return this;
     }
 
     // Parsing other types of Data
@@ -392,13 +392,9 @@ export class SyncNode {
     this.children.unwrap().forEach((child) => {
       const childPathSegment = child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
       const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
-      if (childPathSegment === undefined) {
-        after += child.debugTree(level + 1, direction);
-        return;
-      }
-      if (directionPathSegment === childPathSegment || directionPathSegment === undefined) {
+      if (childPathSegment === undefined) after += child.debugTree(level + 1, direction);
+      if (childPathSegment === directionPathSegment || directionPathSegment === undefined) {
         after += child.debugTree(level + 1, direction.slice(1));
-        return;
       }
     });
 
