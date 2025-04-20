@@ -381,9 +381,9 @@ export class SyncNode {
       description += 'ERROR: ' + this.visual.error.message;
       return spaced(treeSegment) + ' ' + description + '\n'; // Parsing error
     }
-    if (!(this.visual instanceof ComponentsVisual)) description += this.visual.schema.kind;
+    if ('schema' in this.visual) description += this.visual.schema.kind;
     if (this.visual instanceof SerializedVisual) description += '+Serde';
-    if (!(this.visual instanceof ComponentsVisual)) description += '(' + this.visual.schema.typePath + ')';
+    if ('schema' in this.visual) description += '(' + this.visual.schema.typePath + ')';
     if (this.visual instanceof SerializedVisual) description += ' = ' + JSON.stringify(this.visual.value);
     if (this.visual instanceof EnumVisual) description += '/' + JSON.stringify(this.visual.variantName);
 
