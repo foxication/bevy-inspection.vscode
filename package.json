@@ -196,27 +196,27 @@
 				},
 				{
 					"command": "extension.reconnect",
-					"when": "never"
+					"when": "false"
 				},
 				{
 					"command": "extension.updateEntities",
-					"when": "never"
+					"when": "false"
 				},
 				{
 					"command": "extension.disonnect",
-					"when": "never"
+					"when": "false"
 				},
 				{
 					"command": "extension.removeConnection",
-					"when": "never"
+					"when": "false"
 				},
 				{
 					"command": "extension.destroyEntity",
-					"when": "never"
+					"when": "false"
 				},
 				{
 					"command": "extension.renameEntity",
-					"when": "never"
+					"when": "false"
 				}
 			],
 			"view/title": [
