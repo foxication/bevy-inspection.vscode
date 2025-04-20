@@ -86,9 +86,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     connection.onReconnection(() => {
       hierarchyData.update(undefined);
-      if (connections.focus?.host === connection.getHost()) {
-        componentsView.description = undefined;
-      }
+      if (connections.focus?.host === connection.getHost()) componentsView.description = undefined;
+      if (connections.focus !== null) componentsView.updateAll(connections.focus);
     });
   });
   connections.onRemoved(() => {
@@ -121,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  connections.onFocusChanged(() => {
-    componentsView.updateAll();
+  connections.onFocusChanged((focus) => {
+    if (focus !== null) componentsView.updateAll(focus);
   });
 }

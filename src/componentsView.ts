@@ -53,15 +53,14 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   // Called on componentsData.onDidChangeTreeData
-  public async updateAll(): Promise<void> {
+  public async updateAll(focus: EntityFocus): Promise<void> {
     if (this.view === undefined) return vscode.commands.executeCommand('componentsView.focus');
-    if (this.connections.focus === null) return console.error(`ComponentsViewProvider.updateAll(): no focus`);
-    const connection = this.connections.get(this.connections.focus.host);
+    const connection = this.connections.get(focus.host);
     if (connection === undefined) return console.error(`ComponentsViewProvider.updateAll(): no connection`);
 
-    await connection.requestInspectionElements(this.connections.focus.entityId);
+    await connection.requestInspectionElements(focus.entityId);
     const entityData = connection.getInspectionElements();
-    this.postVSCodeMessage({ cmd: 'update_all', focus: this.connections.focus, data: entityData });
+    this.postVSCodeMessage({ cmd: 'update_all', focus, data: entityData });
   }
 
   public updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
@@ -121,7 +120,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     });
     this.view = webviewView;
     webviewView.onDidDispose(() => (this.view = undefined));
-    if (this.connections.focus !== null) this.updateAll();
+    if (this.connections.focus !== null) this.updateAll(this.connections.focus);
   }
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {
