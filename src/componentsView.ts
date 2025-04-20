@@ -36,14 +36,14 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async postVSCodeMessage(message: VSCodeMessage) {
-    if (this.view === undefined) return;
+    if (this.view === undefined) return console.error(`ComponentsViewProvider.postVSCodeMessage: no view`);
     await this.view.webview.postMessage(message);
   }
 
   public async syncRegistrySchema(host: string) {
     const available = this.connections.all().map((connection) => connection.getProtocol().url.host);
     const connection = this.connections.get(host);
-    if (connection === undefined) return;
+    if (connection === undefined) return console.error(`ComponentsViewProvider.syncRegistrySchema: no connection`);
     return this.postVSCodeMessage({
       cmd: 'sync_registry_schema',
       available,
@@ -57,7 +57,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     if (this.view === undefined) return vscode.commands.executeCommand('componentsView.focus');
     if (this.connections.focus === null) return console.error(`ComponentsViewProvider.updateAll(): no focus`);
     const connection = this.connections.get(this.connections.focus.host);
-    if (connection === undefined) return;
+    if (connection === undefined) return console.error(`ComponentsViewProvider.updateAll(): no connection`);
 
     await connection.requestInspectionElements(this.connections.focus.entityId);
     const entityData = connection.getInspectionElements();
@@ -65,7 +65,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   public updateComponents(components: BrpObject, removed: TypePath[]) {
-    if (this.view === undefined) return;
+    if (this.view === undefined) return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     this.postVSCodeMessage({ cmd: 'update_components', components, removed });
   }
 
