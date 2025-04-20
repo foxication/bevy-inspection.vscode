@@ -63,7 +63,7 @@ export class ComponentsVisual extends Visual {
 
   static createHTML() {
     const result = document.createElement('h3');
-    result.textContent = 'Component List';
+    result.textContent = 'Components';
     return result;
   }
 }
