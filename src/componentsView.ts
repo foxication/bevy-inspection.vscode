@@ -60,7 +60,8 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
     await connection.requestInspectionElements(focus.entityId);
     const entityData = connection.getInspectionElements();
-    this.postVSCodeMessage({ cmd: 'update_all', focus, data: entityData });
+    const errorData = connection.getInspectionErrors();
+    this.postVSCodeMessage({ cmd: 'update_all', focus, components: entityData, errors: errorData });
   }
 
   public updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {

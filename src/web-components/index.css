@@ -67,10 +67,10 @@ ul#entity-info {
 }
 
 /*
- * Component List
+ * Sections
  */
 
-#section-component-list {
+.section-list {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

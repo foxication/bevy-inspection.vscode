@@ -1,8 +1,9 @@
 import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
-import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath } from '../protocol/types';
+import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath, BrpErrors } from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
+import { DataErrorsManager as ErrorList } from './errors';
 
 export type WebviewMessage =
   | {
@@ -23,7 +24,8 @@ export type VSCodeMessage =
   | {
       cmd: 'update_all';
       focus: EntityFocus;
-      data: BrpComponentRegistry;
+      components: BrpComponentRegistry;
+      errors: BrpErrors;
     }
   | {
       cmd: 'sync_registry_schema';
@@ -49,9 +51,13 @@ defineCustomElements();
 
 // Main script
 (function () {
-  const componentList = document.querySelector('#section-component-list') as HTMLDivElement;
-  if (componentList === null) return console.error('#section-component-list is not found in DOM');
+  const componentList = document.querySelector('#component-tree') as HTMLDivElement;
+  if (componentList === null) return console.error('componentList is not found in DOM');
   const syncRoot = new DataSyncManager(componentList);
+
+  const errorList = document.querySelector('#error-list') as HTMLDListElement;
+  if (errorList === null) return console.error('errorList is not found in DOM');
+  const errorsRoot = new ErrorList(errorList);
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -59,6 +65,7 @@ defineCustomElements();
     switch (message.cmd) {
       case 'debug_output':
         console.log(syncRoot.debugTree());
+        console.log(errorsRoot.debugList());
         break;
       case 'sync_registry_schema':
         syncRoot.syncRegistrySchema(message.available, message.host, message.data);
@@ -74,7 +81,8 @@ defineCustomElements();
       case 'update_all':
         setEntityInfo(message.focus);
         syncRoot.focus = message.focus;
-        syncRoot.mapOfComponents = message.data;
+        syncRoot.mapOfComponents = message.components;
+        errorsRoot.update(message.errors);
         switch (syncRoot.trySync()) {
           case 'done':
             postWebviewMessage({ cmd: 'ready_for_watch', focus: message.focus });

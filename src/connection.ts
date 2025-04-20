@@ -1,5 +1,13 @@
 import * as vscode from 'vscode';
-import { EntityId, BevyRemoteProtocol, TypePath, BevyVersion, BrpObject, BrpRegistrySchema } from './protocol';
+import {
+  EntityId,
+  BevyRemoteProtocol,
+  TypePath,
+  BevyVersion,
+  BrpObject,
+  BrpRegistrySchema,
+  BrpErrors,
+} from './protocol';
 import { EntityElement } from './hierarchyData';
 
 type ProtocolDisconnection = 'disconnection';
@@ -21,6 +29,7 @@ export class Connection {
   private entityElements = new Map<EntityId, EntityElement>();
   private inspectionList: TypePath[] = [];
   private inspectionTree: BrpObject = {};
+  private inspectionErrors: BrpErrors = {};
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -133,11 +142,16 @@ export class Connection {
 
     this.inspectionList = listResponse.result;
     this.inspectionTree = getResponse.result.components;
+    this.inspectionErrors = getResponse.result.errors;
     return 'success';
   }
 
   public getInspectionElements() {
     return this.inspectionTree;
+  }
+  
+  public getInspectionErrors() {
+    return this.inspectionErrors;
   }
 
   public getInspectionList() {
