@@ -198,7 +198,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
           const parsed = JSON.parse(this.jsonElement.innerText);
           this.mutate(parsed);
         } catch {
-          /* empty */
+          console.error(`Error in parsing brpValue`);
         }
         this.setTextFromBuffer();
         this.jsonElement.blur();

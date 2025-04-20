@@ -319,9 +319,7 @@ export class MutationConsent {
 
   mutate(value: BrpValue) {
     let result = structuredClone(this.sync.access());
-    console.log(`BrpValue before: ${JSON.stringify(result, null, 4)}`);
-
-    const edit = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
+    const modify = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
       const firstSegment = path[0];
       if (access === null) return;
       if (isBrpObject(access) && typeof firstSegment === 'string' && path.length === 1) {
@@ -334,20 +332,19 @@ export class MutationConsent {
       }
       if (isBrpObject(access) && typeof firstSegment === 'string') {
         const next = access[firstSegment];
-        if (isBrpIterable(next)) edit(next, path.slice(1));
+        if (isBrpIterable(next)) modify(next, path.slice(1));
         return;
       }
       if (isBrpArray(access) && typeof firstSegment === 'number') {
         const next = access[firstSegment];
-        if (isBrpIterable(next)) edit(next, path.slice(1));
+        if (isBrpIterable(next)) modify(next, path.slice(1));
         return;
       }
       return;
     };
 
     if (this.internalPath.length === 0) result = value;
-    else if (isBrpIterable(result)) edit(result, this.internalPath);
-    console.log(`BrpValue after: ${JSON.stringify(result, null, 4)}`);
+    else if (isBrpIterable(result)) modify(result, this.internalPath);
 
     const focus = this.sync.source().focus;
     const component = (this.sync.path[0] ?? '').toString();
