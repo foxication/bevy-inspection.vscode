@@ -29,6 +29,9 @@ export class DataErrorsManager {
       element.tooltip =
         `TypePath: ${key}\n` + `Code: ${errors[key].code}\n` + `Contains data: ${errors[key].data !== undefined}`;
       element.brpValue = errors[key].message;
+      element.allowValueWrapping();
+
+      this.errors.push(element);
 
       anchor.after(element);
       anchor = element;

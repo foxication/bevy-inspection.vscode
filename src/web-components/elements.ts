@@ -110,6 +110,9 @@ export class HTMLMerged extends HTMLElement {
   get isExpandable() {
     return this.htmlIcons.expand !== undefined;
   }
+  allowValueWrapping() {
+    this.htmlRight?.value.allowWrapping();
+  }
 
   static create() {
     return document.createElement(HTML_MERGED_NAME) as HTMLMerged;
@@ -164,6 +167,7 @@ abstract class HTMLMutatable<T> extends HTMLElement {
   mutate(value: BrpValue) {
     this._mutability?.mutate(value);
   }
+  abstract allowWrapping(): void;
 }
 
 export class HTMLJson extends HTMLMutatable<BrpValue> {
@@ -222,6 +226,9 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
   allowEditing() {
     this.jsonElement.contentEditable = 'plaintext-only';
   }
+  allowWrapping() {
+    // skip
+  }
 }
 
 export class HTMLString extends HTMLMutatable<string> {
@@ -278,5 +285,9 @@ export class HTMLString extends HTMLMutatable<string> {
   }
   allowEditing() {
     this.textElement.contentEditable = 'plaintext-only';
+  }
+  allowWrapping(): void {
+    this.textElement.style.textWrap = 'wrap';
+    this.textElement.style.wordBreak = 'break-all';
   }
 }

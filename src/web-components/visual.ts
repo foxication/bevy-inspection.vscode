@@ -78,6 +78,7 @@ export class ErrorVisual extends Visual {
     this.dom.label = (this.sync.lastPathSegment ?? '...').toString();
     this.dom.tooltip = (this.error.code ?? 'Error').toString();
     this.dom.brpValue = this.error.message;
+    this.dom.allowValueWrapping();
     anchor.after(this.dom);
   }
 }
