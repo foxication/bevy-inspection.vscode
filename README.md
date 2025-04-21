@@ -1,59 +1,32 @@
 # Bevy Inspection
 
-Monitor and modify data of Bevy game in runtime.
+**Runtime Monitoring & Modification Tool for Bevy Engine**
 
-Communications based on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.html) on JSON-RPC 2.0 on HTTP.
+[![License](https://img.shields.io/badge/license-Apache-2.svg)](LICENSE)
+[![Bevy Version](https://img.shields.io/badge/Bevy-0.16%2B-orange)](https://bevyengine.org)
 
-![Screenshot 2025-02-23 045438](https://github.com/user-attachments/assets/efa86754-9d9d-4f3a-a928-ef91d42f806b)
+![image](https://github.com/user-attachments/assets/39791d0e-0419-434d-9e9b-3bce2af13813)
 
-## Features (IN DEVELOPMENT)
+## ⚠️ Disclaimer
 
-- Monitor entities, components, values
-- Add/remove/modify entites, components
-- Review/organize hierarchy of entities
+- **Not Official**: This is a community-driven project, not affiliated with the official Bevy Engine team.
+- **Early Development**: Currently in alpha stage — expect bugs and missing features. Contributions welcome!
+- **Inspiration**: Built with inspiration from [splo/bevy-inspector-vscode](https://github.com/splo/vscode-bevy-inspector).
 
-## In Future Plans
+## 📦 Supported Versions
 
-- Diagnostics of Bevy applications
-- Resources (monitor + modify)
-- States (monitor + modify)
-- Events (catch + emmit)
+| Bevy Version | Status         |
+| ------------ | -------------- |
+| 0.16+        | ✅ Supported   |
+| < 0.16       | ❌ Unsupported |
 
-## Requirements
+Built on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.html) via JSON-RPC 2.0 over HTTP.
 
-You have to enable feature in your game project:
+## 🛠️ How To Use
 
-```toml
-# cargo.toml
+...
 
-[dependencies]
-bevy = { version = "0.15.1", features = ["bevy_remote"] }
-```
-
-Run `RemotePlugin` and `RemoteHttpPlugin`:
-
-```rust
-// main.rs
-
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(RemotePlugin::default())
-        .add_plugins(RemoteHttpPlugin::default())
-        .run();
-}
-```
-
-## Awareness of Future Changes in Bevy
-
-- [Issue: BRP resource methods](https://github.com/bevyengine/bevy/pull/17423)
-- [Issue: OpenRPC support in Bevy Remote Protocol](https://github.com/bevyengine/bevy/issues/16744)
-
-## Credits
-
-Extension was inspired by [splo/vscode-bevy-inspector](https://github.com/splo/vscode-bevy-inspector)
-
-## Support
+## 💖 Support
 
 Feel free to donate to support repository development/maintenance.
 
