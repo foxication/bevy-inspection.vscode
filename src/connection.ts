@@ -1,16 +1,18 @@
 import * as vscode from 'vscode';
 import {
   EntityId,
-  BevyRemoteProtocol,
   TypePath,
   BrpObject,
   BrpRegistrySchema,
   BrpErrors,
+  BevyRemoteProtocolV016,
+  BrpResponse,
+  BrpError,
+  BrpResponseError,
 } from './protocol';
 import { EntityElement } from './hierarchyData';
 
-type ProtocolDisconnection = 'disconnection';
-type ProtocolResult = 'success' | 'error' | ProtocolDisconnection;
+type ProtocolResult = 'success' | 'disconnection';
 export type NetworkStatus = 'offline' | 'online';
 
 // Inspection data
@@ -19,10 +21,7 @@ export type NetworkStatus = 'offline' | 'online';
 // export type JsonAll = JsonValue | JsonMap | JsonAll[];
 
 export class Connection {
-  private protocol: BevyRemoteProtocol;
   private network: NetworkStatus;
-  private _version: string = '';
-  private _title: string = '';
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
@@ -44,9 +43,8 @@ export class Connection {
   private reconnectionEmitter = new vscode.EventEmitter<Connection>();
   readonly onReconnection = this.reconnectionEmitter.event;
 
-  constructor(url: URL) {
+  constructor(private protocol: BevyRemoteProtocolV016) {
     this.network = 'offline';
-    this.protocol = new BevyRemoteProtocol(url);
   }
 
   public disconnect() {
@@ -57,26 +55,27 @@ export class Connection {
     this.disconnectionEmitter.fire(this);
   }
 
-  private errorHandler(reason: Error): ProtocolDisconnection {
-    if (reason.message === 'fetch failed') {
+  private isCorrectResponseOrDisconnect<R>(
+    response: BrpResponse<R> | BrpError
+  ): response is { jsonrpc: string; id: number; result: R; error?: BrpResponseError } {
+    const isError = typeof response === 'string';
+    if (isError) {
       this.disconnect();
-      return 'disconnection';
+      return false;
     }
-    throw reason;
+    if (response.result === undefined) return false;
+    return true;
   }
 
   public async requestEntityElements(): Promise<ProtocolResult> {
-    const response = await this.protocol
-      .query({
-        option: [
-          'bevy_ecs::name::Name',
-          'bevy_ecs::hierarchy::ChildOf',
-          'bevy_ecs::hierarchy::Children',
-        ],
-      })
-      .catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') return response;
-    if (response.result === undefined) return 'error';
+    const response = await this.protocol.query({
+      option: [
+        'bevy_ecs::name::Name',
+        'bevy_ecs::hierarchy::ChildOf',
+        'bevy_ecs::hierarchy::Children',
+      ],
+    });
+    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
     this.entityElements = new Map(
       response.result.map((value) => {
         return [
@@ -97,42 +96,16 @@ export class Connection {
   }
 
   public async requestRegisteredComponents(): Promise<ProtocolResult> {
-    const response = await this.protocol.list().catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') {
-      return response;
-    }
-    if (response.result === undefined) {
-      return 'error';
-    }
-
+    const response = await this.protocol.list();
+    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
     this.registeredComponents = response.result;
     return 'success';
   }
 
   public async requestRegistrySchema(): Promise<ProtocolResult> {
-    const response = await this.protocol.registrySchema().catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') {
-      return response;
-    }
-    if (response.result === undefined) {
-      return 'error';
-    }
-
+    const response = await this.protocol.registrySchema();
+    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
     this.registrySchema = response.result;
-    return 'success';
-  }
-
-  public async requestBevyInfo(): Promise<ProtocolResult> {
-    const response = await this.protocol.rpcDiscover().catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') {
-      return response;
-    }
-    if (response.result === undefined) {
-      return 'error';
-    }
-
-    this._title = response.result.info.title;
-    this._version = response.result.info.version;
     return 'success';
   }
 
@@ -143,7 +116,6 @@ export class Connection {
       await this.requestEntityElements(),
       await this.requestRegisteredComponents(),
       await this.requestRegistrySchema(),
-      await this.requestBevyInfo(),
     ]) {
       if (status !== 'success') return status;
     }
@@ -151,15 +123,11 @@ export class Connection {
   }
 
   public async requestInspectionElements(entity: EntityId): Promise<ProtocolResult> {
-    const listResponse = await this.protocol.list(entity).catch((e) => this.errorHandler(e));
-    if (listResponse === 'disconnection') return 'disconnection';
-    if (listResponse.result === undefined) return 'error';
+    const listResponse = await this.protocol.list(entity);
+    if (!this.isCorrectResponseOrDisconnect(listResponse)) return 'disconnection';
 
-    const getResponse = await this.protocol
-      .get(entity, listResponse.result)
-      .catch((e) => this.errorHandler(e));
-    if (getResponse === 'disconnection') return 'disconnection';
-    if (getResponse.result === undefined) return 'error';
+    const getResponse = await this.protocol.get(entity, listResponse.result);
+    if (!this.isCorrectResponseOrDisconnect(getResponse)) return 'disconnection';
 
     this.inspectionList = listResponse.result;
     this.inspectionTree = getResponse.result.components;
@@ -188,10 +156,8 @@ export class Connection {
   }
 
   public async requestDestroyOfEntity(element: EntityElement): Promise<ProtocolResult> {
-    const response = await this.protocol.destroy(element.id).catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') {
-      return 'disconnection';
-    }
+    const response = await this.protocol.destroy(element.id);
+    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
     if (response.result === null) {
       this.entityElements.delete(element.id);
       this.entityDestroyedEmitter.fire(element);
@@ -205,25 +171,14 @@ export class Connection {
       value: element.name,
     }); // Prompt
     if (newName === undefined) {
-      return 'error';
+      return 'success'; // ignore bad prompt
     }
-    const response = await this.protocol
-      .insert(element.id, { 'bevy_ecs::name::Name': newName })
-      .catch((e) => this.errorHandler(e));
-    if (response === 'disconnection') {
-      return 'disconnection';
-    }
-    if (response.result === null && response.error === undefined) {
-      const isInserted = element.name === undefined;
-      element.name = newName;
-      this.entityRenamedEmitter.fire([element, isInserted]);
-      return 'success';
-    }
-    return 'error';
-  }
-
-  public cloneProtocol() {
-    return new BevyRemoteProtocol(this.protocol.url);
+    const response = await this.protocol.insert(element.id, { 'bevy_ecs::name::Name': newName });
+    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
+    const isInserted = element.name === undefined;
+    element.name = newName;
+    this.entityRenamedEmitter.fire([element, isInserted]);
+    return 'success';
   }
 
   public getProtocol() {
@@ -231,7 +186,7 @@ export class Connection {
   }
 
   public getTitle() {
-    return this._title;
+    return this.protocol.title;
   }
 
   public getHost() {
@@ -239,7 +194,7 @@ export class Connection {
   }
 
   public getVersion() {
-    return this._version;
+    return this.protocol.version;
   }
 
   public reconnect() {

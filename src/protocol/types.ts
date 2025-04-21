@@ -1,19 +1,19 @@
 export type EntityId = number;
 export type TypePath = string;
 
+export type BrpError = 'disconnection' | 'unspecified_error';
 export type BrpResponse<R> = {
   jsonrpc: string;
   id: number;
   result?: R;
-  error?: BrpError;
+  error?: BrpResponseError;
 };
-
-export type BrpError = {
+export type BrpResponseError = {
   code: number;
   message: string;
   data?: BrpValue;
 };
-export type BrpErrors = { [key: TypePath]: BrpError };
+export type BrpErrors = { [key: TypePath]: BrpResponseError };
 
 export type BrpValue = BrpPrimitive | BrpValue[] | BrpObject;
 export type BrpPrimitive = string | number | boolean | null;

@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, EntityId, BrpGetWatchResult } from './protocol';
+import {
+  EntityId,
+  BrpGetWatchResult,
+  DEFAULT_BEVY_URL,
+  initializeBevyRemoteProtocol,
+} from './protocol';
 import { Connection } from './connection';
 
 type AddBehavior = 'prompt' | 'last';
@@ -14,7 +19,7 @@ export class EntityFocus {
 export class ConnectionList {
   // Properties
   private connections = new Map<string, Connection>();
-  private lastProtocol: BevyRemoteProtocol | null = null;
+  private lastUrl: URL | undefined = undefined;
   private _focus: EntityFocus | null = null;
   private watchingController: AbortController | undefined = undefined;
 
@@ -36,30 +41,37 @@ export class ConnectionList {
   readonly onGetWatchResult = this.getWatchResultEmitter.event;
 
   public async tryCreateConnection(behavior: AddBehavior = 'prompt'): Promise<void> {
-    let newConnection;
+    let url: URL;
     const errSrc = 'ConnectionList.tryCreateConnection(): ';
 
-    if (this.lastProtocol instanceof BevyRemoteProtocol && behavior === 'last') {
-      newConnection = new Connection(this.lastProtocol.url);
+    if (this.lastUrl !== undefined && behavior === 'last') {
+      url = this.lastUrl;
     } else {
       // Input URL
-      const url = await vscode.window.showInputBox({
+      const input = await vscode.window.showInputBox({
         title: 'Connection to Bevy Instance',
-        value: BevyRemoteProtocol.DEFAULT_URL.toString(),
+        value: DEFAULT_BEVY_URL.toString(),
       });
-      if (url === undefined) return console.error(errSrc + 'no url');
-
-      // Create new session
-      newConnection = new Connection(new URL(url));
+      if (input === undefined) return console.error(errSrc + 'no url');
+      url = new URL(input);
     }
 
     // if such online connection already exists
-    const existingConnection = this.connections.get(newConnection.getHost());
+    const existingConnection = this.connections.get(url.host); // REDO (bad solution)
     if (existingConnection && existingConnection.getNetworkStatus() === 'online') {
       vscode.window.showErrorMessage('Specified connection already exists');
       return; // error in ui
     }
 
+    // try to initialize protocol
+    const newProtocol = await initializeBevyRemoteProtocol(url);
+    if (typeof newProtocol === 'string') {
+      vscode.window.showErrorMessage('Bevy instance refused to connect');
+      return; // error in ui
+    }
+
+    // try to initialize connection
+    const newConnection = new Connection(newProtocol);
     newConnection.initialize().then((protocolStatus) => {
       if (protocolStatus !== 'success') {
         vscode.window.showErrorMessage('Bevy instance refused to connect');
@@ -67,8 +79,8 @@ export class ConnectionList {
       }
 
       // Success
-      this.lastProtocol = newConnection.cloneProtocol();
-      this.connections.set(this.lastProtocol.url.host, newConnection);
+      this.lastUrl = newConnection.getProtocol().url;
+      this.connections.set(this.lastUrl.host, newConnection);
       this.addedEmitter.fire(newConnection);
     });
   }
@@ -123,16 +135,14 @@ export class ConnectionList {
     if (protocol === undefined) {
       return console.error(`${this.constructor.name}.startWatch: no connection`);
     }
-    protocol
-      .list(focus.entityId)
-      .then((response) => {
-        if (response.result === undefined) return; // Skip if no components to watch
-        this.watchingController = new AbortController();
-        protocol.getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
-          this.getWatchResultEmitter.fire([focus, v]);
-        });
-      })
-      .catch(() => {});
+    protocol.list(focus.entityId).then((response) => {
+      if (typeof response === 'string') return; // skip if no connection
+      if (response.result === undefined) return; // Skip if no components to watch
+      this.watchingController = new AbortController();
+      protocol.getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
+        this.getWatchResultEmitter.fire([focus, v]);
+      });
+    });
   }
 
   public stopWatch() {

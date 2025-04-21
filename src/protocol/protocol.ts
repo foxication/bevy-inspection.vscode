@@ -14,13 +14,84 @@ import {
   BrpRegistrySchema,
   BrpValue,
   BrpDiscover,
+  BrpError,
 } from './types';
 import { TextDecoder } from 'util';
 
-export class BevyRemoteProtocol {
-  static DEFAULT_URL = new URL('http://127.0.0.1:15702');
+export const DEFAULT_BEVY_URL = new URL('http://127.0.0.1:15702');
 
-  private static decoder = new TextDecoder();
+function requestWrapper(
+  id: number,
+  rpcMethod: string,
+  rpcParams: unknown,
+  signal?: AbortSignal
+): RequestInit {
+  return {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      method: rpcMethod,
+      params: rpcParams,
+    }),
+    signal,
+  };
+}
+
+async function request<R>(
+  url: URL,
+  id: number,
+  method: string,
+  params?: unknown
+): Promise<BrpResponse<R> | BrpError> {
+  try {
+    const fetched = await fetch(url, requestWrapper(id, method, params));
+    return await JSON.parse(await fetched.text());
+  } catch (reason) {
+    if (reason instanceof Error && reason.message === 'fetch failed') return 'disconnection';
+    return 'unspecified_error';
+  }
+}
+
+const decoder = new TextDecoder();
+async function requestStream<R>(
+  url: URL,
+  id: number,
+  method: string,
+  params: unknown,
+  signal: AbortSignal,
+  observer: (arg: R) => void
+): Promise<null | BrpError> {
+  let response;
+  try {
+    response = await fetch(url, requestWrapper(id, method, params, signal));
+    if (!response.body) return null;
+  } catch (reason) {
+    if (reason instanceof Error && reason.message === 'fetch failed') return 'disconnection';
+    return 'unspecified_error';
+  }
+
+  try {
+    // https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_streams
+    const reader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      const decoded = decoder.decode(value);
+      const parsed = JSON.parse(decoded.substring(decoded.indexOf('{')));
+      if (parsed.result) observer(parsed.result);
+      if (done) break;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+abstract class BevyRemoteProtocolEssential {
   private id: number;
   public url: URL;
 
@@ -29,58 +100,39 @@ export class BevyRemoteProtocol {
     this.url = url;
   }
 
-  private nextId() {
+  get nextId() {
     return this.id++; // starting from 0
   }
 
-  private requestWrapper(rpcMethod: string, rpcParams: unknown, signal?: AbortSignal): RequestInit {
-    return {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: this.nextId(),
-        method: rpcMethod,
-        params: rpcParams,
-      }),
-      signal,
-    };
+  abstract get title(): string;
+  abstract get version(): string;
+}
+
+export async function initializeBevyRemoteProtocol(
+  url: URL
+): Promise<BevyRemoteProtocolV016 | BrpError> {
+  const response: BrpResponse<BrpDiscover> | BrpError = await request(url, 0, 'rpc.discover');
+  if (typeof response === 'string') return response;
+  if (response.result === undefined) return 'unspecified_error';
+  if (response.result.info.version.startsWith('0.16')) {
+    return new BevyRemoteProtocolV016(
+      url,
+      response.result.info.title,
+      response.result.info.version
+    );
   }
+  return 'unspecified_error';
+}
 
-  private async request<R>(method: string, params?: unknown): Promise<BrpResponse<R>> {
-    // throws error if connection refused by url
-    const fetched = await fetch(this.url, this.requestWrapper(method, params));
-    return await JSON.parse(await fetched.text());
+export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
+  constructor(url: URL, private _title: string, private _version: string) {
+    super(url);
   }
-
-  private async requestStream<R>(
-    method: string,
-    params: unknown,
-    signal: AbortSignal,
-    observer: (arg: R) => void
-  ): Promise<null> {
-    // throws error if connection refused by url
-    const response = await fetch(this.url, this.requestWrapper(method, params, signal));
-    if (!response.body) return null;
-
-    try {
-      // https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_streams
-      const reader = response.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        const decoded = BevyRemoteProtocol.decoder.decode(value);
-        const parsed = JSON.parse(decoded.substring(decoded.indexOf('{')));
-        if (parsed.result) observer(parsed.result);
-        if (done) break;
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      /* empty */
-    }
-    return null;
+  get title() {
+    return this._title;
+  }
+  get version() {
+    return this._version;
   }
 
   /**
@@ -102,8 +154,8 @@ export class BevyRemoteProtocol {
   public async get(
     entity: EntityId,
     components: TypePath[]
-  ): Promise<BrpResponse<{ components: BrpComponentRegistry; errors: BrpErrors }>> {
-    return this.request('bevy/get', { entity, components, strict: false });
+  ): Promise<BrpResponse<{ components: BrpComponentRegistry; errors: BrpErrors }> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/get', { entity, components, strict: false });
   }
 
   /**
@@ -122,8 +174,8 @@ export class BevyRemoteProtocol {
   public async getStrict(
     entity: EntityId,
     components: TypePath[]
-  ): Promise<BrpResponse<BrpComponentRegistry>> {
-    return this.request('bevy/get', { entity, components, strict: true });
+  ): Promise<BrpResponse<BrpComponentRegistry> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/get', { entity, components, strict: true });
   }
 
   /**
@@ -163,11 +215,12 @@ export class BevyRemoteProtocol {
     filterWith?: TypePath[];
     filterWithout?: TypePath[];
   }): Promise<
-    BrpResponse<
-      [{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]
-    >
+    | BrpResponse<
+        [{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]
+      >
+    | BrpError
   > {
-    return this.request('bevy/query', {
+    return request(this.url, this.nextId, 'bevy/query', {
       data: { components, option, has },
       filter: { with: filterWith, without: filterWithout },
     });
@@ -182,8 +235,10 @@ export class BevyRemoteProtocol {
    * `result`:
    * - `entity`: The ID of the newly spawned entity.
    */
-  public async spawn(components: BrpComponentRegistry): Promise<BrpResponse<{ entity: EntityId }>> {
-    return this.request('bevy/spawn', { components });
+  public async spawn(
+    components: BrpComponentRegistry
+  ): Promise<BrpResponse<{ entity: EntityId }> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/spawn', { components });
   }
 
   /**
@@ -194,8 +249,8 @@ export class BevyRemoteProtocol {
    *
    * `result`: null.
    */
-  public async destroy(entity: EntityId): Promise<BrpResponse<null>> {
-    return this.request('bevy/destroy', { entity });
+  public async destroy(entity: EntityId): Promise<BrpResponse<null> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/destroy', { entity });
   }
 
   /**
@@ -207,8 +262,11 @@ export class BevyRemoteProtocol {
    *
    * `result`: null.
    */
-  public async remove(entity: EntityId, components: TypePath[]): Promise<BrpResponse<null>> {
-    return this.request('bevy/remove', { entity, components });
+  public async remove(
+    entity: EntityId,
+    components: TypePath[]
+  ): Promise<BrpResponse<null> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/remove', { entity, components });
   }
 
   /**
@@ -223,8 +281,8 @@ export class BevyRemoteProtocol {
   public async insert(
     entity: EntityId,
     components: BrpComponentRegistry
-  ): Promise<BrpResponse<null>> {
-    return this.request('bevy/insert', { entity, components });
+  ): Promise<BrpResponse<null> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/insert', { entity, components });
   }
 
   /**
@@ -243,8 +301,13 @@ export class BevyRemoteProtocol {
     component: TypePath,
     path: string,
     value: BrpValue
-  ): Promise<BrpResponse<null>> {
-    return this.request('bevy/mutate_component', { entity, component, path, value });
+  ): Promise<BrpResponse<null> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/mutate_component', {
+      entity,
+      component,
+      path,
+      value,
+    });
   }
 
   /**
@@ -257,8 +320,11 @@ export class BevyRemoteProtocol {
    *
    * `result`: null.
    */
-  public async reparent(entities: EntityId[], parent?: EntityId): Promise<BrpResponse<null>> {
-    return this.request('bevy/reparent', { entities, parent });
+  public async reparent(
+    entities: EntityId[],
+    parent?: EntityId
+  ): Promise<BrpResponse<null> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/reparent', { entities, parent });
   }
 
   /**
@@ -272,9 +338,9 @@ export class BevyRemoteProtocol {
    *
    * `result`: An array of fully-qualified type names of components.
    */
-  public async list(entity?: EntityId): Promise<BrpResponse<TypePath[]>> {
-    if (entity) return this.request('bevy/list', { entity });
-    return this.request('bevy/list');
+  public async list(entity?: EntityId): Promise<BrpResponse<TypePath[]> | BrpError> {
+    if (entity) return request(this.url, this.nextId, 'bevy/list', { entity });
+    return request(this.url, this.nextId, 'bevy/list');
   }
 
   /**
@@ -301,8 +367,10 @@ export class BevyRemoteProtocol {
     components: TypePath[],
     signal: AbortSignal,
     observer: (arg: BrpGetWatchResult) => void
-  ): Promise<null> {
-    return this.requestStream(
+  ): Promise<null | BrpError> {
+    return requestStream(
+      this.url,
+      this.nextId,
       'bevy/get+watch',
       { entity, components, strict: false },
       signal,
@@ -333,8 +401,10 @@ export class BevyRemoteProtocol {
     components: TypePath[],
     signal: AbortSignal,
     observer: (arg: BrpGetWatchStrictResult) => void
-  ): Promise<null> {
-    return this.requestStream(
+  ): Promise<null | BrpError> {
+    return requestStream(
+      this.url,
+      this.nextId,
       'bevy/get+watch',
       { entity, components, strict: true },
       signal,
@@ -363,10 +433,17 @@ export class BevyRemoteProtocol {
     signal: AbortSignal,
     observer: (arg: BrpListWatchResult) => void,
     entity?: EntityId
-  ): Promise<null> {
-    if (entity) return this.requestStream('bevy/list+watch', { entity }, signal, observer);
-    return this.requestStream('bevy/list+watch', null, signal, observer);
+  ): Promise<null | BrpError> {
+    return requestStream(
+      this.url,
+      this.nextId,
+      'bevy/list+watch',
+      entity === undefined ? null : { entity },
+      signal,
+      observer
+    );
   }
+
   /**
    * Undocumented: bevy/get_resource
    */
@@ -407,14 +484,14 @@ export class BevyRemoteProtocol {
    * - Required
    * - Items...
    */
-  public async registrySchema(): Promise<BrpResponse<BrpRegistrySchema>> {
-    return this.request('bevy/registry/schema');
+  public async registrySchema(): Promise<BrpResponse<BrpRegistrySchema> | BrpError> {
+    return request(this.url, this.nextId, 'bevy/registry/schema');
   }
 
   /**
    * Undocumented: rpc.discover
    */
-  public async rpcDiscover(): Promise<BrpResponse<BrpDiscover>> {
-    return this.request('rpc.discover');
+  public async rpcDiscover(): Promise<BrpResponse<BrpDiscover> | BrpError> {
+    return request(this.url, this.nextId, 'rpc.discover');
   }
 }
