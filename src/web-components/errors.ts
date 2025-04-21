@@ -1,4 +1,4 @@
-import { BrpErrors } from '../protocol';
+import { BrpErrors, TypePath } from '../protocol';
 import { HTMLMerged } from './elements';
 
 export class ErrorList {
@@ -23,12 +23,16 @@ export class ErrorList {
     this.errors.forEach((element) => element.remove());
     this.errors = [];
     let anchor = this.title as HTMLElement;
-    for (const key of Object.keys(errors)) {
+    for (const typePath of Object.keys(errors)) {
       const element = new HTMLMerged();
-      element.label = key;
+      const shortPath = this.shortPath(typePath);
+      element.label = shortPath;
       element.tooltip =
-        `TypePath: ${key}\n` + `Code: ${errors[key].code}\n` + `Contains data: ${errors[key].data !== undefined}`;
-      element.brpValue = errors[key].message;
+        `label: ${shortPath}\n` +
+        `type: ${typePath}\n` +
+        `code: ${errors[typePath].code}\n` +
+        `with_data: ${errors[typePath].data !== undefined}`;
+      element.brpValue = errors[typePath].message;
       element.allowValueWrapping();
 
       this.errors.push(element);
@@ -53,5 +57,11 @@ export class ErrorList {
     let result = 'ERRORS:\n';
     for (const key of Object.keys(errors)) result += spaced(key) + ' ' + errors[key].message + '\n';
     return result;
+  }
+
+  private shortPath(typePath: TypePath): string {
+    if (typePath === '') return typePath;
+    const segments = typePath.split('<')[0].split('::');
+    return segments[segments.length - 1];
   }
 }
