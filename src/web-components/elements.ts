@@ -257,7 +257,8 @@ export class HTMLString extends HTMLMutatable<string> {
       // apply changes
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
-          this.mutate(this.textElement.innerText);
+          // remove last newline as contentEditable mode gives unpredictable results
+          this.mutate(this.textElement.innerText.trimEnd());
         } catch {
           /* empty */
         }
