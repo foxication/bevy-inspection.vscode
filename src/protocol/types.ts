@@ -13,7 +13,7 @@ export type BrpResponseError = {
   message: string;
   data?: BrpValue;
 };
-export type BrpErrors = { [key: TypePath]: BrpResponseError };
+export type BrpResponseErrors = { [key: TypePath]: BrpResponseError };
 
 export type BrpValue = BrpPrimitive | BrpValue[] | BrpObject;
 export type BrpPrimitive = string | number | boolean | null;
@@ -43,7 +43,7 @@ export function isBrpArray(value: BrpValue): value is BrpValue[] {
 export type BrpGetWatchResult = {
   components: BrpObject;
   removed: TypePath[];
-  errors: BrpErrors;
+  errors: BrpResponseErrors;
 };
 
 export type BrpGetWatchStrictResult = {
@@ -88,3 +88,5 @@ export type BrpDiscover = {
   openrpc: string;
   servers: { name: string; url: string }[];
 };
+
+export type FromShortPath = 'ChildOf' | 'Children' | 'Name';

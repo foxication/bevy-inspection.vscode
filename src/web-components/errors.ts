@@ -1,4 +1,4 @@
-import { BrpErrors, TypePath } from '../protocol';
+import { BrpResponseErrors, TypePath } from '../protocol';
 import { HTMLMerged } from './elements';
 
 export class ErrorList {
@@ -14,7 +14,7 @@ export class ErrorList {
     this.serialized = this.serialize({});
   }
 
-  update(errors: BrpErrors) {
+  update(errors: BrpResponseErrors) {
     // Toggle section visibility
     if (Object.keys(errors).length > 0) this.section.style.removeProperty('display');
     else this.section.style.display = 'none';
@@ -49,7 +49,7 @@ export class ErrorList {
     return this.serialized;
   }
 
-  private serialize(errors: BrpErrors) {
+  private serialize(errors: BrpResponseErrors) {
     const spaced = (s: string) => {
       const width = 45;
       return s + ' '.repeat(Math.max(width - s.length, 0));

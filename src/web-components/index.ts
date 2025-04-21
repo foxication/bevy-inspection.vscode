@@ -5,7 +5,7 @@ import {
   BrpRegistrySchema,
   BrpObject,
   TypePath,
-  BrpErrors,
+  BrpResponseErrors,
 } from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
@@ -31,7 +31,7 @@ export type VSCodeMessage =
       cmd: 'update_all';
       focus: EntityFocus;
       components: BrpComponentRegistry;
-      errors: BrpErrors;
+      errors: BrpResponseErrors;
     }
   | {
       cmd: 'sync_registry_schema';

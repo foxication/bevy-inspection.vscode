@@ -9,12 +9,13 @@ import {
   BrpGetWatchResult,
   BrpGetWatchStrictResult,
   BrpListWatchResult,
-  BrpErrors,
+  BrpResponseErrors,
   BrpComponentRegistry,
   BrpRegistrySchema,
   BrpValue,
   BrpDiscover,
   BrpError,
+  FromShortPath,
 } from './types';
 import { TextDecoder } from 'util';
 
@@ -106,6 +107,7 @@ abstract class BevyRemoteProtocolEssential {
 
   abstract get title(): string;
   abstract get version(): string;
+  abstract typePathFrom(shortPath: FromShortPath): TypePath;
 }
 
 export async function initializeBevyRemoteProtocol(
@@ -135,6 +137,17 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     return this._version;
   }
 
+  typePathFrom(shortPath: FromShortPath): TypePath {
+    switch (shortPath) {
+      case 'ChildOf':
+        return 'bevy_ecs::hierarchy::ChildOf';
+      case 'Children':
+        return 'bevy_ecs::hierarchy::Children';
+      case 'Name':
+        return 'bevy_ecs::name::Name';
+    }
+  }
+
   /**
    * Retrieve the values of one or more components from an entity.
    *
@@ -154,7 +167,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
   public async get(
     entity: EntityId,
     components: TypePath[]
-  ): Promise<BrpResponse<{ components: BrpComponentRegistry; errors: BrpErrors }> | BrpError> {
+  ): Promise<BrpResponse<{ components: BrpComponentRegistry; errors: BrpResponseErrors }> | BrpError> {
     return request(this.url, this.nextId, 'bevy/get', { entity, components, strict: false });
   }
 

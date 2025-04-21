@@ -4,7 +4,7 @@ import {
   TypePath,
   BrpObject,
   BrpRegistrySchema,
-  BrpErrors,
+  BrpResponseErrors,
   BevyRemoteProtocolV016,
   BrpResponse,
   BrpError,
@@ -29,7 +29,7 @@ export class Connection {
   private entityElements = new Map<EntityId, EntityElement>();
   private inspectionList: TypePath[] = [];
   private inspectionTree: BrpObject = {};
-  private inspectionErrors: BrpErrors = {};
+  private inspectionErrors: BrpResponseErrors = {};
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
