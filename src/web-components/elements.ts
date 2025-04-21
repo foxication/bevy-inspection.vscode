@@ -1,5 +1,5 @@
 import { SyncNode } from './sync';
-import { VscodeIcon } from '@vscode-elements/elements';
+import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
 import { MutationConsent } from './visual';

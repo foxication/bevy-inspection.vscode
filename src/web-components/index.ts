@@ -1,4 +1,3 @@
-import '@vscode-elements/elements/dist/vscode-tree/index.js';
 import { DataSyncManager } from './sync';
 import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath, BrpErrors } from '../protocol/types';
 import { defineCustomElements } from './elements';
