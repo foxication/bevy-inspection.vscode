@@ -34,7 +34,7 @@ export class Connection {
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
   readonly onHierarchyUpdated = this.hierarchyUpdatedEmitter.event;
-  private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
+  private entityRenamedEmitter = new vscode.EventEmitter<[EntityElement, boolean]>();
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityDestroyed = this.entityDestroyedEmitter.event;
@@ -149,7 +149,7 @@ export class Connection {
   public getInspectionElements() {
     return this.inspectionTree;
   }
-  
+
   public getInspectionErrors() {
     return this.inspectionErrors;
   }
@@ -194,8 +194,9 @@ export class Connection {
       return 'disconnection';
     }
     if (response.result === null && response.error === undefined) {
+      const isInserted = element.name === undefined;
       element.name = newName;
-      this.entityRenamedEmitter.fire(element);
+      this.entityRenamedEmitter.fire([element, isInserted]);
       return 'success';
     }
     return 'error';

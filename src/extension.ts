@@ -66,8 +66,9 @@ export function activate(context: vscode.ExtensionContext) {
       hierarchyData.update(typeof destroyed.childOf === 'number' ? connection.getById(destroyed.childOf) : connection);
     });
 
-    connection.onEntityRenamed((renamed) => {
+    connection.onEntityRenamed(([renamed, isInserted]) => {
       hierarchyData.update(renamed);
+      if (isInserted && renamed.host === connections.focus?.host) componentsView.updateAll(connections.focus);
     });
 
     connection.onDisconnection((connection) => {
@@ -94,8 +95,15 @@ export function activate(context: vscode.ExtensionContext) {
     areThereConnections(connections.all().length > 0);
     hierarchyData.update(undefined);
   });
-  connections.onGetWatchResult((result) => {
-    componentsView.updateComponents(result[0], result[1].components, result[1].removed);
+  connections.onGetWatchResult(([focus, result]) => {
+    componentsView.updateComponents(focus, result.components, result.removed);
+
+    // Name update (workaround)
+    if (!Object.keys(result.components).includes('bevy_ecs::name::Name')) return; // skip
+    const entity = connections.get(focus.host)?.getById(focus.entityId);
+    if (entity === undefined) return console.error('connections.onGetWatchResult: no entity');
+    entity.name = result.components['bevy_ecs::name::Name'] as string;
+    hierarchyData.update(entity);
   });
 
   hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
