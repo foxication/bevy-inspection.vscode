@@ -21,7 +21,9 @@ export type VisualUnit =
   | MapVisual
   | SerializedVisual
   | StructVisual
-  | TupleVisual;
+  | TupleVisual
+  | ListVisual
+  | SetVisual;
 
 //
 // Visual

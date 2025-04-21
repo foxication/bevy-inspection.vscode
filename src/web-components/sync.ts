@@ -336,31 +336,30 @@ export class SyncNode {
   }
 
   get pathSerialized(): string {
-    if (this.parent instanceof DataSyncManager) return ''; // Root
-    if (
-      this.lastPathSegment === undefined ||
-      this.parent.visual instanceof SerializedVisual ||
-      this.parent.visual instanceof ErrorVisual
-    ) {
-      return this.parent.pathSerialized; // Skip
-    }
+    if (this.parent instanceof DataSyncManager) return '';
+    if (this.lastPathSegment === undefined) return this.parent.pathSerialized;
     const segment = this.lastPathSegment.toString();
-    if (this.parent.visual instanceof ComponentsVisual) return segment; // Component
-    if (
-      this.parent.visual instanceof MapVisual ||
-      this.parent.visual instanceof StructVisual ||
-      this.parent.visual instanceof TupleVisual
-    ) {
-      return this.parent.pathSerialized + '.' + segment; // Dot
+
+    switch (true) {
+      case this.parent.visual instanceof SerializedVisual:
+      case this.parent.visual instanceof ErrorVisual:
+      case this.parent.visual instanceof EnumVisual:
+        return this.parent.pathSerialized; // Skip
+
+      case this.parent.visual instanceof ComponentsVisual:
+        return segment; // Component
+
+      case this.parent.visual instanceof MapVisual:
+      case this.parent.visual instanceof StructVisual:
+      case this.parent.visual instanceof TupleVisual:
+        return this.parent.pathSerialized + '.' + segment; // Dot
+
+      case this.parent.visual instanceof ArrayVisual:
+      case this.parent.visual instanceof ListVisual:
+      case this.parent.visual instanceof SetVisual:
+        return this.parent.pathSerialized + '[' + segment + ']'; // Array Item
     }
-    if (
-      this.parent.visual instanceof ArrayVisual ||
-      this.parent.visual instanceof ListVisual ||
-      this.parent.visual instanceof SetVisual
-    ) {
-      return this.parent.pathSerialized + '[' + segment + ']'; // Array Item
-    }
-    console.error('Error in "pathSerialized": parsing error');
+    console.error('Error in "pathSerialized": unknown scenario');
     return this.parent.pathSerialized;
   }
   public debugTree(level: number, direction: DataPathSegment[]): string {
