@@ -10,7 +10,7 @@ import {
 } from '../protocol/types';
 import { HTMLMerged } from './elements';
 import { postWebviewMessage } from './index';
-import { SyncNode } from './sync';
+import { SyncNode } from './section-sync';
 
 // All types of visual
 export type VisualUnit =

@@ -1,7 +1,7 @@
 import { BrpResponseErrors, TypePath } from '../protocol';
 import { HTMLMerged } from './elements';
 
-export class ErrorList {
+export class SectionErrors {
   private title: HTMLElement;
   private errors: HTMLMerged[] = [];
   private serialized: string;

@@ -1,4 +1,4 @@
-import { DataSyncManager } from './sync';
+import { SectionSync } from './section-sync';
 import {
   BrpValue,
   BrpComponentRegistry,
@@ -9,7 +9,8 @@ import {
 } from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
-import { ErrorList } from './errors';
+import { SectionErrors } from './section-errors';
+import { SectionDetails } from './section-details';
 
 export type WebviewMessage =
   | {
@@ -57,28 +58,32 @@ defineCustomElements();
 
 // Main script
 (function () {
-  const componentList = document.querySelector('#component-tree') as HTMLDivElement;
-  if (componentList === null) return console.error('componentList is not found in DOM');
-  const syncRoot = new DataSyncManager(componentList);
+  const detailsHTML = document.querySelector('#details') as HTMLDivElement;
+  if (detailsHTML === null) return console.error('#details is not found in DOM');
+  const detailsSection = new SectionDetails(detailsHTML);
 
-  const errorList = document.querySelector('#error-list') as HTMLDListElement;
-  if (errorList === null) return console.error('errorList is not found in DOM');
-  const errorsRoot = new ErrorList(errorList);
+  const componentsHTML = document.querySelector('#component-tree') as HTMLDivElement;
+  if (componentsHTML === null) return console.error('#component-tree is not found in DOM');
+  const syncSection = new SectionSync(componentsHTML);
+
+  const errorsHTML = document.querySelector('#error-list') as HTMLDListElement;
+  if (errorsHTML === null) return console.error('#error-list is not found in DOM');
+  const errorsSection = new SectionErrors(errorsHTML);
 
   // Event listener
   window.addEventListener('message', (event) => {
     const message = event.data as VSCodeMessage;
     switch (message.cmd) {
       case 'debug_output':
-        console.log(syncRoot.debugTree());
-        console.log(errorsRoot.debugList());
+        console.log(syncSection.debugTree());
+        console.log(errorsSection.debugList());
         break;
       case 'sync_registry_schema':
-        syncRoot.syncRegistrySchema(message.available, message.host, message.data);
-        switch (syncRoot.trySync()) {
+        syncSection.syncRegistrySchema(message.available, message.host, message.data);
+        switch (syncSection.trySync()) {
           case 'done':
-            if (syncRoot.focus === undefined) break;
-            postWebviewMessage({ cmd: 'ready_for_watch', focus: syncRoot.focus });
+            if (syncSection.focus === undefined) break;
+            postWebviewMessage({ cmd: 'ready_for_watch', focus: syncSection.focus });
             break;
           case 'no_registry_schema':
             console.error('registry schema did not load');
@@ -87,10 +92,11 @@ defineCustomElements();
         break;
       case 'update_all':
         setEntityInfo(message.focus);
-        syncRoot.focus = message.focus;
-        syncRoot.mapOfComponents = message.components;
-        errorsRoot.update(message.errors);
-        switch (syncRoot.trySync()) {
+        syncSection.focus = message.focus;
+        syncSection.mapOfComponents = message.components;
+        detailsSection.update(syncSection.focus);
+        errorsSection.update(message.errors);
+        switch (syncSection.trySync()) {
           case 'done':
             postWebviewMessage({ cmd: 'ready_for_watch', focus: message.focus });
             break;
@@ -100,14 +106,14 @@ defineCustomElements();
         }
         break;
       case 'update_components':
-        if (syncRoot.focus === undefined) break;
-        if (syncRoot.focus.host !== message.focus.host) break;
-        if (syncRoot.focus.entityId !== message.focus.entityId) break;
+        if (syncSection.focus === undefined) break;
+        if (syncSection.focus.host !== message.focus.host) break;
+        if (syncSection.focus.entityId !== message.focus.entityId) break;
         Object.entries(message.components).forEach(
-          ([typePath, value]) => (syncRoot.mapOfComponents[typePath] = value)
+          ([typePath, value]) => (syncSection.mapOfComponents[typePath] = value)
         );
-        message.removed.forEach((component) => delete syncRoot.mapOfComponents[component]);
-        syncRoot.trySync();
+        message.removed.forEach((component) => delete syncSection.mapOfComponents[component]);
+        syncSection.trySync();
         break;
     }
   });

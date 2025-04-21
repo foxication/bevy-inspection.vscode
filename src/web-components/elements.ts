@@ -1,4 +1,4 @@
-import { SyncNode } from './sync';
+import { SyncNode } from './section-sync';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';

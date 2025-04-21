@@ -61,13 +61,13 @@ class SyncNodeCollection {
 }
 
 export class SyncNode {
-  public readonly parent: SyncNode | DataSyncManager;
+  public readonly parent: SyncNode | SectionSync;
   public readonly path: DataPathSegment[];
   public children = new SyncNodeCollection(this);
   public readonly visual: VisualUnit;
 
   constructor(
-    parent: SyncNode | DataSyncManager,
+    parent: SyncNode | SectionSync,
     anchor: HTMLElement,
     path: DataPathSegment[],
     typePath: TypePath | undefined
@@ -186,8 +186,8 @@ export class SyncNode {
       }
     }
   }
-  public source(): DataSyncManager {
-    if (this.parent instanceof DataSyncManager) return this.parent;
+  public source(): SectionSync {
+    if (this.parent instanceof SectionSync) return this.parent;
     return this.parent.source();
   }
   public access(path: DataPathSegment[] = this.path): BrpValue {
@@ -374,7 +374,7 @@ export class SyncNode {
   }
 
   get pathSerialized(): string {
-    if (this.parent instanceof DataSyncManager) return '';
+    if (this.parent instanceof SectionSync) return '';
     if (this.lastPathSegment === undefined) return this.parent.pathSerialized;
     const segment = this.lastPathSegment.toString();
 
@@ -444,7 +444,7 @@ export class SyncNode {
   }
 }
 
-export class DataSyncManager {
+export class SectionSync {
   private root: SyncNode;
   private registrySchemas: { [host: string]: BrpRegistrySchema } = {};
   public mapOfComponents: BrpComponentRegistry = {};
@@ -454,7 +454,7 @@ export class DataSyncManager {
     this.root = new SyncNode(this, section, [], undefined);
     this.section.style.display = 'none';
   }
-  source(): DataSyncManager {
+  source(): SectionSync {
     return this;
   }
   getRegistrySchema(): BrpRegistrySchema | undefined {
