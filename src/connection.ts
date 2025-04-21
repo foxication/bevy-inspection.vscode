@@ -58,12 +58,10 @@ export class Connection {
   private isCorrectResponseOrDisconnect<R>(
     response: BrpResponse<R> | BrpError
   ): response is { jsonrpc: string; id: number; result: R; error?: BrpResponseError } {
-    const isError = typeof response === 'string';
-    if (isError) {
+    if (typeof response === 'string' || response.result === undefined) {
       this.disconnect();
       return false;
     }
-    if (response.result === undefined) return false;
     return true;
   }
 
