@@ -1,7 +1,7 @@
 import { BrpErrors } from '../protocol';
 import { HTMLMerged } from './elements';
 
-export class DataErrorsManager {
+export class ErrorList {
   private title: HTMLElement;
   private errors: HTMLMerged[] = [];
   private serialized: string;

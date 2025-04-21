@@ -3,7 +3,7 @@ import { DataSyncManager } from './sync';
 import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath, BrpErrors } from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
-import { DataErrorsManager as ErrorList } from './errors';
+import { ErrorList } from './errors';
 
 export type WebviewMessage =
   | {
