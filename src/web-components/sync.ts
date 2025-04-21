@@ -40,7 +40,9 @@ class SyncNodeCollection {
   }
   shrink(newLength: number) {
     if (newLength >= this.collection.length) return; // skip
-    for (let index = newLength; index < this.collection.length; index++) this.collection[index].preDestruct();
+    for (let index = newLength; index < this.collection.length; index++) {
+      this.collection[index].preDestruct();
+    }
     this.collection.length = newLength;
     this.updateIsExpandable();
   }
@@ -82,7 +84,10 @@ export class SyncNode {
     // ComponentsData
     if (path.length === 0) {
       const mapOfComponents = isBrpObject(access) ? access : {};
-      const componentNames = sortByShortPath(Object.keys(mapOfComponents), source.getRegistrySchema() ?? {});
+      const componentNames = sortByShortPath(
+        Object.keys(mapOfComponents),
+        source.getRegistrySchema() ?? {}
+      );
       this.visual = new ComponentsVisual(this, anchor, componentNames);
       for (const childTypePath of componentNames) {
         pushChild(childTypePath, childTypePath);
@@ -92,12 +97,18 @@ export class SyncNode {
 
     // Get schema
     if (typePath === undefined) {
-      this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `typePath is undefined` });
+      this.visual = new ErrorVisual(this, anchor, {
+        code: undefined,
+        message: `typePath is undefined`,
+      });
       return this;
     }
     const schema = getSchemaRecursively(typePath, source.getRegistrySchema() ?? {});
     if (schema === undefined) {
-      this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `schema is not found` });
+      this.visual = new ErrorVisual(this, anchor, {
+        code: undefined,
+        message: `schema is not found`,
+      });
       return this;
     }
 
@@ -110,7 +121,10 @@ export class SyncNode {
     // Parsing other types of Data
     switch (schema.kind) {
       case 'Value': {
-        this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `Value is not serializable` });
+        this.visual = new ErrorVisual(this, anchor, {
+          code: undefined,
+          message: `Value is not serializable`,
+        });
         break;
       }
       case 'Enum': {
@@ -125,14 +139,22 @@ export class SyncNode {
           pushChild(Object.keys(access)[0], childTypePath);
           break;
         }
-        this.visual = new ErrorVisual(this, anchor, { code: undefined, message: `cannot deserialize Enum` });
+        this.visual = new ErrorVisual(this, anchor, {
+          code: undefined,
+          message: `cannot deserialize Enum`,
+        });
         break;
       }
       case 'Tuple':
       case 'TupleStruct': {
         this.visual = new TupleVisual(this, anchor, schema);
-        if (this.visual.childTypePaths.length === 1) pushChild(undefined, this.visual.childTypePaths[0]);
-        else this.visual.childTypePaths.forEach((childTypePath, index) => pushChild(index, childTypePath));
+        if (this.visual.childTypePaths.length === 1) {
+          pushChild(undefined, this.visual.childTypePaths[0]);
+        } else {
+          this.visual.childTypePaths.forEach((childTypePath, index) =>
+            pushChild(index, childTypePath)
+          );
+        }
         break;
       }
       case 'Array':
@@ -199,7 +221,9 @@ export class SyncNode {
     if (this.visual instanceof SerializedVisual) {
       if (this.visual.value !== access) {
         debugOutput(
-          `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(this.visual.value)} --> ${JSON.stringify(access)}`
+          `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(
+            this.visual.value
+          )} --> ${JSON.stringify(access)}`
         );
         this.visual.value = access;
         if (this.visual instanceof SerializedVisual) this.visual.set(access);
@@ -211,7 +235,9 @@ export class SyncNode {
       if (typeof access === 'string') {
         const variant = this.visual.schema.typePath + '::' + access;
         if (this.visual.variantTypePath !== variant) {
-          debugOutput(`Update: ${JSON.stringify(this.path)} = ${this.visual.variantTypePath} --> ${access}`);
+          debugOutput(
+            `Update: ${JSON.stringify(this.path)} = ${this.visual.variantTypePath} --> ${access}`
+          );
           this.visual.variantTypePath = variant;
           this.children.shrink(0);
         }
@@ -219,11 +245,15 @@ export class SyncNode {
         const variant = this.visual.schema.typePath + '::' + Object.keys(access)[0];
         if (this.visual.variantTypePath !== variant) {
           debugOutput(
-            `Update: ${JSON.stringify(this.path)} = ${this.visual.variantTypePath} --> ${JSON.stringify(access)}`
+            `Update: ${JSON.stringify(this.path)} = ${
+              this.visual.variantTypePath
+            } --> ${JSON.stringify(access)}`
           );
           this.visual.variantTypePath = variant;
           this.children.shrink(0);
-          this.children.push(new SyncNode(source, this.visual.dom, [...this.path, this.visual.variantName], variant));
+          this.children.push(
+            new SyncNode(source, this.visual.dom, [...this.path, this.visual.variantName], variant)
+          );
         }
       } else {
         debugOutput(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
@@ -249,9 +279,14 @@ export class SyncNode {
       if (isBrpObject(access)) {
         const prevLength = this.children.unwrap().length;
         this.children.filter((child) => {
-          return typeof child.lastPathSegment === 'string' && Object.keys(access).includes(child.lastPathSegment);
+          return (
+            typeof child.lastPathSegment === 'string' &&
+            Object.keys(access).includes(child.lastPathSegment)
+          );
         });
-        if (prevLength !== this.children.unwrap().length) debugOutput(`Shrink: ${JSON.stringify(this.path)}`);
+        if (prevLength !== this.children.unwrap().length) {
+          debugOutput(`Shrink: ${JSON.stringify(this.path)}`);
+        }
       }
     }
 
@@ -265,7 +300,9 @@ export class SyncNode {
       }
       if (isBrpArray(access)) {
         for (let index = this.children.unwrap().length; index < access.length; index++) {
-          this.children.push(new SyncNode(source, this.endAnchor, [...this.path, index], this.visual.childTypePath));
+          this.children.push(
+            new SyncNode(source, this.endAnchor, [...this.path, index], this.visual.childTypePath)
+          );
           debugOutput(`Extend: ${JSON.stringify([...this.path, index])}`);
         }
       }
@@ -288,7 +325,8 @@ export class SyncNode {
             return key === child.lastPathSegment;
           });
           if (exists === undefined) {
-            const childTypePath = this.visual instanceof MapVisual ? this.visual.valueTypePath : key;
+            const childTypePath =
+              this.visual instanceof MapVisual ? this.visual.valueTypePath : key;
             const newNode = new SyncNode(source, anchor, [...this.path, key], childTypePath);
             debugOutput(`Extend: ${JSON.stringify([...this.path, key])}`);
             this.children.push(newNode);
@@ -383,13 +421,18 @@ export class SyncNode {
     if ('schema' in this.visual) description += this.visual.schema.kind;
     if (this.visual instanceof SerializedVisual) description += '+Serde';
     if ('schema' in this.visual) description += '(' + this.visual.schema.typePath + ')';
-    if (this.visual instanceof SerializedVisual) description += ' = ' + JSON.stringify(this.visual.value);
-    if (this.visual instanceof EnumVisual) description += '/' + JSON.stringify(this.visual.variantName);
+    if (this.visual instanceof SerializedVisual) {
+      description += ' = ' + JSON.stringify(this.visual.value);
+    }
+    if (this.visual instanceof EnumVisual) {
+      description += '/' + JSON.stringify(this.visual.variantName);
+    }
 
     // Set after
     let after = '';
     this.children.unwrap().forEach((child) => {
-      const childPathSegment = child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
+      const childPathSegment =
+        child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
       const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
       if (childPathSegment === undefined) after += child.debugTree(level + 1, direction);
       if (childPathSegment === directionPathSegment || directionPathSegment === undefined) {
@@ -444,7 +487,10 @@ export class DataSyncManager {
   }
 }
 
-function getSchemaRecursively(typePath: TypePath, registrySchema: BrpRegistrySchema): BrpSchema | undefined {
+function getSchemaRecursively(
+  typePath: TypePath,
+  registrySchema: BrpRegistrySchema
+): BrpSchema | undefined {
   // TypePath
   if (Object.keys(registrySchema).includes(typePath)) return registrySchema[typePath];
 
@@ -465,7 +511,9 @@ function getSchemaRecursively(typePath: TypePath, registrySchema: BrpRegistrySch
     return value.typePath === typePath && Object.keys(value).includes('kind');
   }) as BrpSchema | undefined;
   if (result === undefined) {
-    console.error(`SerializedData Error - schema of ${parentTypePath} doesn't include: ${typePath}`);
+    console.error(
+      `SerializedData Error - schema of ${parentTypePath} doesn't include: ${typePath}`
+    );
     return undefined;
   }
   return result;

@@ -20,7 +20,9 @@ export function testWithServer(manifestPath: string, version: BevyVersion) {
     await t.test('server compilation', async () => {
       const compilation = await spawnSync('cargo', ['build', '--manifest-path', manifestPath]);
       if (compilation.status !== 0) {
-        assert.fail('compilation error(' + compilation.status?.toString() + '):\n' + compilation.output);
+        assert.fail(
+          'compilation error(' + compilation.status?.toString() + '):\n' + compilation.output
+        );
       }
       isCompiled = true;
     });
@@ -107,7 +109,8 @@ export async function testGet(protocol: BevyRemoteProtocol): Promise<void> {
   };
 
   // recieve entityId of favorite entity
-  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0].entity;
+  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0]
+    .entity;
   assert.ok(entity);
 
   // recieve components of favorite entity
@@ -150,7 +153,9 @@ export async function testGet(protocol: BevyRemoteProtocol): Promise<void> {
     const res = await protocol.getStrict(entity, typePaths);
     assert.ifError(res.error);
     assert.ok(res.result);
-    if (protocol.commonTypePaths('Children') in res.result) res.result[protocol.commonTypePaths('Children')] = [];
+    if (protocol.commonTypePaths('Children') in res.result) {
+      res.result[protocol.commonTypePaths('Children')] = [];
+    }
     assert.deepEqual(res.result, reference0x16.components);
   }
 }
@@ -163,7 +168,10 @@ export async function testQueryEmpty(protocol: BevyRemoteProtocol): Promise<void
   for (let i = 0, l = response.result.length; i < l; i++) {
     response.result[i].entity = 0;
   }
-  assert.deepEqual(response.result, Array(response.result.length).fill({ components: {}, entity: 0 }));
+  assert.deepEqual(
+    response.result,
+    Array(response.result.length).fill({ components: {}, entity: 0 })
+  );
 }
 
 export async function testQueryByComponents(protocol: BevyRemoteProtocol): Promise<void> {
@@ -173,11 +181,14 @@ export async function testQueryByComponents(protocol: BevyRemoteProtocol): Promi
 
   assert.strictEqual(response.result.length, 1);
   response.result[0].entity = 0;
-  assert.deepEqual(response.result, [{ components: { 'server::FavoriteEntity': null }, entity: 0 }]);
+  assert.deepEqual(response.result, [
+    { components: { 'server::FavoriteEntity': null }, entity: 0 },
+  ]);
 }
 
 export async function testListEntity(protocol: BevyRemoteProtocol): Promise<void> {
-  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0].entity;
+  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0]
+    .entity;
   assert.ok(entity);
 
   const response = await protocol.list(entity);
@@ -223,7 +234,8 @@ export async function testListAll(protocol: BevyRemoteProtocol): Promise<void> {
 }
 
 export async function testInsertThenRemove(protocol: BevyRemoteProtocol): Promise<void> {
-  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0].entity;
+  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0]
+    .entity;
   assert.ok(entity);
 
   let resTypes = await protocol.list(entity);
@@ -238,7 +250,9 @@ export async function testInsertThenRemove(protocol: BevyRemoteProtocol): Promis
     ].sort()
   );
 
-  let resNull = await protocol.insert(entity, { 'server::Description': 'Testing insertion and removing' });
+  let resNull = await protocol.insert(entity, {
+    'server::Description': 'Testing insertion and removing',
+  });
   assert.ifError(resNull.result);
   assert.ifError(resNull.error);
 
@@ -297,7 +311,8 @@ export async function testSpawnThenDestroy(protocol: BevyRemoteProtocol): Promis
 }
 
 export async function testReparent(protocol: BevyRemoteProtocol): Promise<void> {
-  const parent = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0].entity;
+  const parent = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0]
+    .entity;
   assert.ok(parent);
 
   const child0 = (await protocol.spawn({ 'bevy_ecs::name::Name': 'test child 1' })).result?.entity;
@@ -355,13 +370,19 @@ export async function testGetWatchStrict(protocol: BevyRemoteProtocol): Promise<
     controller.abort();
   };
 
-  const promise = protocol.getWatchStrict(entity, ['server::Description'], controller.signal, observer);
+  const promise = protocol.getWatchStrict(
+    entity,
+    ['server::Description'],
+    controller.signal,
+    observer
+  );
   await protocol.insert(entity, apply);
   await promise;
 }
 
 export async function testListWatch(protocol: BevyRemoteProtocol): Promise<void> {
-  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0].entity;
+  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0]
+    .entity;
   assert.ok(entity);
 
   const toInsert = { 'server::Description': 'added new component (Description)' };
@@ -380,7 +401,8 @@ export async function testListWatch(protocol: BevyRemoteProtocol): Promise<void>
 }
 
 export async function testListWatchAll(protocol: BevyRemoteProtocol): Promise<void> {
-  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0].entity;
+  const entity = (await protocol.query({ filterWith: ['server::FavoriteEntity'] })).result?.[0]
+    .entity;
   assert.ok(entity);
 
   const controller = new AbortController();

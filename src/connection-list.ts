@@ -1,5 +1,11 @@
 import * as vscode from 'vscode';
-import { BevyRemoteProtocol, EntityId, BevyVersion, BevyVersions, BrpGetWatchResult } from './protocol';
+import {
+  BevyRemoteProtocol,
+  EntityId,
+  BevyVersion,
+  BevyVersions,
+  BrpGetWatchResult,
+} from './protocol';
 import { Connection } from './connection';
 
 type AddBehavior = 'prompt' | 'last';
@@ -89,7 +95,9 @@ export class ConnectionList {
     const errSrc = 'ConnectionList.updateFocus(): ';
     const connection = this.connections.get(newFocus.host);
     if (connection === undefined) return console.error(errSrc + 'no connection');
-    if (connection.getNetworkStatus() !== 'online') return console.error(errSrc + 'connection is not online');
+    if (connection.getNetworkStatus() !== 'online') {
+      return console.error(errSrc + 'connection is not online');
+    }
 
     // Change focus
     this._focus = new EntityFocus(newFocus.host, newFocus.entityId);
@@ -101,7 +109,9 @@ export class ConnectionList {
 
   public removeConnection(host: string) {
     const connection = this.get(host);
-    if (connection === undefined) return console.error('ConnectionList.removeConnection(): no connection');
+    if (connection === undefined) {
+      return console.error('ConnectionList.removeConnection(): no connection');
+    }
     this.connections.delete(host);
     this.removedEmitter.fire(connection);
   }
@@ -120,7 +130,9 @@ export class ConnectionList {
 
     // Get connection
     const protocol = this.get(focus.host)?.getProtocol();
-    if (protocol === undefined) return console.error(`${this.constructor.name}.startWatch: no connection`);
+    if (protocol === undefined) {
+      return console.error(`${this.constructor.name}.startWatch: no connection`);
+    }
     protocol
       .list(focus.entityId)
       .then((response) => {

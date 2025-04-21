@@ -73,7 +73,11 @@ export class ComponentsVisual extends Visual {
 export class ErrorVisual extends Visual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, public error: { code: number | undefined; message: string }) {
+  constructor(
+    sync: SyncNode,
+    anchor: HTMLElement,
+    public error: { code: number | undefined; message: string }
+  ) {
     super(sync);
     this.dom = HTMLMerged.create();
     this.dom.level = this.level;
@@ -103,15 +107,15 @@ export abstract class VisualDescribed extends Visual {
     } else {
       result = (this.sync.lastPathSegment ?? '...').toString();
     }
-    // if (data instanceof EnumData) result += ' / ' + data.variantName;
     return result;
   }
   get tooltip(): string {
     let result = 'label: ' + this.label;
     result += '\ntype: ' + this.schema.typePath;
     result += '\nkind: ' + this.schema.kind;
-    if (this.schema.reflectTypes !== undefined) result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
-    // if (data instanceof EnumData) result += '\nvariant: ' + data.variantName;
+    if (this.schema.reflectTypes !== undefined) {
+      result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
+    }
     return result;
   }
 }
@@ -126,7 +130,9 @@ export class SerializedVisual extends VisualDescribed {
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
     this.dom.brpValue = this.access;
-    if (this.dom.htmlRight !== undefined) this.dom.htmlRight.value.mutability = new MutationConsent(sync);
+    if (this.dom.htmlRight !== undefined) {
+      this.dom.htmlRight.value.mutability = new MutationConsent(sync);
+    }
     anchor.after(this.dom);
   }
 
@@ -153,7 +159,12 @@ export abstract class ExpandableVisual extends VisualDescribed {
 export class EnumVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public variantTypePath: TypePath) {
+  constructor(
+    sync: SyncNode,
+    anchor: HTMLElement,
+    schema: BrpSchema,
+    public variantTypePath: TypePath
+  ) {
     super(sync, schema);
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
@@ -338,7 +349,9 @@ export class MutationConsent {
         const next = access[firstSegment];
         if (isBrpIterable(next)) modify(next, path.slice(1));
       }
-      return console.error(`${this.constructor.name}.mutate().modify(): access is not Object/Array`);
+      return console.error(
+        `${this.constructor.name}.mutate().modify(): access is not Object/Array`
+      );
     };
 
     if (this.internalPath.length === 0) result = value;
@@ -349,7 +362,10 @@ export class MutationConsent {
     const path = this.sync.pathSerialized;
     if (focus === undefined) return console.error('MutationConsent.mutate(): no focus');
     if (component === '') return console.error('MutationConsent.mutate(): no component');
-    postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value: result } });
+    postWebviewMessage({
+      cmd: 'mutate_component',
+      data: { focus, component, path, value: result },
+    });
   }
 }
 

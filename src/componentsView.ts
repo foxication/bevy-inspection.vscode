@@ -3,7 +3,10 @@ import { ConnectionList, EntityFocus } from './connection-list';
 import { VSCodeMessage, WebviewMessage } from './web-components';
 import { BrpObject, TypePath } from './protocol';
 
-export function createComponentsView(context: vscode.ExtensionContext, connections: ConnectionList) {
+export function createComponentsView(
+  context: vscode.ExtensionContext,
+  connections: ConnectionList
+) {
   const componentsView = new ComponentsViewProvider(context.extensionUri, connections);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('componentsView', componentsView, {
@@ -36,14 +39,18 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async postVSCodeMessage(message: VSCodeMessage) {
-    if (this.view === undefined) return console.error(`ComponentsViewProvider.postVSCodeMessage: no view`);
+    if (this.view === undefined) {
+      return console.error(`ComponentsViewProvider.postVSCodeMessage: no view`);
+    }
     await this.view.webview.postMessage(message);
   }
 
   public async syncRegistrySchema(host: string) {
     const available = this.connections.all().map((connection) => connection.getProtocol().url.host);
     const connection = this.connections.get(host);
-    if (connection === undefined) return console.error(`ComponentsViewProvider.syncRegistrySchema: no connection`);
+    if (connection === undefined) {
+      return console.error(`ComponentsViewProvider.syncRegistrySchema: no connection`);
+    }
     return this.postVSCodeMessage({
       cmd: 'sync_registry_schema',
       available,
@@ -56,7 +63,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   public async updateAll(focus: EntityFocus): Promise<void> {
     if (this.view === undefined) return vscode.commands.executeCommand('componentsView.focus');
     const connection = this.connections.get(focus.host);
-    if (connection === undefined) return console.error(`ComponentsViewProvider.updateAll(): no connection`);
+    if (connection === undefined) {
+      return console.error(`ComponentsViewProvider.updateAll(): no connection`);
+    }
 
     await connection.requestInspectionElements(focus.entityId);
     const entityData = connection.getInspectionElements();
@@ -65,7 +74,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   public updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
-    if (this.view === undefined) return console.error(`ComponentsViewProvider.updateComponents(): no view`);
+    if (this.view === undefined) {
+      return console.error(`ComponentsViewProvider.updateComponents(): no view`);
+    }
     this.postVSCodeMessage({ cmd: 'update_components', focus, components, removed });
   }
 
@@ -124,14 +135,33 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {
-    const htmlUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'index.html'));
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'index.css'));
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js'));
+    const htmlUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'index.html')
+    );
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'index.css')
+    );
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js')
+    );
     const elementsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode-elements', 'elements', 'dist', 'bundled.js')
+      vscode.Uri.joinPath(
+        this.extensionUri,
+        'node_modules',
+        '@vscode-elements',
+        'elements',
+        'dist',
+        'bundled.js'
+      )
     );
     const codiconsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css')
+      vscode.Uri.joinPath(
+        this.extensionUri,
+        'node_modules',
+        '@vscode/codicons',
+        'dist',
+        'codicon.css'
+      )
     );
 
     const result = (await vscode.workspace.openTextDocument(htmlUri.fsPath))

@@ -1,12 +1,6 @@
 import assert from 'assert';
 import test from 'node:test';
-import { isBrpArray, isBrpIterable, isBrpObject, isPrimitive, short } from '../src/protocol';
-
-test('short TypePath', () => {
-  assert.strictEqual(short('Crypto'), 'Crypto');
-  assert.strictEqual(short('bevy_ecs::something::Crypto'), 'Crypto');
-  assert.strictEqual(short('bevy_ecs::something::Crypto<hell::Satan>'), 'Crypto');
-});
+import { isBrpArray, isBrpIterable, isBrpObject, isPrimitive } from '../src/protocol';
 
 test('isPrimitive & isBrpIterable & isBrpObject & isBrpArray', () => {
   const _string = 'hello';

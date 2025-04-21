@@ -129,7 +129,9 @@ export class HTMLMerged extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.merged];
     shadow.append(
-      ...[this.htmlLeft, this.htmlRight?.wrapper, this.htmlIcons.wrapper].filter((element) => element !== undefined)
+      ...[this.htmlLeft, this.htmlRight?.wrapper, this.htmlIcons.wrapper].filter(
+        (element) => element !== undefined
+      )
     );
   }
 }

@@ -67,7 +67,11 @@ export class Connection {
   public async requestEntityElements(): Promise<ProtocolResult> {
     const response = await this.protocol
       .query({
-        option: ['bevy_ecs::name::Name', 'bevy_ecs::hierarchy::ChildOf', 'bevy_ecs::hierarchy::Children'],
+        option: [
+          'bevy_ecs::name::Name',
+          'bevy_ecs::hierarchy::ChildOf',
+          'bevy_ecs::hierarchy::Children',
+        ],
       })
       .catch((e) => this.errorHandler(e));
     if (response === 'disconnection') return response;
@@ -136,7 +140,9 @@ export class Connection {
     if (listResponse === 'disconnection') return 'disconnection';
     if (listResponse.result === undefined) return 'error';
 
-    const getResponse = await this.protocol.get(entity, listResponse.result).catch((e) => this.errorHandler(e));
+    const getResponse = await this.protocol
+      .get(entity, listResponse.result)
+      .catch((e) => this.errorHandler(e));
     if (getResponse === 'disconnection') return 'disconnection';
     if (getResponse.result === undefined) return 'error';
 
@@ -163,7 +169,9 @@ export class Connection {
   }
 
   public getSessionInfo(): string {
-    return 'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion;
+    return (
+      'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion
+    );
   }
 
   public getNetworkStatus(): NetworkStatus {
@@ -183,7 +191,10 @@ export class Connection {
   }
 
   public async requestRenameOfEntity(element: EntityElement): Promise<ProtocolResult> {
-    const newName = await vscode.window.showInputBox({ title: 'Rename Entity', value: element.name }); // Prompt
+    const newName = await vscode.window.showInputBox({
+      title: 'Rename Entity',
+      value: element.name,
+    }); // Prompt
     if (newName === undefined) {
       return 'error';
     }
@@ -235,10 +246,16 @@ export class Connection {
   }
 
   public getChildren(): EntityElement[] {
-    return Array.from(this.entityElements.values()).filter((element) => element.childOf === undefined);
+    return Array.from(this.entityElements.values()).filter(
+      (element) => element.childOf === undefined
+    );
   }
 
   public getChildrenOf(parent: EntityElement): EntityElement[] {
-    return parent.children?.map((id) => this.entityElements.get(id)).filter((element) => element !== undefined) ?? [];
+    return (
+      parent.children
+        ?.map((id) => this.entityElements.get(id))
+        .filter((element) => element !== undefined) ?? []
+    );
   }
 }

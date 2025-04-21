@@ -148,7 +148,10 @@ export class BevyRemoteProtocol {
    *
    * `result`: A map associating each type name to its value on the requested entity.
    */
-  public async getStrict(entity: EntityId, components: TypePath[]): Promise<BrpResponse<BrpComponentRegistry>> {
+  public async getStrict(
+    entity: EntityId,
+    components: TypePath[]
+  ): Promise<BrpResponse<BrpComponentRegistry>> {
     return this.request('bevy/get', { entity, components, strict: true });
   }
 
@@ -189,7 +192,9 @@ export class BevyRemoteProtocol {
     filterWith?: TypePath[];
     filterWithout?: TypePath[];
   }): Promise<
-    BrpResponse<[{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]>
+    BrpResponse<
+      [{ entity: EntityId; components: BrpComponentRegistry; has: { [key: TypePath]: boolean } }]
+    >
   > {
     return this.request('bevy/query', {
       data: { components, option, has },
@@ -244,7 +249,10 @@ export class BevyRemoteProtocol {
    *
    * `result`: null.
    */
-  public async insert(entity: EntityId, components: BrpComponentRegistry): Promise<BrpResponse<null>> {
+  public async insert(
+    entity: EntityId,
+    components: BrpComponentRegistry
+  ): Promise<BrpResponse<null>> {
     return this.request('bevy/insert', { entity, components });
   }
 
@@ -323,7 +331,12 @@ export class BevyRemoteProtocol {
     signal: AbortSignal,
     observer: (arg: BrpGetWatchResult) => void
   ): Promise<null> {
-    return this.requestStream('bevy/get+watch', { entity, components, strict: false }, signal, observer);
+    return this.requestStream(
+      'bevy/get+watch',
+      { entity, components, strict: false },
+      signal,
+      observer
+    );
   }
 
   /**
@@ -350,7 +363,12 @@ export class BevyRemoteProtocol {
     signal: AbortSignal,
     observer: (arg: BrpGetWatchStrictResult) => void
   ): Promise<null> {
-    return this.requestStream('bevy/get+watch', { entity, components, strict: true }, signal, observer);
+    return this.requestStream(
+      'bevy/get+watch',
+      { entity, components, strict: true },
+      signal,
+      observer
+    );
   }
 
   /**

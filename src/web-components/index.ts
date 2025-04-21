@@ -1,5 +1,12 @@
 import { DataSyncManager } from './sync';
-import { BrpValue, BrpComponentRegistry, BrpRegistrySchema, BrpObject, TypePath, BrpErrors } from '../protocol/types';
+import {
+  BrpValue,
+  BrpComponentRegistry,
+  BrpRegistrySchema,
+  BrpObject,
+  TypePath,
+  BrpErrors,
+} from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
 import { ErrorList } from './errors';
@@ -70,7 +77,8 @@ defineCustomElements();
         syncRoot.syncRegistrySchema(message.available, message.host, message.data);
         switch (syncRoot.trySync()) {
           case 'done':
-            if (syncRoot.focus !== undefined) postWebviewMessage({ cmd: 'ready_for_watch', focus: syncRoot.focus });
+            if (syncRoot.focus === undefined) break;
+            postWebviewMessage({ cmd: 'ready_for_watch', focus: syncRoot.focus });
             break;
           case 'no_registry_schema':
             console.error('registry schema did not load');
@@ -95,7 +103,9 @@ defineCustomElements();
         if (syncRoot.focus === undefined) break;
         if (syncRoot.focus.host !== message.focus.host) break;
         if (syncRoot.focus.entityId !== message.focus.entityId) break;
-        Object.entries(message.components).forEach(([typePath, value]) => (syncRoot.mapOfComponents[typePath] = value));
+        Object.entries(message.components).forEach(
+          ([typePath, value]) => (syncRoot.mapOfComponents[typePath] = value)
+        );
         message.removed.forEach((component) => delete syncRoot.mapOfComponents[component]);
         syncRoot.trySync();
         break;

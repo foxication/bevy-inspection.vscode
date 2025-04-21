@@ -44,4 +44,8 @@ export class NamedValueElement {
   }
 }
 
-export type InspectionElement = ComponentAndChildren | ComponentError | AnyValue | NamedValueElement;
+export type InspectionElement =
+  | ComponentAndChildren
+  | ComponentError
+  | AnyValue
+  | NamedValueElement;
