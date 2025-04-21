@@ -3,7 +3,6 @@ import {
   EntityId,
   BevyRemoteProtocol,
   TypePath,
-  BevyVersion,
   BrpObject,
   BrpRegistrySchema,
   BrpErrors,
@@ -22,6 +21,8 @@ export type NetworkStatus = 'offline' | 'online';
 export class Connection {
   private protocol: BevyRemoteProtocol;
   private network: NetworkStatus;
+  private _version: string = '';
+  private _title: string = '';
 
   // Bevy data
   private registeredComponents: TypePath[] = [];
@@ -43,9 +44,9 @@ export class Connection {
   private reconnectionEmitter = new vscode.EventEmitter<Connection>();
   readonly onReconnection = this.reconnectionEmitter.event;
 
-  constructor(url: URL, version: BevyVersion) {
+  constructor(url: URL) {
     this.network = 'offline';
-    this.protocol = new BevyRemoteProtocol(url, version);
+    this.protocol = new BevyRemoteProtocol(url);
   }
 
   public disconnect() {
@@ -121,18 +122,32 @@ export class Connection {
     return 'success';
   }
 
+  public async requestBevyInfo(): Promise<ProtocolResult> {
+    const response = await this.protocol.rpcDiscover().catch((e) => this.errorHandler(e));
+    if (response === 'disconnection') {
+      return response;
+    }
+    if (response.result === undefined) {
+      return 'error';
+    }
+
+    this._title = response.result.info.title;
+    this._version = response.result.info.version;
+    return 'success';
+  }
+
   public async initialize(): Promise<ProtocolResult> {
     this.network = 'online';
-    let status;
 
-    status = await this.requestEntityElements();
-    if (status !== 'success') return status;
-
-    status = await this.requestRegisteredComponents();
-    if (status !== 'success') return status;
-
-    status = await this.requestRegistrySchema();
-    return status;
+    for (const status of [
+      await this.requestEntityElements(),
+      await this.requestRegisteredComponents(),
+      await this.requestRegistrySchema(),
+      await this.requestBevyInfo(),
+    ]) {
+      if (status !== 'success') return status;
+    }
+    return 'success';
   }
 
   public async requestInspectionElements(entity: EntityId): Promise<ProtocolResult> {
@@ -166,12 +181,6 @@ export class Connection {
 
   public getRegistrySchema() {
     return this.registrySchema;
-  }
-
-  public getSessionInfo(): string {
-    return (
-      'Bevy Remote Protocol: ' + this.protocol.url + ', Version: ' + this.protocol.serverVersion
-    );
   }
 
   public getNetworkStatus(): NetworkStatus {
@@ -214,11 +223,15 @@ export class Connection {
   }
 
   public cloneProtocol() {
-    return new BevyRemoteProtocol(this.protocol.url, this.protocol.serverVersion);
+    return new BevyRemoteProtocol(this.protocol.url);
   }
 
   public getProtocol() {
     return this.protocol;
+  }
+
+  public getTitle() {
+    return this._title;
   }
 
   public getHost() {
@@ -226,7 +239,7 @@ export class Connection {
   }
 
   public getVersion() {
-    return this.protocol.serverVersion;
+    return this._version;
   }
 
   public reconnect() {

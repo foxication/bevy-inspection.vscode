@@ -101,23 +101,10 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           const path = message.data.path;
           const value = message.data.value;
           const protocol = this.connections.get(focus.host)?.getProtocol();
-
-          // errors
           const e1 = `ComponentsViewProvider.mutate_component(): no such connection`;
-          const e2 = `ComponentsViewProvider.mutate_component(): mutation with path is not supported in 0.15`;
 
           if (protocol === undefined) return console.error(e1);
-          switch (protocol.serverVersion) {
-            case '0.15':
-              if (path !== '') {
-                return console.error(e2);
-              }
-              protocol.insert(focus.entityId, { [component]: value });
-              return; // success
-            case '0.16':
-              protocol.mutateComponent(focus.entityId, component, path, value);
-              return; // success
-          }
+          protocol.mutateComponent(focus.entityId, component, path, value);
           break;
         }
         case 'request_for_registry_schema': {

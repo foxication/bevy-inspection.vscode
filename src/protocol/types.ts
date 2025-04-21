@@ -56,9 +56,8 @@ export type BrpListWatchResult = {
   removed: TypePath[];
 };
 
-export const BevyVersions = ['0.15', '0.16'] as const;
+export const BevyVersions = ['0.15', '0.16', 'future'] as const;
 export type BevyVersion = (typeof BevyVersions)[number];
-export type CommonTypePath = 'ChildOf' | 'Children' | 'Name';
 
 export type TypePathReference = { type: { $ref: string }; typePath?: string };
 export type BrpSchema = {
@@ -82,3 +81,10 @@ export type BrpSchema = {
   oneOf?: (string | { shortPath: string; typePath: TypePath } | BrpSchema)[];
 };
 export type BrpRegistrySchema = { [key: TypePath]: BrpSchema };
+
+export type BrpDiscover = {
+  info: { title: string; version: string };
+  methods: { name: string; params: [] }[];
+  openrpc: string;
+  servers: { name: string; url: string }[];
+};

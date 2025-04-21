@@ -1,11 +1,5 @@
 import * as vscode from 'vscode';
-import {
-  BevyRemoteProtocol,
-  EntityId,
-  BevyVersion,
-  BevyVersions,
-  BrpGetWatchResult,
-} from './protocol';
+import { BevyRemoteProtocol, EntityId, BrpGetWatchResult } from './protocol';
 import { Connection } from './connection';
 
 type AddBehavior = 'prompt' | 'last';
@@ -46,7 +40,7 @@ export class ConnectionList {
     const errSrc = 'ConnectionList.tryCreateConnection(): ';
 
     if (this.lastProtocol instanceof BevyRemoteProtocol && behavior === 'last') {
-      newConnection = new Connection(this.lastProtocol.url, this.lastProtocol.serverVersion);
+      newConnection = new Connection(this.lastProtocol.url);
     } else {
       // Input URL
       const url = await vscode.window.showInputBox({
@@ -55,12 +49,8 @@ export class ConnectionList {
       });
       if (url === undefined) return console.error(errSrc + 'no url');
 
-      // Input version
-      const chosenVersion = await vscode.window.showQuickPick(BevyVersions, { canPickMany: false });
-      if (chosenVersion === undefined) return console.error(errSrc + 'user did not pick version');
-
       // Create new session
-      newConnection = new Connection(new URL(url), chosenVersion as BevyVersion);
+      newConnection = new Connection(new URL(url));
     }
 
     // if such online connection already exists

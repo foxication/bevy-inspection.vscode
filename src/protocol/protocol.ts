@@ -9,12 +9,11 @@ import {
   BrpGetWatchResult,
   BrpGetWatchStrictResult,
   BrpListWatchResult,
-  BevyVersion,
   BrpErrors,
-  CommonTypePath,
   BrpComponentRegistry,
   BrpRegistrySchema,
   BrpValue,
+  BrpDiscover,
 } from './types';
 import { TextDecoder } from 'util';
 
@@ -24,42 +23,14 @@ export class BevyRemoteProtocol {
   private static decoder = new TextDecoder();
   private id: number;
   public url: URL;
-  public serverVersion: BevyVersion;
 
-  constructor(url: URL, version: BevyVersion) {
+  constructor(url: URL) {
     this.id = 0;
     this.url = url;
-    this.serverVersion = version;
   }
 
   private nextId() {
     return this.id++; // starting from 0
-  }
-
-  public commonTypePaths(short: CommonTypePath) {
-    switch (this.serverVersion) {
-      case '0.15':
-        switch (short) {
-          case 'ChildOf':
-            return 'bevy_ecs::hierarchy::ChildOf';
-          case 'Children':
-            return 'bevy_hierarchy::components::children::Children';
-          case 'Name':
-            return 'bevy_core::name::Name';
-        }
-        break;
-
-      case '0.16':
-        switch (short) {
-          case 'ChildOf':
-            return 'bevy_ecs::hierarchy::ChildOf';
-          case 'Children':
-            return 'bevy_ecs::hierarchy::Children';
-          case 'Name':
-            return 'bevy_ecs::name::Name';
-        }
-        break;
-    }
   }
 
   private requestWrapper(rpcMethod: string, rpcParams: unknown, signal?: AbortSignal): RequestInit {
@@ -443,4 +414,7 @@ export class BevyRemoteProtocol {
   /**
    * Undocumented: rpc.discover
    */
+  public async rpcDiscover(): Promise<BrpResponse<BrpDiscover>> {
+    return this.request('rpc.discover');
+  }
 }
