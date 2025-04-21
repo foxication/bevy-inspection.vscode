@@ -408,8 +408,9 @@ export class DataSyncManager {
   public mapOfComponents: BrpComponentRegistry = {};
   public focus: EntityFocus | undefined;
 
-  constructor(public readonly mount: HTMLElement) {
-    this.root = new SyncNode(this, mount, [], undefined);
+  constructor(public section: HTMLElement) {
+    this.root = new SyncNode(this, section, [], undefined);
+    this.section.style.display = 'none';
   }
   source(): DataSyncManager {
     return this;
@@ -431,6 +432,8 @@ export class DataSyncManager {
   trySync() {
     if (this.getRegistrySchema() === undefined) return 'no_registry_schema';
     this.root.sync();
+    if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
+    else this.section.style.removeProperty('display');
     return 'done';
   }
 

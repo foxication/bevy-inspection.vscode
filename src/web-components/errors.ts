@@ -6,18 +6,18 @@ export class DataErrorsManager {
   private errors: HTMLMerged[] = [];
   private serialized: string;
 
-  constructor(private anchor: HTMLElement) {
+  constructor(private section: HTMLElement) {
     this.title = document.createElement('h3');
     this.title.textContent = 'Errors';
-    this.title.style.display = 'none';
-    anchor.append(this.title);
+    this.section.append(this.title);
+    this.section.style.display = 'none';
     this.serialized = this.serialize({});
   }
 
   update(errors: BrpErrors) {
-    // Toggle title visibility
-    if (Object.keys(errors).length > 0) this.title.style.removeProperty('display');
-    else this.title.style.display = 'none';
+    // Toggle section visibility
+    if (Object.keys(errors).length > 0) this.section.style.removeProperty('display');
+    else this.section.style.display = 'none';
 
     // Remove & Create
     this.errors.forEach((element) => element.remove());
