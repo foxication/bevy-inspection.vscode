@@ -21,6 +21,12 @@
 > - **Not Official**: This is a community-driven project, not affiliated with the official Bevy Engine team.
 > - **Early Development**: Currently in alpha stage — expect bugs and missing features. Contributions welcome!
 
+## Features
+
+- Review hierarchy of all entities in your scene
+- Rename and destroy entities
+- Review and modify components of entities in real time
+
 ## Supported Versions
 
 | Bevy Version | Status      |
