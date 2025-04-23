@@ -41,11 +41,7 @@ export function testWithServer(manifestPath: string, expectedVersion: BevyVersio
       isRunning = true;
     });
 
-    const protocol = await initializeBevyRemoteProtocol(DEFAULT_BEVY_URL);
-    t.assert.ok(protocol !== 'disconnection');
-    t.assert.ok(protocol !== 'unspecified_error');
-    t.assert.ok(protocol.version.startsWith(expectedVersion));
-
+    let protocolOrError = await initializeBevyRemoteProtocol(DEFAULT_BEVY_URL);
     let isConnected = false;
     await t.test('connection with server', { skip: !isRunning, timeout: 30 * 1000 }, async () => {
       const attemptInterval = 500;
@@ -54,12 +50,14 @@ export function testWithServer(manifestPath: string, expectedVersion: BevyVersio
       assert.ok(server);
       while (!server.exitCode) {
         await sleep(attemptInterval);
-        const components = await protocol.list();
-        t.assert.ok(typeof components !== 'string');
-        if (components) if (components.result) break;
+        protocolOrError = await initializeBevyRemoteProtocol(DEFAULT_BEVY_URL);
+        if (protocolOrError instanceof BevyRemoteProtocolV016) break;
       }
       isConnected = true;
     });
+    t.assert.ok(protocolOrError instanceof BevyRemoteProtocolV016);
+    const protocol = protocolOrError;
+    t.assert.ok(protocol.version.startsWith(expectedVersion));
 
     await t.test('testing protocol', { skip: !isConnected }, async (t) => {
       await t.test('get & get_strict', async () => testGet(protocol));
@@ -328,7 +326,7 @@ export async function testReparent(protocol: BevyRemoteProtocolV016): Promise<vo
 export async function testGetWatch(protocol: BevyRemoteProtocolV016): Promise<void> {
   const res = await protocol.query({ filterWith: ['server::Description'] });
   assert.ok(typeof res !== 'string');
-  const entity = res[0].entity;
+  const entity = res.result?.[0].entity;
   assert.ok(entity);
 
   let changed: BrpGetWatchResult | undefined;
@@ -353,7 +351,7 @@ export async function testGetWatch(protocol: BevyRemoteProtocolV016): Promise<vo
 export async function testGetWatchStrict(protocol: BevyRemoteProtocolV016): Promise<void> {
   const res = await protocol.query({ filterWith: ['server::Description'] });
   assert.ok(typeof res !== 'string');
-  const entity = res[0].entity;
+  const entity = res.result?.[0].entity;
   assert.ok(entity);
 
   const apply = { 'server::Description': 'here is updated description' };
