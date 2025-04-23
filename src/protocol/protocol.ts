@@ -93,16 +93,24 @@ async function requestStream<R>(
 }
 
 abstract class BevyRemoteProtocolEssential {
-  private id: number;
-  public url: URL;
-
-  constructor(url: URL) {
-    this.id = 0;
-    this.url = url;
-  }
+  private id: number = 0;
+  constructor(public url: URL) {}
 
   get nextId() {
     return this.id++; // starting from 0
+  }
+
+  async rawRequest<R>(method: string, params?: unknown) {
+    return request<R>(this.url, this.nextId, method, params);
+  }
+
+  async rawRequestStream<R>(
+    method: string,
+    params: unknown,
+    signal: AbortSignal,
+    observer: (arg: R) => void
+  ): Promise<null | BrpError> {
+    return requestStream<R>(this.url, this.nextId, method, params, signal, observer);
   }
 
   abstract get title(): string;
@@ -167,8 +175,10 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
   public async get(
     entity: EntityId,
     components: TypePath[]
-  ): Promise<BrpResponse<{ components: BrpComponentRegistry; errors: BrpResponseErrors }> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/get', { entity, components, strict: false });
+  ): Promise<
+    BrpResponse<{ components: BrpComponentRegistry; errors: BrpResponseErrors }> | BrpError
+  > {
+    return this.rawRequest('bevy/get', { entity, components, strict: false });
   }
 
   /**
@@ -188,7 +198,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     entity: EntityId,
     components: TypePath[]
   ): Promise<BrpResponse<BrpComponentRegistry> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/get', { entity, components, strict: true });
+    return this.rawRequest('bevy/get', { entity, components, strict: true });
   }
 
   /**
@@ -233,7 +243,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
       >
     | BrpError
   > {
-    return request(this.url, this.nextId, 'bevy/query', {
+    return this.rawRequest('bevy/query', {
       data: { components, option, has },
       filter: { with: filterWith, without: filterWithout },
     });
@@ -251,7 +261,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
   public async spawn(
     components: BrpComponentRegistry
   ): Promise<BrpResponse<{ entity: EntityId }> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/spawn', { components });
+    return this.rawRequest('bevy/spawn', { components });
   }
 
   /**
@@ -263,7 +273,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
    * `result`: null.
    */
   public async destroy(entity: EntityId): Promise<BrpResponse<null> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/destroy', { entity });
+    return this.rawRequest('bevy/destroy', { entity });
   }
 
   /**
@@ -279,7 +289,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     entity: EntityId,
     components: TypePath[]
   ): Promise<BrpResponse<null> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/remove', { entity, components });
+    return this.rawRequest('bevy/remove', { entity, components });
   }
 
   /**
@@ -295,7 +305,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     entity: EntityId,
     components: BrpComponentRegistry
   ): Promise<BrpResponse<null> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/insert', { entity, components });
+    return this.rawRequest('bevy/insert', { entity, components });
   }
 
   /**
@@ -315,7 +325,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     path: string,
     value: BrpValue
   ): Promise<BrpResponse<null> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/mutate_component', {
+    return this.rawRequest('bevy/mutate_component', {
       entity,
       component,
       path,
@@ -337,7 +347,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     entities: EntityId[],
     parent?: EntityId
   ): Promise<BrpResponse<null> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/reparent', { entities, parent });
+    return this.rawRequest('bevy/reparent', { entities, parent });
   }
 
   /**
@@ -352,8 +362,8 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
    * `result`: An array of fully-qualified type names of components.
    */
   public async list(entity?: EntityId): Promise<BrpResponse<TypePath[]> | BrpError> {
-    if (entity) return request(this.url, this.nextId, 'bevy/list', { entity });
-    return request(this.url, this.nextId, 'bevy/list');
+    if (entity) return this.rawRequest('bevy/list', { entity });
+    return this.rawRequest('bevy/list');
   }
 
   /**
@@ -381,9 +391,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     signal: AbortSignal,
     observer: (arg: BrpGetWatchResult) => void
   ): Promise<null | BrpError> {
-    return requestStream(
-      this.url,
-      this.nextId,
+    return this.rawRequestStream(
       'bevy/get+watch',
       { entity, components, strict: false },
       signal,
@@ -415,9 +423,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     signal: AbortSignal,
     observer: (arg: BrpGetWatchStrictResult) => void
   ): Promise<null | BrpError> {
-    return requestStream(
-      this.url,
-      this.nextId,
+    return this.rawRequestStream(
       'bevy/get+watch',
       { entity, components, strict: true },
       signal,
@@ -447,9 +453,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     observer: (arg: BrpListWatchResult) => void,
     entity?: EntityId
   ): Promise<null | BrpError> {
-    return requestStream(
-      this.url,
-      this.nextId,
+    return this.rawRequestStream(
       'bevy/list+watch',
       entity === undefined ? null : { entity },
       signal,
@@ -498,13 +502,13 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
    * - Items...
    */
   public async registrySchema(): Promise<BrpResponse<BrpRegistrySchema> | BrpError> {
-    return request(this.url, this.nextId, 'bevy/registry/schema');
+    return this.rawRequest('bevy/registry/schema');
   }
 
   /**
    * Undocumented: rpc.discover
    */
   public async rpcDiscover(): Promise<BrpResponse<BrpDiscover> | BrpError> {
-    return request(this.url, this.nextId, 'rpc.discover');
+    return this.rawRequest('rpc.discover');
   }
 }
