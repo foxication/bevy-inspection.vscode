@@ -35,9 +35,63 @@
 
 Built on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.html) via JSON-RPC 2.0 over HTTP.
 
-## How To Use
+## Getting Started
 
-...
+### Configure Bevy Project
+
+1. Add required dependencies to your `Cargo.toml`:
+
+```toml
+[dependencies]
+bevy = { version = "=0.16.0-rc.5", features = ["bevy_remote"] }
+```
+
+2. Initialize plugins in your Bevy app:
+
+```rust
+fn main() {
+    App::new()
+        .add_plugins(RemotePlugin::default()) // Core remote protocol
+        .add_plugins(RemoteHttpPlugin::default()) // Enable HTTP transport
+        // ...other plugins
+        .run();
+}
+```
+
+3. Launch your game and connect from VSCode using the extension.
+
+### Custom Components
+
+For built-in Bevy components (with Reflect trait), inspection works automatically.
+For custom components:
+
+```rust
+#[derive(Component, Reflect, Default)] // Derive `Reflect` trait:
+#[reflect(Component, Default)] // 'Component' is required for component recognition
+struct SimpleWeapon {
+    #[reflect(ignore)] // Optional: hide sensitive fields
+    secret_code: String,
+    damage: f32,
+    charge_time: f32,
+}
+
+fn main() {
+    App::new()
+        // ...other plugins
+        .register_type::<SimpleWeapon>() // Register type during app initialization
+        // ...other registrations
+        .run();
+}
+```
+
+> [!NOTE]
+> 
+> Resource inspection not supported - work in progress
+
+## Documentation
+
+- Reflection - https://docs.rs/bevy/latest/bevy/reflect/index.html
+- RemoteHttpPlugin - https://docs.rs/bevy/latest/bevy/remote/http/struct.RemoteHttpPlugin.html
 
 ## Support
 
