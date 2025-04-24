@@ -102,7 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
         });
       if (connections.focus?.host === connection.getHost()) {
         componentsView.description = 'Disconnected';
-        connections.stopWatch();
+        connections.stopComponentWatch();
       }
     });
 
@@ -150,6 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   connections.onFocusChanged((focus) => {
+    connections.stopComponentWatch();
     if (focus !== null) componentsView.updateAll(focus);
   });
 }

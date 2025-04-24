@@ -126,9 +126,13 @@ export class ConnectionList {
     return this.connections.get(host);
   }
 
-  public startWatch(focus: EntityFocus) {
+  private expectStopOfWatch = false;
+  public startComponentWatch(focus: EntityFocus) {
     // Stop previous watching
-    this.stopWatch();
+    if (this.watchingController !== undefined) {
+      this.watchingController.abort();
+      console.error(`ConnectionList.startComponentWatch(): previous watch wasn't stopped`);
+    }
 
     // Get connection
     const protocol = this.get(focus.host)?.getProtocol();
@@ -139,13 +143,23 @@ export class ConnectionList {
       if (typeof response === 'string') return; // skip if no connection
       if (response.result === undefined) return; // Skip if no components to watch
       this.watchingController = new AbortController();
-      protocol.getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
-        this.getWatchResultEmitter.fire([focus, v]);
-      });
+      protocol
+        .getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
+          this.getWatchResultEmitter.fire([focus, v]);
+        })
+        .then(() => {
+          if (!this.expectStopOfWatch) {
+            console.error(`ConnectionList.watchingController: watch stopped unexpectedly`);
+            this.connections.get(focus.host)?.disconnect();
+          }
+          this.expectStopOfWatch = false;
+          this.watchingController = undefined;
+        });
     });
   }
 
-  public stopWatch() {
+  public stopComponentWatch() {
+    this.expectStopOfWatch = true;
     this.watchingController?.abort();
   }
 }
