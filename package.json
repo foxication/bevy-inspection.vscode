@@ -96,7 +96,7 @@
 				{
 					"type": "webview",
 					"id": "componentsView",
-					"name": "Components",
+					"name": "Inspection",
 					"when": "extension.areThereConnections"
 				},
 				{

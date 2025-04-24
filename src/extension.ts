@@ -138,7 +138,6 @@ export function activate(context: vscode.ExtensionContext) {
         if (!(selection instanceof EntityElement)) break;
         if (connections.get(selection.host)?.getNetworkStatus() !== 'online') break;
         connections.updateFocus(new EntityFocus(selection.host, selection.id));
-        componentsView.title = 'Components of ' + (selection.name ?? selection.id);
         componentsView.description = undefined;
         break;
       }

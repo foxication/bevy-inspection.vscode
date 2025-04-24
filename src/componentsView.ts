@@ -32,12 +32,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  set title(text: string | undefined) {
-    if (this.view !== undefined) {
-      this.view.title = text;
-    }
-  }
-
   private async postVSCodeMessage(message: VSCodeMessage) {
     if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.postVSCodeMessage: no view`);
