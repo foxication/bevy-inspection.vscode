@@ -5,7 +5,7 @@
     Runtime Monitoring & Modification Tool for Bevy Engine in VSCode extension.
 </p>
 
-![image](https://github.com/user-attachments/assets/39791d0e-0419-434d-9e9b-3bce2af13813)
+![Screenshot](https://github.com/user-attachments/assets/8f6fd0d4-8e3b-4e2c-82e9-f85fda7e21a7)
 
 ## Warning
 
