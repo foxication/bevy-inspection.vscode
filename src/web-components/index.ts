@@ -24,6 +24,7 @@ export type WebviewMessage =
   | {
       cmd: 'ready_for_watch';
       focus: EntityFocus;
+      components: TypePath[];
     };
 
 export type VSCodeMessage =
@@ -83,7 +84,11 @@ defineCustomElements();
         switch (syncSection.trySync()) {
           case 'done':
             if (syncSection.focus === undefined) break;
-            postWebviewMessage({ cmd: 'ready_for_watch', focus: syncSection.focus });
+            postWebviewMessage({
+              cmd: 'ready_for_watch',
+              focus: syncSection.focus,
+              components: Object.keys(syncSection.mapOfComponents),
+            });
             break;
           case 'no_registry_schema':
             console.error('registry schema did not load');
@@ -98,7 +103,11 @@ defineCustomElements();
         errorsSection.update(message.errors);
         switch (syncSection.trySync()) {
           case 'done':
-            postWebviewMessage({ cmd: 'ready_for_watch', focus: message.focus });
+            postWebviewMessage({
+              cmd: 'ready_for_watch',
+              focus: message.focus,
+              components: Object.keys(message.components),
+            });
             break;
           case 'no_registry_schema':
             postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });

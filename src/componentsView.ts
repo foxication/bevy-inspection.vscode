@@ -149,7 +149,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'ready_for_watch':
-          this.connections.startComponentWatch(message.focus);
+          this.connections.startComponentWatch(message.focus, message.components);
           break;
       }
     });

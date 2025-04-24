@@ -4,6 +4,7 @@ import {
   BrpGetWatchResult,
   DEFAULT_BEVY_URL,
   initializeBevyRemoteProtocol,
+  TypePath,
 } from './protocol';
 import { Connection } from './connection';
 
@@ -127,7 +128,7 @@ export class ConnectionList {
   }
 
   private expectStopOfWatch = false;
-  public startComponentWatch(focus: EntityFocus) {
+  public startComponentWatch(focus: EntityFocus, components: TypePath[]) {
     const srcName = `${this.constructor.name}.watchingController`;
 
     // Stop previous watching
@@ -139,35 +140,24 @@ export class ConnectionList {
     // Get connection
     const protocol = this.get(focus.host)?.getProtocol();
     if (protocol === undefined) return console.error(`${srcName}: no connection`);
-    protocol.list(focus.entityId).then((response) => {
-      if (response === 'disconnection') {
-        this.connections.get(focus.host)?.disconnect();
-        return console.error(`${srcName}: list() returns error`);
-      }
-      if (response === 'unspecified_error') return console.error(`${srcName}: unknown error`);
-      if (response.result === undefined) return console.error(`${srcName}: no result`);
-      if (response.error !== undefined) {
-        console.error(`${srcName}: ${JSON.stringify(response.error)}`);
-      }
-      this.watchingController = new AbortController();
-      protocol
-        .getWatch(focus.entityId, response.result, this.watchingController.signal, (v) => {
-          this.getWatchResultEmitter.fire([focus, v]);
-        })
-        .then((result) => {
-          this.watchingController = undefined;
-          if (!this.expectStopOfWatch) {
-            console.error(`${srcName}: watch stopped unexpectedly with: ${JSON.stringify(result)}`);
-            if (result === null) {
-              console.log(`${srcName}: watch is restored`);
-              this.startComponentWatch(focus);
-            } else {
-              this.connections.get(focus.host)?.disconnect();
-            }
+    this.watchingController = new AbortController();
+    protocol
+      .getWatch(focus.entityId, components, this.watchingController.signal, (v) => {
+        this.getWatchResultEmitter.fire([focus, v]);
+      })
+      .then((result) => {
+        this.watchingController = undefined;
+        if (!this.expectStopOfWatch) {
+          console.error(`${srcName}: watch stopped unexpectedly with: ${JSON.stringify(result)}`);
+          if (result === null) {
+            console.log(`${srcName}: watch is restored`);
+            this.startComponentWatch(focus, components);
+          } else {
+            this.connections.get(focus.host)?.disconnect();
           }
-          this.expectStopOfWatch = false;
-        });
-    });
+        }
+        this.expectStopOfWatch = false;
+      });
   }
 
   public stopComponentWatch() {
