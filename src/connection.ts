@@ -60,6 +60,7 @@ export class Connection {
   ): response is { jsonrpc: string; id: number; result: R; error?: BrpResponseError } {
     if (typeof response === 'string' || response.result === undefined) {
       this.disconnect();
+      if (typeof response !== 'string') console.error(JSON.stringify(response.error));
       return false;
     }
     return true;
@@ -74,21 +75,24 @@ export class Connection {
       ],
     });
     if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
-    this.entityElements = new Map(
-      response.result.map((value) => {
-        return [
+    this.entityElements = new Map();
+    for (const value of response.result) {
+      const listResponse = await this.protocol.list(value.entity);
+      if (!this.isCorrectResponseOrDisconnect(listResponse)) return 'disconnection';
+      const hasList = typeof listResponse !== 'string' ? listResponse.result ?? [] : [];
+      this.entityElements.set(
+        value.entity,
+        new EntityElement(
+          this.getHost(),
+          this.getNetworkStatus(),
           value.entity,
-          new EntityElement(
-            this.getHost(),
-            this.getNetworkStatus(),
-            value.entity,
-            value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId,
-            value.components['bevy_ecs::hierarchy::Children'] as EntityId[],
-            value.components['bevy_ecs::name::Name'] as string
-          ),
-        ];
-      })
-    );
+          (value.components['bevy_ecs::hierarchy::ChildOf'] as EntityId) ?? undefined,
+          (value.components['bevy_ecs::hierarchy::Children'] as EntityId[]) ?? [],
+          hasList,
+          (value.components['bevy_ecs::name::Name'] as string) ?? undefined
+        )
+      );
+    }
     this.hierarchyUpdatedEmitter.fire(this);
     return 'success';
   }
@@ -111,9 +115,9 @@ export class Connection {
     this.network = 'online';
 
     for (const status of [
-      await this.requestEntityElements(),
       await this.requestRegisteredComponents(),
       await this.requestRegistrySchema(),
+      await this.requestEntityElements(),
     ]) {
       if (status !== 'success') return status;
     }

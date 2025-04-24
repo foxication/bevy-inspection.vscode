@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EntityId } from './protocol';
+import { EntityId, TypePath } from './protocol';
 import { ConnectionList } from './connection-list';
 import { Connection, NetworkStatus } from './connection';
 
@@ -17,8 +17,9 @@ export class EntityElement {
     public host: string,
     public network: NetworkStatus,
     public id: EntityId,
-    public childOf: EntityId | string,
+    public childOf: EntityId | undefined,
     public children: EntityId[],
+    public components: TypePath[],
     public name?: string
   ) {}
 }
@@ -63,31 +64,19 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
 
     // if element instanceof EntityElement
     const collapsible =
-      element.children === undefined || element.children.length === 0
-        ? undefined
-        : vscode.TreeItemCollapsibleState.Expanded;
-    const treeItem = new vscode.TreeItem(element.name ?? element.id.toString(), collapsible);
-    treeItem.id = element.host + '/' + element.id.toString();
-    if (collapsible === undefined) {
-      switch (element.network) {
-        case 'offline':
-          treeItem.iconPath = new vscode.ThemeIcon('debug-disconnect');
-          break;
-        case 'online':
-          treeItem.iconPath = new vscode.ThemeIcon('debug-breakpoint-unverified');
-          break;
-      }
-    }
-    if (element.name) {
-      treeItem.description = element.id.toString();
-    }
-    treeItem.tooltip = treeItem.id;
+      element.children.length === 0 ? undefined : vscode.TreeItemCollapsibleState.Expanded;
+    const treeItem = new vscode.TreeItem(element.id.toString(), collapsible);
+    if (element.name !== undefined) treeItem.description = element.name;
+    treeItem.id = element.id.toString();
+    treeItem.tooltip = element.id.toString();
     switch (element.network) {
       case 'offline':
         treeItem.contextValue = 'entityElementOffline';
+        treeItem.iconPath = new vscode.ThemeIcon('debug-disconnect');
         break;
       case 'online':
         treeItem.contextValue = 'entityElementOnline';
+        treeItem.iconPath = iconFromComponents(element.components);
         break;
     }
     return treeItem;
@@ -96,4 +85,47 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
   update(data: HierarchyElement | undefined) {
     this.treeIsChangedEmitter.fire(data);
   }
+}
+
+export const componentsWithIcons = [
+  'bevy_ecs::observer::runner::Observer',
+  'bevy_ecs::system::system_registry::SystemIdMarker',
+  'bevy_window::monitor::Monitor',
+  'bevy_window::window::Window',
+  'bevy_picking::pointer::PointerId',
+  'bevy_ui::ui_node::Node',
+  'bevy_ui::widget::text::Text',
+  'bevy_pbr::light::point_light::PointLight',
+  'bevy_render::camera::camera::Camera',
+  'bevy_render::mesh::components::Mesh3d',
+  'bevy_transform::components::transform::Transform',
+] as const;
+
+function iconFromComponents(components: TypePath[]) {
+  const highest = componentsWithIcons.find((key) => components.includes(key));
+  switch (highest) {
+    case 'bevy_ecs::observer::runner::Observer':
+      return new vscode.ThemeIcon('compass');
+    case 'bevy_ecs::system::system_registry::SystemIdMarker':
+      return new vscode.ThemeIcon('chip');
+    case 'bevy_window::monitor::Monitor':
+      return new vscode.ThemeIcon('device-desktop');
+    case 'bevy_window::window::Window':
+      return new vscode.ThemeIcon('window');
+    case 'bevy_picking::pointer::PointerId':
+      return new vscode.ThemeIcon('target');
+    case 'bevy_ui::ui_node::Node':
+      return new vscode.ThemeIcon('layout');
+    case 'bevy_ui::widget::text::Text':
+      return new vscode.ThemeIcon('symbol-text');
+    case 'bevy_pbr::light::point_light::PointLight':
+      return new vscode.ThemeIcon('lightbulb');
+    case 'bevy_render::camera::camera::Camera':
+      return new vscode.ThemeIcon('device-camera');
+    case 'bevy_render::mesh::components::Mesh3d':
+      return new vscode.ThemeIcon('symbol-misc');
+    case 'bevy_transform::components::transform::Transform':
+      return new vscode.ThemeIcon('move');
+  }
+  return new vscode.ThemeIcon('debug-breakpoint-unverified');
 }
