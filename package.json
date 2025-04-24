@@ -5,6 +5,7 @@
 	"version": "0.1.0",
 	"license": "Apache-2.0",
 	"icon": "assets/extension-logo.png",
+	"publisher": "foxication",
 	"repository": {
 		"url": "https://github.com/foxication/bevy-inspection.vcscode"
 	},
