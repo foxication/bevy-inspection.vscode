@@ -117,7 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
     hierarchyData.update(undefined);
   });
   connections.onGetWatchResult(([focus, result]) => {
-    componentsView.updateComponents(focus, result.components, result.removed);
+    componentsView.updateComponentsLazy(focus, result.components, result.removed);
 
     // Name update (workaround)
     if (!Object.keys(result.components).includes('bevy_ecs::name::Name')) return; // skip

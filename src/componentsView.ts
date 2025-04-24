@@ -73,7 +73,44 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     this.postVSCodeMessage({ cmd: 'update_all', focus, components: entityData, errors: errorData });
   }
 
-  public updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
+  private changesToApply = 0;
+  private changesInProcess = 0;
+  private bufferOfChanges: {
+    [hash: string]: {
+      focus: EntityFocus;
+      components: BrpObject;
+      removed: TypePath[];
+    };
+  } = {};
+  public updateComponentsLazy(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
+    const hash = `${focus.host}@${focus.entityId}`;
+    const access = this.bufferOfChanges[hash] ?? {
+      focus: focus,
+      components: {},
+      removed: [],
+    };
+    for (const key of Object.keys(components)) {
+      access.components[key] = components[key];
+      const found = access.removed.indexOf(key);
+      access.removed.splice(found, found === -1 ? 0 : 1); // component is not removed anymore
+    }
+    access.removed = [...new Set([...access.removed, ...removed])];
+    access.removed.forEach((key) => delete access.components[key]); // component doesn't exist anymore
+    this.bufferOfChanges[hash] = access;
+    this.changesToApply += 1;
+
+    if (this.changesInProcess === 0) {
+      this.changesInProcess = this.changesToApply;
+      this.changesToApply = 0;
+      Object.values(this.bufferOfChanges).forEach((v) =>
+        this.updateComponents(v.focus, v.components, v.removed)
+      );
+      this.bufferOfChanges = {};
+      setTimeout(() => (this.changesInProcess = 0), 200);
+    }
+  }
+
+  private updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
     if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
