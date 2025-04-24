@@ -5,21 +5,12 @@
     Runtime Monitoring & Modification Tool for Bevy Engine in VSCode extension.
 </p>
 
-<p align="center">
-  <a href="https://github.com/foxication/bevy-inspection.vscode/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/foxication/bevy-inspection.vscode.svg" alt="License" /></a>
-  <a href="https://github.com/foxication/bevy-inspection.vscode/releases">
-    <img src="https://img.shields.io/github/downloads/foxication/bevy-inspection.vscode/total?color=lightgreen" alt="Downloads" /></a>
-  <a href="https://bevyengine.org">
-    <img src="https://img.shields.io/badge/Bevy-0.16%2B-orange"/></a>
-</p>
-
 ![image](https://github.com/user-attachments/assets/39791d0e-0419-434d-9e9b-3bce2af13813)
 
-> [!WARNING]  
->
-> - **Not Official**: This is a community-driven project, not affiliated with the official Bevy Engine team.
-> - **Early Development**: Currently in alpha stage — expect bugs and missing features. Contributions welcome!
+## Warning
+
+- **Not Official**: This is a community-driven project, not affiliated with the official Bevy Engine team.
+- **Early Development**: Currently in alpha stage — expect bugs and missing features. Contributions welcome!
 
 ## Features
 
@@ -67,7 +58,7 @@ For custom components:
 
 ```rust
 #[derive(Component, Reflect, Default)] // Derive `Reflect` trait:
-#[reflect(Component, Default)] // 'Component' is required for component recognition
+#[reflect(Component, Default)] // 'Component' is required for recognition
 struct SimpleWeapon {
     #[reflect(ignore)] // Optional: hide sensitive fields
     secret_code: String,
@@ -78,15 +69,15 @@ struct SimpleWeapon {
 fn main() {
     App::new()
         // ...other plugins
-        .register_type::<SimpleWeapon>() // Register type during app initialization
+        .register_type::<SimpleWeapon>() // Register type
         // ...other registrations
         .run();
 }
 ```
 
-> [!NOTE]
-> 
-> Resource inspection not supported - work in progress
+### Custom Resources
+
+Resource inspection not supported - work in progress
 
 ## Documentation
 

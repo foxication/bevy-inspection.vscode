@@ -1,9 +1,10 @@
 {
 	"name": "bevy-inspection",
-	"displayName": "bevy-inspection",
-	"description": "Bevy Inspection",
+	"displayName": "Bevy Inspection",
+	"description": "Runtime Monitoring & Modification Tool for Bevy Engine",
 	"version": "0.1.0",
 	"license": "Apache-2.0",
+	"icon": "assets/extension-logo.png",
 	"repository": {
 		"url": "https://github.com/foxication/bevy-inspection.vcscode"
 	},
@@ -54,7 +55,7 @@
 				{
 					"id": "bevy-inspection",
 					"title": "Bevy Inspection",
-					"icon": "assets/bevy.svg"
+					"icon": "assets/extension-icon.svg"
 				}
 			]
 		},

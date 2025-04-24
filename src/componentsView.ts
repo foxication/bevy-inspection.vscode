@@ -160,32 +160,19 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {
     const htmlUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'index.html')
+      vscode.Uri.joinPath(this.extensionUri, 'web', 'components.html')
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'src', 'web-components', 'index.css')
+      vscode.Uri.joinPath(this.extensionUri, 'web', 'components.css')
     );
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js')
     );
     const elementsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this.extensionUri,
-        'node_modules',
-        '@vscode-elements',
-        'elements',
-        'dist',
-        'bundled.js'
-      )
+      vscode.Uri.joinPath(this.extensionUri, 'web', 'vscode-elements.js')
     );
     const codiconsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(
-        this.extensionUri,
-        'node_modules',
-        '@vscode/codicons',
-        'dist',
-        'codicon.css'
-      )
+      vscode.Uri.joinPath(this.extensionUri, 'web', 'codicon.css')
     );
 
     const result = (await vscode.workspace.openTextDocument(htmlUri.fsPath))

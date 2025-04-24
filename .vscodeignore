@@ -1,0 +1,14 @@
+.vscode/
+examples/
+node_modules/
+out/
+src/
+test/
+
+.gitignore
+CONTRIBUTING.md
+esbuild.js
+eslint.config.mjs
+tsconfig.json
+tsconfig.json
+webpack.config.js
