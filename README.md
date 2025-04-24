@@ -79,6 +79,11 @@ fn main() {
 
 Resource inspection not supported - work in progress
 
+### Examples
+
+Refer to the [examples](https://github.com/foxication/bevy-inspection.vscode/tree/main/examples/) directory
+for fully functional Bevy applications demonstrating correct configuration.
+
 ## Documentation
 
 - Reflection - https://docs.rs/bevy/latest/bevy/reflect/index.html
