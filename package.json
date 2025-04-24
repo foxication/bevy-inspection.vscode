@@ -23,13 +23,14 @@
 	"activationEvents": [],
 	"main": "./dist/extension.js",
 	"scripts": {
-		"compile": "npm run check-types && node esbuild.js",
+		"copy-required": "@powershell mkdir -Force dist; cp node_modules/@vscode-elements/elements/dist/bundled.js dist/vscode-elements.js; cp node_modules/@vscode/codicons/dist/codicon.css dist/; cp node_modules/@vscode/codicons/dist/codicon.ttf dist/",
+		"compile": "npm run copy-required && npm run check-types && node esbuild.js",
 		"check-types": "tsc --noEmit",
 		"watch": "npm run watch:esbuild && npm run watch:tsc",
-		"watch:esbuild": "node esbuild.js --watch",
+		"watch:esbuild": "npm run copy-required && node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"vscode:prepublish": "npm run package",
-		"package": "npm run check-types && node esbuild.js --production",
+		"package": "npm run copy-required && npm run check-types && node esbuild.js --production",
 		"lint": "eslint src web --ext ts",
 		"test": "npx tsx --test"
 	},

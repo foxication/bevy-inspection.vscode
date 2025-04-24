@@ -169,10 +169,10 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview-components.js')
     );
     const elementsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'web', 'vscode-elements.js')
+      vscode.Uri.joinPath(this.extensionUri, 'dist', 'vscode-elements.js')
     );
     const codiconsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, 'web', 'codicon.css')
+      vscode.Uri.joinPath(this.extensionUri, 'dist', 'codicon.css')
     );
 
     const result = (await vscode.workspace.openTextDocument(htmlUri.fsPath))
