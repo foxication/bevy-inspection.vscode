@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "=0.16.0-rc.5", features = ["bevy_remote"] }
+bevy = { version = "0.16", features = ["bevy_remote"] }
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
