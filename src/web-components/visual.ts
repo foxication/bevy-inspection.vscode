@@ -79,12 +79,17 @@ export class ErrorVisual extends Visual {
     public error: { code: number | undefined; message: string }
   ) {
     super(sync);
+    const label = (this.sync.lastPathSegment ?? '...').toString();
     this.dom = HTMLMerged.create();
     this.dom.level = this.level;
-    this.dom.label = (this.sync.lastPathSegment ?? '...').toString();
+    this.dom.label = label;
     this.dom.tooltip = (this.error.code ?? 'Error').toString();
     this.dom.brpValue = this.error.message;
     this.dom.allowValueWrapping();
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
 }
@@ -133,6 +138,11 @@ export class SerializedVisual extends VisualDescribed {
     if (this.dom.htmlRight !== undefined) {
       this.dom.htmlRight.value.mutability = new MutationConsent(sync);
     }
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
 
@@ -172,6 +182,11 @@ export class EnumVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label + ' / ' + this.variantName;
     this.dom.tooltip = this.tooltipExtended;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
     if (!this.variantTypePaths.includes(this.variantTypePath)) {
       console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
@@ -211,6 +226,11 @@ export class StructVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
 
@@ -232,6 +252,11 @@ export class TupleVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
 
@@ -252,6 +277,11 @@ export class ArrayVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
@@ -270,6 +300,11 @@ export class ListVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
@@ -288,6 +323,11 @@ export class SetVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
@@ -306,6 +346,11 @@ export class MapVisual extends ExpandableVisual {
     this.dom.level = this.level;
     this.dom.label = this.label;
     this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.label,
+      type: this.schema.typePath,
+      path: this.sync.internalPathSerialized,
+    });
     anchor.after(this.dom);
   }
   get keyTypePath(): TypePath {
@@ -358,7 +403,7 @@ export class MutationConsent {
     else if (isBrpIterable(result)) modify(result, this.internalPath);
 
     const focus = this.sync.source().focus;
-    const component = (this.sync.path[0] ?? '').toString();
+    const component = this.sync.pathComponent;
     const path = this.sync.pathSerialized;
     if (focus === undefined) return console.error('MutationConsent.mutate(): no focus');
     if (component === '') return console.error('MutationConsent.mutate(): no component');

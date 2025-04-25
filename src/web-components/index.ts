@@ -6,6 +6,7 @@ import {
   BrpObject,
   TypePath,
   BrpResponseErrors,
+  isBrpIterable,
 } from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
@@ -25,6 +26,10 @@ export type WebviewMessage =
       cmd: 'ready_for_watch';
       focus: EntityFocus;
       components: TypePath[];
+    }
+  | {
+      cmd: 'write_clipboard';
+      text: string;
     };
 
 export type VSCodeMessage =
@@ -46,6 +51,14 @@ export type VSCodeMessage =
       focus: EntityFocus;
       components: BrpObject;
       removed: TypePath[];
+    }
+  | {
+      cmd: 'copy_error_message_to_clipboard';
+      component: string;
+    }
+  | {
+      cmd: 'copy_value_to_clipboard';
+      path: string;
     };
 
 // VSCode Access
@@ -124,6 +137,35 @@ defineCustomElements();
         message.removed.forEach((component) => delete syncSection.mapOfComponents[component]);
         syncSection.trySync();
         break;
+      case 'copy_error_message_to_clipboard': {
+        const result = errorsSection.getErrorMessage(message.component)?.toString();
+        if (result !== undefined) postWebviewMessage({ cmd: 'write_clipboard', text: result });
+        else console.error(`Error message is not found: ${message.component}`);
+        break;
+      }
+      case 'copy_value_to_clipboard': {
+        const parsedPath = message.path.split('.').map((segment) => {
+          if (segment === '') return undefined;
+          if (/^\d+$/.test(segment)) return parseInt(segment);
+          return segment;
+        });
+        const result = syncSection.access(parsedPath);
+        switch (true) {
+          case result === undefined:
+            console.error(`Value is not found: ${message.path}`);
+            break;
+          case result === null:
+            postWebviewMessage({ cmd: 'write_clipboard', text: 'null' });
+            break;
+          case result !== undefined && isBrpIterable(result):
+            postWebviewMessage({ cmd: 'write_clipboard', text: JSON.stringify(result) });
+            break;
+          default:
+            postWebviewMessage({ cmd: 'write_clipboard', text: result.toString() });
+            break;
+        }
+        break;
+      }
     }
   });
 

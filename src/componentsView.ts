@@ -145,6 +145,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
         case 'ready_for_watch':
           this.connections.startComponentWatch(message.focus, message.components);
           break;
+        case 'write_clipboard':
+          vscode.env.clipboard.writeText(message.text);
+          break;
       }
     });
     this.view = webviewView;
@@ -183,6 +186,13 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
   public debugOutput() {
     this.postVSCodeMessage({ cmd: 'debug_output' });
+  }
+
+  public copyValueToClipboard(path: string) {
+    this.postVSCodeMessage({ cmd: 'copy_value_to_clipboard', path });
+  }
+  public copyErrorToClipboard(component: string) {
+    this.postVSCodeMessage({ cmd: 'copy_error_message_to_clipboard', component });
   }
 }
 

@@ -59,6 +59,22 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // Webview commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('extension.copyLabel', (context: { label: string }) => {
+      vscode.env.clipboard.writeText(context.label);
+    }),
+    vscode.commands.registerCommand('extension.copyType', (context: { type: string }) => {
+      vscode.env.clipboard.writeText(context.type);
+    }),
+    vscode.commands.registerCommand('extension.copyValue', (context: { path: string }) => {
+      componentsView.copyValueToClipboard(context.path);
+    }),
+    vscode.commands.registerCommand('extension.copyError', (context: { errorPath: string }) => {
+      componentsView.copyErrorToClipboard(context.errorPath);
+    })
+  );
+
   // Events sorted by call order
   connections.onAdded((connection) => {
     // Update views

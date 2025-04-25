@@ -113,6 +113,9 @@ export class HTMLMerged extends HTMLElement {
   allowValueWrapping() {
     this.htmlRight?.value.allowWrapping();
   }
+  vscodeContext(data: { [key: string]: string }) {
+    this.setAttribute('data-vscode-context', JSON.stringify(data));
+  }
 
   static create() {
     return document.createElement(HTML_MERGED_NAME) as HTMLMerged;

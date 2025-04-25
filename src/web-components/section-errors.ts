@@ -1,9 +1,9 @@
-import { BrpResponseErrors, TypePath } from '../protocol';
+import { BrpResponseErrors, BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 
 export class SectionErrors {
   private title: HTMLElement;
-  private errors: HTMLMerged[] = [];
+  private errors: { [typePath: TypePath]: HTMLMerged } = {};
   private serialized: string;
 
   constructor(private section: HTMLElement) {
@@ -14,14 +14,20 @@ export class SectionErrors {
     this.serialized = this.serialize({});
   }
 
+  getErrorMessage(typePath: TypePath): BrpValue | undefined {
+    const found = this.errors[typePath] as HTMLMerged | undefined;
+    if (found === undefined) return undefined;
+    return found?.htmlRight?.value.buffer;
+  }
+
   update(errors: BrpResponseErrors) {
     // Toggle section visibility
     if (Object.keys(errors).length > 0) this.section.style.removeProperty('display');
     else this.section.style.display = 'none';
 
     // Remove & Create
-    this.errors.forEach((element) => element.remove());
-    this.errors = [];
+    Object.values(this.errors).forEach((element) => element.remove());
+    this.errors = {};
     let anchor = this.title as HTMLElement;
     for (const typePath of Object.keys(errors)) {
       const element = new HTMLMerged();
@@ -34,8 +40,9 @@ export class SectionErrors {
         `with_data: ${errors[typePath].data !== undefined}`;
       element.brpValue = errors[typePath].message;
       element.allowValueWrapping();
+      element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
 
-      this.errors.push(element);
+      this.errors[typePath] = element;
 
       anchor.after(element);
       anchor = element;

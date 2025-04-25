@@ -373,6 +373,18 @@ export class SyncNode {
     this.children.unwrap().forEach((child) => child.hide());
   }
 
+  get internalPathSerialized(): string {
+    return this.path
+      .map((segment) => {
+        if (segment === undefined) return '';
+        if (typeof segment === 'number') return segment.toString();
+        return segment;
+      })
+      .join('.');
+  }
+  get pathComponent(): string {
+    return (this.path[0] ?? '').toString();
+  }
   get pathSerialized(): string {
     if (this.parent instanceof SectionSync) return '';
     if (this.lastPathSegment === undefined) return this.parent.pathSerialized;
@@ -456,6 +468,9 @@ export class SectionSync {
   }
   source(): SectionSync {
     return this;
+  }
+  access(path: DataPathSegment[]): BrpValue | undefined {
+    return this.root.access(path);
   }
   getRegistrySchema(): BrpRegistrySchema | undefined {
     if (this.focus === undefined) return;

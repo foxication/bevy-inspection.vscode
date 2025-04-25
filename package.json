@@ -181,6 +181,26 @@
 				"category": "Bevy Inspection",
 				"icon": "$(pencil)",
 				"enablement": "viewItem == entityElementOnline"
+			},
+			{
+				"command": "extension.copyLabel",
+				"title": "Copy Label",
+				"category": "Bevy Inspection"
+			},
+			{
+				"command": "extension.copyType",
+				"title": "Copy Type",
+				"category": "Bevy Inspection"
+			},
+			{
+				"command": "extension.copyValue",
+				"title": "Copy Value",
+				"category": "Bevy Inspection"
+			},
+			{
+				"command": "extension.copyError",
+				"title": "Copy Error Message",
+				"category": "Bevy Inspection"
 			}
 		],
 		"menus": {
@@ -219,6 +239,22 @@
 				},
 				{
 					"command": "extension.renameEntity",
+					"when": "false"
+				},
+				{
+					"command": "extension.copyLabel",
+					"when": "false"
+				},
+				{
+					"command": "extension.copyType",
+					"when": "false"
+				},
+				{
+					"command": "extension.copyValue",
+					"when": "false"
+				},
+				{
+					"command": "extension.copyError",
 					"when": "false"
 				}
 			],
@@ -294,6 +330,28 @@
 					"command": "extension.destroyEntity",
 					"when": "viewItem == entityElementOnline || viewItem == entityElementOffline",
 					"group": "inline@1"
+				}
+			],
+			"webview/context": [
+				{
+					"command": "extension.copyLabel",
+					"when": "webviewId == componentsView && label",
+					"group": "copy@0"
+				},
+				{
+					"command": "extension.copyType",
+					"when": "webviewId == componentsView && type",
+					"group": "copy@1"
+				},
+				{
+					"command": "extension.copyValue",
+					"when": "webviewId == componentsView && path",
+					"group": "copy@2"
+				},
+				{
+					"command": "extension.copyError",
+					"when": "webviewId == componentsView && errorPath",
+					"group": "copy@2"
 				}
 			]
 		}
