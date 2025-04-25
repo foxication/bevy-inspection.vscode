@@ -61,24 +61,20 @@ class SyncNodeCollection {
 }
 
 export class SyncNode {
-  public readonly parent: SyncNode | SectionSync;
-  public readonly path: DataPathSegment[];
   public children = new SyncNodeCollection(this);
   public readonly visual: VisualUnit;
 
   constructor(
-    parent: SyncNode | SectionSync,
+    public readonly parent: SyncNode | SectionSync,
+    public readonly path: DataPathSegment[],
     anchor: HTMLElement,
-    path: DataPathSegment[],
     typePath: TypePath | undefined
   ) {
-    this.parent = parent;
-    this.path = path;
     const source = this.source();
     const access = this.access(path);
 
     const pushChild = (pathSegment: DataPathSegment, typePath: TypePath) => {
-      this.children.push(new SyncNode(this, this.endAnchor, [...this.path, pathSegment], typePath));
+      this.children.push(new SyncNode(this, [...this.path, pathSegment], this.endAnchor, typePath));
     };
 
     // ComponentsData
@@ -252,7 +248,7 @@ export class SyncNode {
           this.visual.variantTypePath = variant;
           this.children.shrink(0);
           this.children.push(
-            new SyncNode(source, this.visual.dom, [...this.path, this.visual.variantName], variant)
+            new SyncNode(source, [...this.path, this.visual.variantName], this.visual.dom, variant)
           );
         }
       } else {
@@ -301,7 +297,7 @@ export class SyncNode {
       if (isBrpArray(access)) {
         for (let index = this.children.unwrap().length; index < access.length; index++) {
           this.children.push(
-            new SyncNode(source, this.endAnchor, [...this.path, index], this.visual.childTypePath)
+            new SyncNode(source, [...this.path, index], this.endAnchor, this.visual.childTypePath)
           );
           debugOutput(`Extend: ${JSON.stringify([...this.path, index])}`);
         }
@@ -327,7 +323,7 @@ export class SyncNode {
           if (exists === undefined) {
             const childTypePath =
               this.visual instanceof MapVisual ? this.visual.valueTypePath : key;
-            const newNode = new SyncNode(source, anchor, [...this.path, key], childTypePath);
+            const newNode = new SyncNode(source, [...this.path, key], anchor, childTypePath);
             debugOutput(`Extend: ${JSON.stringify([...this.path, key])}`);
             this.children.push(newNode);
             anchor = newNode.endAnchor;
@@ -463,7 +459,7 @@ export class SectionSync {
   public focus: EntityFocus | undefined;
 
   constructor(public section: HTMLElement) {
-    this.root = new SyncNode(this, section, [], undefined);
+    this.root = new SyncNode(this, [], section, undefined);
     this.section.style.display = 'none';
   }
   source(): SectionSync {
