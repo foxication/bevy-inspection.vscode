@@ -1,549 +1,532 @@
+import { postWebviewMessage } from '.';
 import { EntityFocus } from '../connection-list';
 import {
+  BrpArraySchema,
   BrpComponentRegistry,
+  BrpListSchema,
+  BrpMapSchema,
+  BrpObject,
   BrpRegistrySchema,
-  BrpSchema,
+  BrpSchemaUnit,
+  BrpSetSchema,
+  BrpStructSchema,
+  BrpTupleSchema,
+  BrpTupleStructSchema,
   BrpValue,
   isBrpArray,
   isBrpObject,
   TypePath,
+  TypePathReference,
 } from '../protocol/types';
 import {
   ArrayVisual,
-  ComponentsVisual,
-  EnumVisual,
+  ComponentListVisual,
   ErrorVisual,
-  ExpandableVisual,
   ListVisual,
   MapVisual,
   SerializedVisual,
   SetVisual,
   StructVisual,
+  TupleStructVisual,
   TupleVisual,
-  VisualUnit,
+  Visual,
 } from './visual';
 
-export type DataPathSegment = string | number | undefined;
+export type PathSegment = string | number;
 
-class SyncNodeCollection {
-  private collection: SyncNode[] = [];
-  constructor(private sync: SyncNode) {}
+//
+// Children of DataSync
+//
+
+class ChildrenOfSyncNode {
+  private collection: DataSync[] = [];
+  constructor(public node: DataSyncBasic) {}
+
   private updateIsExpandable() {
-    if ('isExpandable' in this.sync.visual) {
-      this.sync.visual.isExpandable = this.collection.length > 0;
+    if ('isExpandable' in this.node.visual) {
+      this.node.visual.isExpandable = this.collection.length > 0;
     }
   }
+  private removeVisualsRecursively(node: DataSync) {
+    node.children.forEach((child) => this.removeVisualsRecursively(child));
+    node.visual.dom.remove();
+  }
+  private filter(segments: PathSegment[]) {
+    this.collection = this.collection.filter((child) => {
+      if (segments.includes(child.label)) return true;
+      this.removeVisualsRecursively(child);
+      return false;
+    });
+  }
 
-  push(node: SyncNode) {
+  clear() {
+    this.collection.forEach((child) => this.removeVisualsRecursively(child));
+    this.collection = [];
+    this.updateIsExpandable();
+  }
+  push(node: DataSync) {
     this.collection.push(node);
     this.updateIsExpandable();
   }
-  shrink(newLength: number) {
-    if (newLength >= this.collection.length) return; // skip
-    for (let index = newLength; index < this.collection.length; index++) {
-      this.collection[index].preDestruct();
-    }
-    this.collection.length = newLength;
+  get(segment: PathSegment): DataSync | undefined {
+    return this.collection.find((node) => node.label === segment);
+  }
+  getLast(): DataSync | undefined {
+    if (this.collection.length === 0) return undefined;
+    return this.collection[this.collection.length - 1];
+  }
+  updateOnOrderedArray(
+    length: number,
+    onCreation: (segment: number, anchor: HTMLElement) => DataSync
+  ) {
+    const range = [...Array(length).keys()];
+    this.filter(range);
+    let anchor = this.node.getStartAnchor();
+    this.collection = range.map((segment) => {
+      const result = this.get(segment) ?? onCreation(segment, anchor);
+      anchor = result.getEndAnchor();
+      return result;
+    });
     this.updateIsExpandable();
   }
-  filter(fn: (child: SyncNode) => boolean) {
-    this.collection = this.collection.filter((child) => {
-      if (!fn(child)) {
-        child.preDestruct();
-        return false;
-      }
-      return true;
+  updateOnOrderedLabels(
+    orderedSegments: string[],
+    onCreation: (segment: string, anchor: HTMLElement) => DataSync
+  ) {
+    this.filter(orderedSegments);
+    let anchor = this.node.getStartAnchor();
+    this.collection = orderedSegments.map((segment) => {
+      const result = this.get(segment) ?? onCreation(segment, anchor);
+      anchor = result.getEndAnchor();
+      return result;
     });
+    this.updateIsExpandable();
   }
-  unwrap(): SyncNode[] {
-    return this.collection;
+  forEach(fn: (value: DataSync, index: number, array: DataSync[]) => void) {
+    return this.collection.forEach(fn);
   }
 }
 
-export class SyncNode {
-  public children = new SyncNodeCollection(this);
-  public readonly visual: VisualUnit;
+//
+// DataSyncBasic is DataSync shared with ComponentListSync
+//
 
-  constructor(
-    public readonly parent: SyncNode | SectionSync,
-    public readonly path: DataPathSegment[],
-    anchor: HTMLElement,
-    typePath: TypePath | undefined
-  ) {
-    const source = this.source();
-    const access = this.access(path);
-
-    const pushChild = (pathSegment: DataPathSegment, typePath: TypePath) => {
-      this.children.push(new SyncNode(this, [...this.path, pathSegment], this.endAnchor, typePath));
-    };
-
-    // ComponentsData
-    if (path.length === 0) {
-      const mapOfComponents = isBrpObject(access) ? access : {};
-      const componentNames = sortByShortPath(
-        Object.keys(mapOfComponents),
-        source.getRegistrySchema() ?? {}
-      );
-      this.visual = new ComponentsVisual(this, anchor, componentNames);
-      for (const childTypePath of componentNames) {
-        pushChild(childTypePath, childTypePath);
-      }
-      return this;
-    }
-
-    // Get schema
-    if (typePath === undefined) {
-      this.visual = new ErrorVisual(this, anchor, {
-        code: undefined,
-        message: `typePath is undefined`,
-      });
-      return this;
-    }
-    const schema = getSchemaRecursively(typePath, source.getRegistrySchema() ?? {});
-    if (schema === undefined) {
-      this.visual = new ErrorVisual(this, anchor, {
-        code: undefined,
-        message: `schema is not found`,
-      });
-      return this;
-    }
-
-    // SerializedData
-    if (schema.reflectTypes?.includes('Serialize')) {
-      this.visual = new SerializedVisual(this, anchor, schema, access);
-      return this;
-    }
-
-    // Parsing other types of Data
-    switch (schema.kind) {
-      case 'Value': {
-        this.visual = new ErrorVisual(this, anchor, {
-          code: undefined,
-          message: `Value is not serializable`,
-        });
-        break;
-      }
-      case 'Enum': {
-        if (typeof access === 'string') {
-          const childTypePath = schema.typePath + '::' + access;
-          this.visual = new EnumVisual(this, anchor, schema, childTypePath);
-          break;
-        }
-        if (isBrpObject(access) && Object.keys(access).length >= 1) {
-          const childTypePath = schema.typePath + '::' + Object.keys(access)[0];
-          this.visual = new EnumVisual(this, anchor, schema, childTypePath);
-          pushChild(Object.keys(access)[0], childTypePath);
-          break;
-        }
-        this.visual = new ErrorVisual(this, anchor, {
-          code: undefined,
-          message: `cannot deserialize Enum`,
-        });
-        break;
-      }
-      case 'Tuple':
-      case 'TupleStruct': {
-        this.visual = new TupleVisual(this, anchor, schema);
-        if (this.visual.childTypePaths.length === 1) {
-          pushChild(undefined, this.visual.childTypePaths[0]);
-        } else {
-          this.visual.childTypePaths.forEach((childTypePath, index) =>
-            pushChild(index, childTypePath)
-          );
-        }
-        break;
-      }
-      case 'Array':
-        this.visual = new ArrayVisual(this, anchor, schema);
-        if (!isBrpArray(access)) break;
-        for (const item of access.keys()) pushChild(item, this.visual.childTypePath);
-        break;
-      case 'List':
-        this.visual = new ListVisual(this, anchor, schema);
-        if (!isBrpArray(access)) break;
-        for (const item of access.keys()) pushChild(item, this.visual.childTypePath);
-        break;
-      case 'Set': {
-        this.visual = new SetVisual(this, anchor, schema);
-        if (!isBrpArray(access)) break;
-        for (const item of access.keys()) pushChild(item, this.visual.childTypePath);
-        break;
-      }
-      case 'Struct': {
-        this.visual = new StructVisual(this, anchor, schema);
-        for (const { property: p, typePath: tp } of this.visual.properties) pushChild(p, tp);
-        break;
-      }
-      case 'Map': {
-        this.visual = new MapVisual(this, anchor, schema);
-        if (!isBrpObject(access)) break;
-        for (const key of Object.keys(access).sort()) pushChild(key, this.visual.valueTypePath);
-        break;
-      }
-    }
+export abstract class DataSyncBasic {
+  children = new ChildrenOfSyncNode(this);
+  getChild(path: PathSegment[]): DataSync | undefined {
+    if (path.length === 0) return this instanceof DataSync ? this : undefined;
+    return this.children.get(path[0])?.getChild(path.splice(1));
   }
-  public source(): SectionSync {
-    if (this.parent instanceof SectionSync) return this.parent;
-    return this.parent.source();
-  }
-  public access(path: DataPathSegment[] = this.path): BrpValue {
-    let access: BrpValue = this.source().mapOfComponents;
-
-    for (const key of path) {
-      // skip fake pathSegments
-      if (key === undefined) continue;
-
-      // access next level
-      if (isBrpArray(access) && typeof key === 'number') {
-        access = access[key];
-        continue;
-      } else if (isBrpObject(access) && typeof key === 'string') {
-        access = access[key];
-        continue;
-      }
-      console.error('Error in ExtSync.access(): tried to parse ' + JSON.stringify(path));
-      return null;
-    }
-    return access;
-  }
-  public sync() {
-    const access = this.access(this.path);
-    const source = this.source();
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const debugOutput = (message: string) => {}; // console.log(message);
-
-    // Overwrite Serialized
-    if (this.visual instanceof SerializedVisual) {
-      if (this.visual.value !== access) {
-        debugOutput(
-          `Update: ${JSON.stringify(this.path)} = ${JSON.stringify(
-            this.visual.value
-          )} --> ${JSON.stringify(access)}`
-        );
-        this.visual.value = access;
-        if (this.visual instanceof SerializedVisual) this.visual.set(access);
-      }
-    }
-
-    // Restructure Enum
-    if (this.visual instanceof EnumVisual) {
-      if (typeof access === 'string') {
-        const variant = this.visual.schema.typePath + '::' + access;
-        if (this.visual.variantTypePath !== variant) {
-          debugOutput(
-            `Update: ${JSON.stringify(this.path)} = ${this.visual.variantTypePath} --> ${access}`
-          );
-          this.visual.variantTypePath = variant;
-          this.children.shrink(0);
-        }
-      } else if (isBrpObject(access) && Object.keys(access).length === 1) {
-        const variant = this.visual.schema.typePath + '::' + Object.keys(access)[0];
-        if (this.visual.variantTypePath !== variant) {
-          debugOutput(
-            `Update: ${JSON.stringify(this.path)} = ${
-              this.visual.variantTypePath
-            } --> ${JSON.stringify(access)}`
-          );
-          this.visual.variantTypePath = variant;
-          this.children.shrink(0);
-          this.children.push(
-            new SyncNode(source, [...this.path, this.visual.variantName], this.visual.dom, variant)
-          );
-        }
-      } else {
-        debugOutput(`Error in parsing EnumData: ${JSON.stringify(this.path)}`);
-      }
-    }
-
-    // Shrink List + Set
-    if (this.visual instanceof ListVisual || this.visual instanceof SetVisual) {
-      if (!isBrpArray(access)) {
-        console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpArray`);
-      }
-      if (isBrpArray(access) && this.children.unwrap().length > access.length) {
-        this.children.shrink(access.length);
-        debugOutput(`Shrink: ${JSON.stringify(this.path)}`);
-      }
-    }
-
-    // Shrink Map + Components
-    if (this.visual instanceof MapVisual || this.visual instanceof ComponentsVisual) {
-      if (!isBrpObject(access)) {
-        console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
-      }
-      if (isBrpObject(access)) {
-        const prevLength = this.children.unwrap().length;
-        this.children.filter((child) => {
-          return (
-            typeof child.lastPathSegment === 'string' &&
-            Object.keys(access).includes(child.lastPathSegment)
-          );
-        });
-        if (prevLength !== this.children.unwrap().length) {
-          debugOutput(`Shrink: ${JSON.stringify(this.path)}`);
-        }
-      }
-    }
-
-    // Sync children
-    this.children.unwrap().forEach((child) => child.sync());
-
-    // Extend List + Set
-    if (this.visual instanceof ListVisual || this.visual instanceof SetVisual) {
-      if (!isBrpArray(access)) {
-        console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpArray`);
-      }
-      if (isBrpArray(access)) {
-        for (let index = this.children.unwrap().length; index < access.length; index++) {
-          this.children.push(
-            new SyncNode(source, [...this.path, index], this.endAnchor, this.visual.childTypePath)
-          );
-          debugOutput(`Extend: ${JSON.stringify([...this.path, index])}`);
-        }
-      }
-    }
-
-    // Extend Map + Components
-    if (this.visual instanceof MapVisual || this.visual instanceof ComponentsVisual) {
-      if (!isBrpObject(access)) {
-        console.error(`Error in parsing: ${JSON.stringify(this.path)} is not a BrpObject`);
-      }
-      if (isBrpObject(access)) {
-        let anchor: HTMLElement = this.visual.dom;
-        const sorted =
-          this.visual instanceof MapVisual
-            ? Object.keys(access).sort()
-            : sortByShortPath(Object.keys(access), source.getRegistrySchema() ?? {});
-        for (const key of sorted) {
-          const exists = this.children.unwrap().find((child) => {
-            if (typeof child.lastPathSegment !== 'string') return false;
-            return key === child.lastPathSegment;
-          });
-          if (exists === undefined) {
-            const childTypePath =
-              this.visual instanceof MapVisual ? this.visual.valueTypePath : key;
-            const newNode = new SyncNode(source, [...this.path, key], anchor, childTypePath);
-            debugOutput(`Extend: ${JSON.stringify([...this.path, key])}`);
-            this.children.push(newNode);
-            anchor = newNode.endAnchor;
-          } else {
-            anchor = exists.endAnchor;
-          }
-        }
-      }
-    }
-  }
-
-  get lastPathSegment(): DataPathSegment {
-    if (this.path.length === 0) return undefined;
-    return this.path[this.path.length - 1];
-  }
-  get startAnchor(): HTMLElement {
+  getStartAnchor() {
     return this.visual.dom;
   }
-  get endAnchor(): HTMLElement {
-    const length = this.children.unwrap().length;
-    if (length === 0) return this.visual.dom;
-    return this.children.unwrap()[length - 1].endAnchor;
+  getEndAnchor() {
+    return this.children.getLast()?.visual.dom ?? this.getStartAnchor();
   }
 
-  preDestruct() {
-    this.children.shrink(0);
-    this.visual.preDestruct();
-  }
-  show() {
-    this.visual.show();
-    this.showChildren();
-  }
-  showChildren() {
-    if (this.visual instanceof ExpandableVisual && this.visual.isExpanded) {
-      this.children.unwrap().forEach((child) => child.show());
-    }
-  }
-  hide() {
-    this.visual.hide();
-    this.hideChildren();
-  }
-  hideChildren() {
-    this.children.unwrap().forEach((child) => child.hide());
-  }
-
-  get internalPathSerialized(): string {
-    return this.path
-      .map((segment) => {
-        if (segment === undefined) return '';
-        if (typeof segment === 'number') return segment.toString();
-        return segment;
-      })
-      .join('.');
-  }
-  get pathComponent(): string {
-    return (this.path[0] ?? '').toString();
-  }
-  get pathSerialized(): string {
-    if (this.parent instanceof SectionSync) return '';
-    if (this.lastPathSegment === undefined) return this.parent.pathSerialized;
-    const segment = this.lastPathSegment.toString();
-
-    switch (true) {
-      case this.parent.visual instanceof SerializedVisual:
-      case this.parent.visual instanceof ErrorVisual:
-      case this.parent.visual instanceof EnumVisual:
-        return this.parent.pathSerialized; // Skip
-
-      case this.parent.visual instanceof ComponentsVisual:
-        return segment; // Component
-
-      case this.parent.visual instanceof MapVisual:
-      case this.parent.visual instanceof StructVisual:
-      case this.parent.visual instanceof TupleVisual:
-        return this.parent.pathSerialized + '.' + segment; // Dot
-
-      case this.parent.visual instanceof ArrayVisual:
-      case this.parent.visual instanceof ListVisual:
-      case this.parent.visual instanceof SetVisual:
-        return this.parent.pathSerialized + '[' + segment + ']'; // Array Item
-    }
-    console.error('Error in "pathSerialized": unknown scenario');
-    return this.parent.pathSerialized;
-  }
-  public debugTree(level: number, direction: DataPathSegment[]): string {
-    const pathSegment = this.path.length >= 1 ? this.path[this.path.length - 1] : undefined;
-    const spaced = (s: string) => {
-      const width = 45;
-      return s + ' '.repeat(Math.max(width - s.length, 0));
-    };
-
-    // Set treeSegment
-    let treeSegment = '| '.repeat(level);
-    if (this.visual instanceof ComponentsVisual) treeSegment += 'COMPONENTS:';
-    else treeSegment += pathSegment ?? '...';
-
-    // Set description
-    let description = '';
-    if (this.visual instanceof ErrorVisual) {
-      description += 'ERROR: ' + this.visual.error.message;
-      return spaced(treeSegment) + ' ' + description + '\n'; // Parsing error
-    }
-    if ('schema' in this.visual) description += this.visual.schema.kind;
-    if (this.visual instanceof SerializedVisual) description += '+Serde';
-    if ('schema' in this.visual) description += '(' + this.visual.schema.typePath + ')';
-    if (this.visual instanceof SerializedVisual) {
-      description += ' = ' + JSON.stringify(this.visual.value);
-    }
-    if (this.visual instanceof EnumVisual) {
-      description += '/' + JSON.stringify(this.visual.variantName);
-    }
-
-    // Set after
-    let after = '';
-    this.children.unwrap().forEach((child) => {
-      const childPathSegment =
-        child.path.length > 0 ? child.path[child.path.length - 1] : undefined;
-      const directionPathSegment = direction.length > 0 ? direction[0] : undefined;
-      if (childPathSegment === undefined) after += child.debugTree(level + 1, direction);
-      if (childPathSegment === directionPathSegment || directionPathSegment === undefined) {
-        after += child.debugTree(level + 1, direction.slice(1));
-      }
-    });
-
-    return spaced(treeSegment) + ' ' + description + '\n' + after;
-  }
+  abstract visual: Visual;
+  abstract getDebugTree(): string;
 }
 
-export class SectionSync {
-  private root: SyncNode;
-  private registrySchemas: { [host: string]: BrpRegistrySchema } = {};
-  public mapOfComponents: BrpComponentRegistry = {};
-  public focus: EntityFocus | undefined;
+//
+// Root DataSync
+//
 
+export class ComponentListSync extends DataSyncBasic {
+  // Creation
   constructor(public section: HTMLElement) {
-    this.root = new SyncNode(this, [], section, undefined);
-    this.section.style.display = 'none';
-  }
-  source(): SectionSync {
+    super();
+    this.visual = new ComponentListVisual(this, section);
     return this;
   }
-  access(path: DataPathSegment[]): BrpValue | undefined {
-    return this.root.access(path);
+
+  // Data
+  private mapOfComponents: BrpComponentRegistry = {};
+  private registry: BrpRegistrySchema = {};
+  private focus: EntityFocus | undefined = undefined;
+  getValue(): BrpObject {
+    return this.mapOfComponents;
   }
-  getRegistrySchema(): BrpRegistrySchema | undefined {
-    if (this.focus === undefined) return;
-    if (!Object.keys(this.registrySchemas).includes(this.focus.host)) return;
-    return this.registrySchemas[this.focus.host];
-  }
-  syncRegistrySchema(available: string[], host: string, schema: BrpRegistrySchema) {
-    this.registrySchemas[host] = schema;
-    Object.keys(this.registrySchemas)
-      .filter((toFilter) => !available.includes(toFilter))
-      .forEach((toRemove) => delete this.registrySchemas[toRemove]);
-  }
-  setMapOfComponents(components: BrpComponentRegistry) {
+  syncRoot(registry: BrpRegistrySchema, focus: EntityFocus, components: BrpComponentRegistry) {
+    this.registry = registry;
+    this.focus = focus;
     this.mapOfComponents = components;
-  }
-  trySync() {
-    if (this.getRegistrySchema() === undefined) return 'no_registry_schema';
-    this.root.sync();
+
+    // Get TypePaths
+    const TypePathListOrdered = Object.keys(this.mapOfComponents).sort((a, b) => {
+      function shortPath(typePath: string) {
+        return typePath.split('<')[0].split('::')[0];
+      }
+      const aShort = this.getSchema(a)?.shortPath ?? shortPath(a);
+      const bShort = this.getSchema(b)?.shortPath ?? shortPath(b);
+      return aShort > bShort ? 1 : bShort > aShort ? -1 : 0;
+    });
+
+    // Remove and create children
+    this.children.updateOnOrderedLabels(TypePathListOrdered, (typePath, anchor) => {
+      const schema = this.getSchema(typePath.toString());
+      const result =
+        schema !== undefined
+          ? createSyncFromSchema(this, anchor, typePath, schema)
+          : new ErrorSync(this, anchor, typePath, undefined, 'schema is not found');
+      return result;
+    });
+
+    // Sync children
+    this.children.forEach((node) => node.sync());
+
+    // Update visibility of 'Components' section
     if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
     else this.section.style.removeProperty('display');
-    return 'done';
+  }
+  getFocus() {
+    return this.focus;
+  }
+  getSchema(typePath: TypePath): BrpSchemaUnit | undefined {
+    if (Object.keys(this.registry).includes(typePath)) return this.registry[typePath];
+    return undefined;
   }
 
-  debugTree(direction: DataPathSegment[] = []): string {
-    return this.root.debugTree(0, direction);
-  }
-  get lastPathSegment(): DataPathSegment {
-    return '';
+  // Visuals
+  visual: ComponentListVisual;
+
+  // Debug
+  getDebugTree(): string {
+    let result = 'Components:\n';
+    this.children.forEach((node) => (result += node.getDebugTree()));
+    return result;
   }
 }
 
-function getSchemaRecursively(
-  typePath: TypePath,
-  registrySchema: BrpRegistrySchema
-): BrpSchema | undefined {
-  // TypePath
-  if (Object.keys(registrySchema).includes(typePath)) return registrySchema[typePath];
+//
+// DataSync with parent
+//
 
-  // TypePath as part of Enum
-  const splittedPath = typePath.split('::');
-  if (splittedPath.length < 2) {
-    console.error(`SerializedData Error in making splittedPath from: ${typePath}`);
+export abstract class DataSync extends DataSyncBasic {
+  getPathSerialized() {
+    return this.getPath()
+      .map((value) => value.toString())
+      .join('.');
+  }
+  getRoot(): ComponentListSync {
+    if (this.parent instanceof ComponentListSync) return this.parent;
+    return this.parent.getRoot();
+  }
+  getValue(): BrpValue | undefined {
+    const iterable = this.parent.getValue();
+    if (iterable === undefined) return undefined;
+    if (isBrpObject(iterable) && typeof this.label === 'string') {
+      return iterable[this.label];
+    }
+    if (isBrpArray(iterable) && typeof this.label === 'number') {
+      return iterable[this.label];
+    }
     return undefined;
   }
-  const shortPath = '::' + splittedPath[splittedPath.length - 1];
-  const parentTypePath = typePath.slice(0, typePath.length - shortPath.length);
-  if (!Object.keys(registrySchema).includes(parentTypePath)) {
-    console.error(`SerializedData Error - enumTypePath doesn't exist: ${parentTypePath}`);
-    return undefined;
+  getPath(): [string, ...PathSegment[]] {
+    if (this.parent instanceof ComponentListSync) return [this.label.toString()];
+    return [...this.parent.getPath(), this.label];
   }
-  const result = registrySchema[parentTypePath].oneOf?.find((value) => {
-    if (typeof value === 'string') return false;
-    return value.typePath === typePath && Object.keys(value).includes('kind');
-  }) as BrpSchema | undefined;
-  if (result === undefined) {
-    console.error(
-      `SerializedData Error - schema of ${parentTypePath} doesn't include: ${typePath}`
-    );
-    return undefined;
+  getMutationPath(): [string, string] {
+    const [component, ...path] = this.getPath();
+    return [
+      component,
+      path
+        .map((segment) => {
+          if (typeof segment === 'string') return '[' + segment + ']';
+          else return '.' + segment;
+        })
+        .join(''),
+    ];
   }
-  return result;
+  getDebugTree(): string {
+    let result = this.label.toString();
+    if ('schema' in this.visual) result += ' => ' + this.visual.schema;
+    this.children.forEach((node) => (result += node.getDebugTree()));
+    return result;
+  }
+  requestValueMutation: ((value: BrpValue) => void) | undefined = (value: BrpValue) => {
+    const [component, path] = this.getMutationPath();
+    const focus = this.getRoot().getFocus();
+    if (focus === undefined) return;
+    postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
+  };
+
+  abstract parent: ComponentListSync | DataSync;
+  abstract label: PathSegment;
+  abstract sync(): void;
 }
 
-function sortByShortPath(typePaths: TypePath[], registrySchema: BrpRegistrySchema): TypePath[] {
-  return typePaths
-    .map((typePath) => {
-      return { typePath, schema: getSchemaRecursively(typePath, registrySchema) };
-    })
-    .sort(({ schema: a }, { schema: b }) => {
-      if (a === undefined && b !== undefined) return -1;
-      if (a !== undefined && b === undefined) return 1;
-      if (a === undefined || b === undefined) return 0;
-      if (a.shortPath < b.shortPath) return -1;
-      if (a.shortPath > b.shortPath) return 1;
-      return 0;
-    })
-    .map((item) => {
-      return item.typePath;
+//
+// Implementations
+//
+
+function createSyncFromSchema(
+  parent: ComponentListSync | DataSync,
+  anchor: HTMLElement,
+  label: PathSegment,
+  schema: BrpSchemaUnit
+) {
+  if (schema.reflectTypes !== undefined && schema.reflectTypes.includes('Serialize')) {
+    return new SerializedSync(parent, anchor, label, schema);
+  }
+  switch (schema.kind) {
+    case 'Array':
+      return new ArraySync(parent, anchor, label, schema);
+    case 'Enum':
+      return new ErrorSync(parent, anchor, label, undefined, 'Not implemented');
+    case 'List':
+      return new ListSync(parent, anchor, label, schema);
+    case 'Map':
+      return new MapSync(parent, anchor, label, schema);
+    case 'Set':
+      return new SetSync(parent, anchor, label, schema);
+    case 'Struct':
+      return new StructSync(parent, anchor, label, schema);
+    case 'Tuple':
+      return new TupleSync(parent, anchor, label, schema);
+    case 'TupleStruct':
+      return new TupleStructSync(parent, anchor, label, schema);
+    case 'Value':
+      return new SerializedSync(parent, anchor, label, schema);
+  }
+}
+
+export class ArraySync extends DataSync {
+  visual: ArrayVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpArraySchema
+  ) {
+    super();
+    this.visual = new ArrayVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
+    if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
+      return createSyncFromSchema(this, anchor, segment, childSchema);
     });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class ListSync extends DataSync {
+  visual: ListVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpListSchema
+  ) {
+    super();
+    this.visual = new ListVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
+    if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
+      return createSyncFromSchema(this, anchor, segment, childSchema);
+    });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class MapSync extends DataSync {
+  visual: MapVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpMapSchema
+  ) {
+    super();
+    this.visual = new MapVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const childSchema = this.getRoot().getSchema(
+      resolveTypePathFromRef(this.visual.schema.valueType)
+    );
+    if (value === undefined || !isBrpObject(value) || childSchema === undefined) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedLabels(Object.keys(value), (segment, anchor) => {
+      return createSyncFromSchema(this, anchor, segment, childSchema);
+    });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class SetSync extends DataSync {
+  visual: SetVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpSetSchema
+  ) {
+    super();
+    this.visual = new SetVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
+    if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
+      return createSyncFromSchema(this, anchor, segment, childSchema);
+    });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class StructSync extends DataSync {
+  visual: StructVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpStructSchema
+  ) {
+    super();
+    this.visual = new StructVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const properties = this.visual.schema.properties;
+    if (value === undefined || !isBrpObject(value) || properties === undefined) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedLabels(Object.keys(properties), (segment, anchor) => {
+      const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(properties[segment]));
+      if (childSchema !== undefined) {
+        return createSyncFromSchema(this, anchor, segment, childSchema);
+      }
+      return new ErrorSync(this, anchor, segment, undefined, 'Schema is not found');
+    });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class TupleSync extends DataSync {
+  visual: TupleVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpTupleSchema
+  ) {
+    super();
+    this.visual = new TupleVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const prefixItems = this.visual.schema.prefixItems;
+    if (prefixItems === undefined) return this.children.clear();
+    if (value === undefined || !isBrpArray(value)) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
+      const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
+      if (childSchema !== undefined) {
+        return createSyncFromSchema(this, anchor, segment, childSchema);
+      }
+      return new ErrorSync(this, anchor, segment, undefined, 'Schema is not found');
+    });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class TupleStructSync extends DataSync {
+  visual: TupleStructVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpTupleStructSchema
+  ) {
+    super();
+    this.visual = new TupleStructVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    const prefixItems = this.visual.schema.prefixItems;
+    if (prefixItems === undefined) return this.children.clear();
+    if (value === undefined || !isBrpArray(value)) {
+      this.children.clear();
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
+      const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
+      if (childSchema !== undefined) {
+        return createSyncFromSchema(this, anchor, segment, childSchema);
+      }
+      return new ErrorSync(this, anchor, segment, undefined, 'Schema is not found');
+    });
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class SerializedSync extends DataSync {
+  visual: SerializedVisual;
+  constructor(
+    public parent: ComponentListSync | DataSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    schema: BrpSchemaUnit
+  ) {
+    super();
+    this.visual = new SerializedVisual(this, anchor, schema);
+  }
+  sync(): void {
+    const value = this.getValue();
+    if (value !== undefined) this.visual.set(value);
+    else {
+      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+    }
+    this.children.forEach((node) => node.sync());
+  }
+}
+
+export class ErrorSync extends DataSync {
+  visual: ErrorVisual;
+  requestValueMutation = undefined;
+
+  constructor(
+    public parent: DataSync | ComponentListSync,
+    anchor: HTMLElement,
+    public label: PathSegment,
+    code: number | undefined,
+    message: string
+  ) {
+    super();
+    this.visual = new ErrorVisual(this, anchor, { code, message });
+  }
+  sync(): void {}
+  getValue(): BrpValue | undefined {
+    return this.visual.error.message;
+  }
+  getDebugTree(): string {
+    return `${this.label} => ${this.visual.error.message}`;
+  }
+}
+
+export function resolveTypePathFromRef(ref: TypePathReference): TypePath {
+  return ref.type.$ref.slice('#/$defs/'.length);
 }

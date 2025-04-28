@@ -1,8 +1,7 @@
-import { SyncNode } from './section-sync';
+import { DataSync } from './section-sync';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
-import { MutationConsent } from './visual';
 
 const HTML_MERGED_NAME = 'visual-merged';
 const HTML_JSON_NAME = 'visual-json';
@@ -69,7 +68,7 @@ export class HTMLMerged extends HTMLElement {
       }
     }
   }
-  set onEnumEdit(sync: SyncNode) {
+  set onEnumEdit(sync: DataSync) {
     if (this.htmlIcons.enum === undefined) {
       this.htmlIcons.enum = document.createElement('vscode-icon');
       this.htmlIcons.enum.setAttribute('name', 'symbol-property');
@@ -83,17 +82,17 @@ export class HTMLMerged extends HTMLElement {
     result.setAttribute('class', 'rotatable');
     return result;
   }
-  set onExpansion(sync: SyncNode) {
+  set onExpansion(sync: DataSync) {
     this.onclick = () => {
       if (this.htmlIcons.expand === undefined) return; // skip - no children
       const state = this.htmlIcons.expand.getAttribute('name');
       if (state === 'chevron-up') {
         this.htmlIcons.expand.setAttribute('name', 'chevron-down');
-        sync.hideChildren();
+        sync.children.forEach((node) => node.visual.hide());
       }
       if (state === 'chevron-down') {
         this.htmlIcons.expand.setAttribute('name', 'chevron-up');
-        sync.showChildren();
+        sync.children.forEach((node) => node.visual.show());
       }
     };
   }
@@ -142,7 +141,7 @@ export class HTMLMerged extends HTMLElement {
 abstract class HTMLMutatable<T> extends HTMLElement {
   private _buffer: T;
   private _inEdit: boolean = false;
-  private _mutability: MutationConsent | undefined;
+  private _mutability: ((v: BrpValue) => void) | undefined;
 
   constructor(defaultValue: T) {
     super();
@@ -162,15 +161,15 @@ abstract class HTMLMutatable<T> extends HTMLElement {
     this._buffer = v;
     if (!this.inEdit) this.setTextFromBuffer();
   }
-  set mutability(m: MutationConsent) {
-    this._mutability = m;
+  set mutability(f: (v: BrpValue) => void) {
+    this._mutability = f;
     this.allowEditing();
   }
 
   abstract setTextFromBuffer(): void;
   abstract allowEditing(): void;
   mutate(value: BrpValue) {
-    this._mutability?.mutate(value);
+    if (this._mutability !== undefined) this._mutability(value);
   }
   abstract allowWrapping(): void;
 }

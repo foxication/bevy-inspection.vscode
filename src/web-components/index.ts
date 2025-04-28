@@ -1,4 +1,3 @@
-import { SectionSync } from './section-sync';
 import {
   BrpValue,
   BrpComponentRegistry,
@@ -12,6 +11,7 @@ import { defineCustomElements } from './elements';
 import { EntityFocus } from '../connection-list';
 import { SectionErrors } from './section-errors';
 import { SectionDetails } from './section-details';
+import { ComponentListSync } from './section-sync';
 
 export type WebviewMessage =
   | {
@@ -78,65 +78,74 @@ defineCustomElements();
 
   const componentsHTML = document.querySelector('#component-tree') as HTMLDivElement;
   if (componentsHTML === null) return console.error('#component-tree is not found in DOM');
-  const syncSection = new SectionSync(componentsHTML);
+  const syncRoot = new ComponentListSync(componentsHTML);
 
   const errorsHTML = document.querySelector('#error-list') as HTMLDListElement;
   if (errorsHTML === null) return console.error('#error-list is not found in DOM');
   const errorsSection = new SectionErrors(errorsHTML);
+
+  // buffer
+  let dataBuffer:
+    | {
+        focus: EntityFocus;
+        data: BrpObject;
+      }
+    | undefined = undefined;
+  const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
 
   // Event listener
   window.addEventListener('message', (event) => {
     const message = event.data as VSCodeMessage;
     switch (message.cmd) {
       case 'debug_output':
-        console.log(syncSection.debugTree());
+        console.log(syncRoot.getDebugTree());
         console.log(errorsSection.debugList());
         break;
-      case 'sync_registry_schema':
-        syncSection.syncRegistrySchema(message.available, message.host, message.data);
-        switch (syncSection.trySync()) {
-          case 'done':
-            if (syncSection.focus === undefined) break;
-            postWebviewMessage({
-              cmd: 'ready_for_watch',
-              focus: syncSection.focus,
-              components: Object.keys(syncSection.mapOfComponents),
-            });
-            break;
-          case 'no_registry_schema':
-            console.error('registry schema did not load');
-            break;
-        }
+      case 'sync_registry_schema': {
+        [...registryBuffer.keys()]
+          .filter((host) => !message.available.includes(host))
+          .forEach((host) => {
+            registryBuffer.delete(host);
+          });
+        registryBuffer.set(message.host, message.data);
+        if (dataBuffer === undefined) break;
+        syncRoot.syncRoot(message.data, dataBuffer.focus, dataBuffer.data);
         break;
-      case 'update_all':
-        setEntityInfo(message.focus);
-        syncSection.focus = message.focus;
-        syncSection.mapOfComponents = message.components;
-        detailsSection.update(syncSection.focus);
+      }
+      case 'update_all': {
+        // Buffer
+        dataBuffer = { focus: message.focus, data: message.components };
+
+        // Details
+        detailsSection.update(message.focus);
+
+        // Components
+        const registry = registryBuffer.get(message.focus.host);
+        if (registry !== undefined) syncRoot.syncRoot(registry, dataBuffer.focus, dataBuffer.data);
+        else postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
+
+        // Errors
         errorsSection.update(message.errors);
-        switch (syncSection.trySync()) {
-          case 'done':
-            postWebviewMessage({
-              cmd: 'ready_for_watch',
-              focus: message.focus,
-              components: Object.keys(message.components),
-            });
-            break;
-          case 'no_registry_schema':
-            postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
-            break;
+        break;
+      }
+      case 'update_components': {
+        if (dataBuffer === undefined) break;
+        if (!dataBuffer.focus.compare(message.focus)) break;
+        const registry = registryBuffer.get(dataBuffer.focus.host);
+        if (registry === undefined) break;
+
+        // Apply changes
+        for (const [typePath, value] of Object.entries(message.components)) {
+          dataBuffer.data[typePath] = value;
         }
+        for (const typePath of message.removed) {
+          delete dataBuffer.data[typePath];
+        }
+
+        // Sync visuals
+        syncRoot.syncRoot(registry, dataBuffer.focus, dataBuffer.data);
         break;
-      case 'update_components':
-        if (syncSection.focus === undefined) break;
-        if (syncSection.focus.host !== message.focus.host) break;
-        if (syncSection.focus.entityId !== message.focus.entityId) break;
-        Object.entries(message.components).forEach(
-          ([typePath, value]) => (syncSection.mapOfComponents[typePath] = value)
-        );
-        message.removed.forEach((component) => delete syncSection.mapOfComponents[component]);
-        syncSection.trySync();
-        break;
+      }
       case 'copy_error_message_to_clipboard': {
         const result = errorsSection.getErrorMessage(message.component)?.toString();
         if (result !== undefined) postWebviewMessage({ cmd: 'write_clipboard', text: result });
@@ -145,11 +154,10 @@ defineCustomElements();
       }
       case 'copy_value_to_clipboard': {
         const parsedPath = message.path.split('.').map((segment) => {
-          if (segment === '') return undefined;
           if (/^\d+$/.test(segment)) return parseInt(segment);
           return segment;
         });
-        const result = syncSection.access(parsedPath);
+        const result = syncRoot.getChild(parsedPath)?.getValue();
         switch (true) {
           case result === undefined:
             console.error(`Value is not found: ${message.path}`);
@@ -168,11 +176,4 @@ defineCustomElements();
       }
     }
   });
-
-  function setEntityInfo(focus: EntityFocus) {
-    const hostLabel = document.querySelector('#entity-info-host');
-    const idLabel = document.querySelector('#entity-info-id');
-    if (hostLabel !== null) hostLabel.textContent = focus.host;
-    if (idLabel !== null) idLabel.textContent = focus.entityId.toString();
-  }
 })();

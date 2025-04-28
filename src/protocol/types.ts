@@ -60,27 +60,101 @@ export const BevyVersions = ['0.15', '0.16', 'future'] as const;
 export type BevyVersion = (typeof BevyVersions)[number];
 
 export type TypePathReference = { type: { $ref: string }; typePath?: string };
-export type BrpSchema = {
-  // Essential
+// export type BrpSchema = {
+//   // Essential
+//   typePath: TypePath;
+//   shortPath: string;
+//   kind: 'Enum' | 'Value' | 'Struct' | 'TupleStruct' | 'Tuple' | 'Array' | 'List' | 'Map' | 'Set';
+//   type: 'object' | 'array' | 'set' | 'string' | 'uint' | 'int' | 'usize' | 'float' | 'boolean';
+
+//   // Optional
+//   keyType?: TypePathReference;
+//   valueType?: TypePathReference;
+//   additionalProperties?: boolean;
+//   crateName?: string;
+//   items?: false | TypePathReference;
+//   prefixItems?: TypePathReference[];
+//   modulePath?: string;
+//   reflectTypes?: ('Serialize' | 'Deserialize' | 'Default' | 'Component' | 'Resource')[];
+//   required?: string[];
+//   properties?: { [property: string]: TypePathReference };
+//   oneOf?: string[] | ({ shortPath: string; typePath: TypePath } | BrpSchema)[];
+// };
+export type BrpSchemaUnit =
+  | BrpArraySchema
+  | BrpEnumAsObjectSchema
+  | BrpEnumAsStringSchema
+  | BrpListSchema
+  | BrpMapSchema
+  | BrpSetSchema
+  | BrpStructSchema
+  | BrpTupleSchema
+  | BrpTupleStructSchema
+  | BrpValueSchema;
+
+export interface BrpSchemaBasic {
   typePath: TypePath;
   shortPath: string;
-  kind: 'Enum' | 'Value' | 'Struct' | 'TupleStruct' | 'Tuple' | 'Array' | 'List' | 'Map' | 'Set';
-  type: 'object' | 'array' | 'set' | 'string' | 'uint' | 'int' | 'usize' | 'float' | 'boolean';
-
-  // Optional
-  keyType?: TypePathReference;
-  valueType?: TypePathReference;
-  additionalProperties?: boolean;
+  reflectTypes?: string[];
   crateName?: string;
-  items?: false | TypePathReference;
-  prefixItems?: TypePathReference[];
   modulePath?: string;
-  reflectTypes?: ('Serialize' | 'Deserialize' | 'Default' | 'Component' | 'Resource')[];
+}
+export interface BrpArraySchema extends BrpSchemaBasic {
+  kind: 'Array';
+  type: 'array';
+  items: TypePathReference;
+}
+export interface BrpEnumAsObjectSchema extends BrpSchemaBasic {
+  kind: 'Enum';
+  type: 'object';
+  oneOf: (BrpSchemaBasic | BrpSchemaUnit)[];
+}
+export interface BrpEnumAsStringSchema extends BrpSchemaBasic {
+  kind: 'Enum';
+  type: 'string';
+  oneOf: string[];
+}
+export interface BrpListSchema extends BrpSchemaBasic {
+  kind: 'List';
+  type: 'array';
+  items: TypePathReference;
+}
+export interface BrpMapSchema extends BrpSchemaBasic {
+  kind: 'Map';
+  type: 'object';
+  keyType: TypePathReference;
+  valueType: TypePathReference;
+}
+export interface BrpSetSchema extends BrpSchemaBasic {
+  kind: 'Set';
+  type: 'set';
+  items: TypePathReference;
+}
+export interface BrpStructSchema extends BrpSchemaBasic {
+  kind: 'Struct';
+  type: 'Object';
+  additionalProperties: false;
   required?: string[];
   properties?: { [property: string]: TypePathReference };
-  oneOf?: (string | { shortPath: string; typePath: TypePath } | BrpSchema)[];
-};
-export type BrpRegistrySchema = { [key: TypePath]: BrpSchema };
+}
+export interface BrpTupleSchema extends BrpSchemaBasic {
+  kind: 'Tuple';
+  type: 'array';
+  items: false;
+  prefixItems?: TypePathReference[];
+}
+export interface BrpTupleStructSchema extends BrpSchemaBasic {
+  kind: 'TupleStruct';
+  type: 'array';
+  items: false;
+  prefixItems?: TypePathReference[];
+}
+export interface BrpValueSchema extends BrpSchemaBasic {
+  kind: 'Value';
+  type: 'object' | 'string' | 'uint' | 'int' | 'usize' | 'float' | 'boolean';
+}
+
+export type BrpRegistrySchema = { [key: TypePath]: BrpSchemaUnit };
 
 export type BrpDiscover = {
   info: { title: string; version: string };

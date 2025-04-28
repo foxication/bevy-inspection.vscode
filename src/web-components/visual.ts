@@ -1,29 +1,19 @@
 import {
-  BrpObject,
-  BrpSchema,
+  BrpArraySchema,
+  BrpEnumAsObjectSchema,
+  BrpEnumAsStringSchema,
+  BrpListSchema,
+  BrpMapSchema,
+  BrpSchemaUnit,
+  BrpSetSchema,
+  BrpStructSchema,
+  BrpTupleSchema,
+  BrpTupleStructSchema,
   BrpValue,
-  isBrpArray,
-  isBrpIterable,
-  isBrpObject,
   TypePath,
-  TypePathReference,
 } from '../protocol/types';
 import { HTMLMerged } from './elements';
-import { postWebviewMessage } from './index';
-import { SyncNode } from './section-sync';
-
-// All types of visual
-export type VisualUnit =
-  | ArrayVisual
-  | ComponentsVisual
-  | EnumVisual
-  | ErrorVisual
-  | MapVisual
-  | SerializedVisual
-  | StructVisual
-  | TupleVisual
-  | ListVisual
-  | SetVisual;
+import { ComponentListSync, DataSync, DataSyncBasic, resolveTypePathFromRef } from './section-sync';
 
 //
 // Visual
@@ -31,11 +21,8 @@ export type VisualUnit =
 
 export abstract class Visual {
   abstract dom: HTMLElement;
-  constructor(private _sync: SyncNode) {}
+  abstract sync: DataSyncBasic;
 
-  preDestruct() {
-    this.dom.remove();
-  }
   show() {
     this.dom.style.removeProperty('display');
   }
@@ -43,23 +30,22 @@ export abstract class Visual {
     this.dom.style.display = 'none';
   }
 
-  get sync() {
-    return this._sync;
-  }
-  get level() {
-    return Math.max(this.sync.path.length - 1, 0);
-  }
-  get access() {
-    return this.sync.access();
-  }
+  abstract getLevel(): number;
+
+  // get level() {
+  //   let level = 0;
+  //   if ('path' in this.sync.data) level += this.sync.data.path.length;
+  //   if ('pathVirtual' in this.sync.data) level += this.sync.data.pathVirtual.length;
+  //   return level;
+  // }
 }
 
-export class ComponentsVisual extends Visual {
+export class ComponentListVisual extends Visual {
   readonly dom: HTMLHeadingElement;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, public componentNames: TypePath[]) {
-    super(sync);
-    this.dom = ComponentsVisual.createHTML();
+  constructor(public sync: ComponentListSync, anchor: HTMLElement) {
+    super();
+    this.dom = ComponentListVisual.createHTML();
     anchor.append(this.dom);
   }
 
@@ -68,29 +54,38 @@ export class ComponentsVisual extends Visual {
     result.textContent = 'Components';
     return result;
   }
+
+  getLevel(): number {
+    return 0;
+  }
 }
 
 export class ErrorVisual extends Visual {
   readonly dom: HTMLMerged;
 
   constructor(
-    sync: SyncNode,
+    public sync: DataSync,
     anchor: HTMLElement,
     public error: { code: number | undefined; message: string }
   ) {
-    super(sync);
-    const label = (this.sync.lastPathSegment ?? '...').toString();
+    super();
+    const label = this.sync.label.toString();
     this.dom = HTMLMerged.create();
-    this.dom.level = this.level;
+    this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = (this.error.code ?? 'Error').toString();
     this.dom.brpValue = this.error.message;
     this.dom.allowValueWrapping();
     this.dom.vscodeContext({
       label: label,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
+  }
+
+  getLevel(): number {
+    const [, ...path] = this.sync.getPath();
+    return path.length;
   }
 }
 
@@ -99,23 +94,11 @@ export class ErrorVisual extends Visual {
 //
 
 export abstract class VisualDescribed extends Visual {
-  constructor(sync: SyncNode, public readonly schema: BrpSchema) {
-    super(sync);
-  }
-  get typePath() {
-    return this.schema.typePath;
-  }
-  get label() {
-    let result = '';
-    if (this.schema.typePath === this.sync.lastPathSegment) {
-      result = this.schema.shortPath;
-    } else {
-      result = (this.sync.lastPathSegment ?? '...').toString();
-    }
-    return result;
-  }
+  abstract schema: BrpSchemaUnit;
+  abstract sync: DataSync;
+
   get tooltip(): string {
-    let result = 'label: ' + this.label;
+    let result = 'label: ' + this.sync.label;
     result += '\ntype: ' + this.schema.typePath;
     result += '\nkind: ' + this.schema.kind;
     if (this.schema.reflectTypes !== undefined) {
@@ -123,31 +106,42 @@ export abstract class VisualDescribed extends Visual {
     }
     return result;
   }
+
+  getLevel(): number {
+    const [, ...path] = this.sync.getPath();
+    return path.length;
+  }
 }
 
 export class SerializedVisual extends VisualDescribed {
-  readonly dom: HTMLMerged;
+  dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema, public value: BrpValue) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSchemaUnit) {
+    super();
+    const value = this.sync.getValue();
     this.dom = HTMLMerged.create();
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
-    this.dom.brpValue = this.access;
-    if (this.dom.htmlRight !== undefined) {
-      this.dom.htmlRight.value.mutability = new MutationConsent(sync);
+    if (value !== undefined) this.dom.brpValue = value;
+    if (this.dom.htmlRight !== undefined && sync.requestValueMutation !== undefined) {
+      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
     }
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
 
   set(value: BrpValue) {
     this.dom.brpValue = value;
+  }
+
+  getLevel(): number {
+    const [, ...path] = this.sync.getPath();
+    return path.length;
   }
 }
 
@@ -170,22 +164,22 @@ export class EnumVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
   constructor(
-    sync: SyncNode,
+    public sync: DataSync,
     anchor: HTMLElement,
-    schema: BrpSchema,
+    public schema: BrpEnumAsObjectSchema | BrpEnumAsStringSchema,
     public variantTypePath: TypePath
   ) {
-    super(sync, schema);
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
     this.dom.onEnumEdit = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label + ' / ' + this.variantName;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label + ' / ' + this.variantName;
     this.dom.tooltip = this.tooltipExtended;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
     if (!this.variantTypePaths.includes(this.variantTypePath)) {
@@ -203,13 +197,13 @@ export class EnumVisual extends ExpandableVisual {
     return this.variantTypePath.slice(parent.length);
   }
   get variantTypePaths(): readonly TypePath[] {
-    return (this.schema.oneOf ?? []).map((value) => {
+    return this.schema.oneOf.map((value) => {
       if (typeof value === 'string') return this.schema.typePath + '::' + value;
       return value.typePath;
     });
   }
   get variantShortPaths(): readonly string[] {
-    return (this.schema.oneOf ?? []).map((value) => {
+    return this.schema.oneOf.map((value) => {
       if (typeof value === 'string') return value;
       return value.shortPath;
     });
@@ -219,17 +213,17 @@ export class EnumVisual extends ExpandableVisual {
 export class StructVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpStructSchema) {
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
@@ -245,17 +239,42 @@ export class StructVisual extends ExpandableVisual {
 export class TupleVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleSchema) {
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+
+  get childTypePaths(): readonly TypePath[] {
+    return (this.schema.prefixItems ?? []).map((ref) => {
+      return resolveTypePathFromRef(ref);
+    });
+  }
+}
+
+export class TupleStructVisual extends ExpandableVisual {
+  readonly dom: HTMLMerged;
+
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleStructSchema) {
+    super();
+    this.dom = HTMLMerged.create();
+    this.dom.onExpansion = sync;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
+    this.dom.tooltip = this.tooltip;
+    this.dom.vscodeContext({
+      label: this.sync.label.toString(),
+      type: this.schema.typePath,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
@@ -270,22 +289,21 @@ export class TupleVisual extends ExpandableVisual {
 export class ArrayVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpArraySchema) {
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
-    if (typeof this.schema.items !== 'object') return '()';
     return resolveTypePathFromRef(this.schema.items);
   }
 }
@@ -293,22 +311,21 @@ export class ArrayVisual extends ExpandableVisual {
 export class ListVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpListSchema) {
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
-    if (typeof this.schema.items !== 'object') return '()';
     return resolveTypePathFromRef(this.schema.items);
   }
 }
@@ -316,22 +333,21 @@ export class ListVisual extends ExpandableVisual {
 export class SetVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSetSchema) {
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
-    if (typeof this.schema.items !== 'object') return '()';
     return resolveTypePathFromRef(this.schema.items);
   }
 }
@@ -339,26 +355,24 @@ export class SetVisual extends ExpandableVisual {
 export class MapVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(sync: SyncNode, anchor: HTMLElement, schema: BrpSchema) {
-    super(sync, schema);
+  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpMapSchema) {
+    super();
     this.dom = HTMLMerged.create();
     this.dom.onExpansion = sync;
-    this.dom.level = this.level;
-    this.dom.label = this.label;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.label,
+      label: this.sync.label.toString(),
       type: this.schema.typePath,
-      path: this.sync.internalPathSerialized,
+      path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get keyTypePath(): TypePath {
-    if (this.schema.keyType === undefined) return '()';
     return resolveTypePathFromRef(this.schema.keyType);
   }
   get valueTypePath(): TypePath {
-    if (this.schema.valueType === undefined) return '()';
     return resolveTypePathFromRef(this.schema.valueType);
   }
 }
@@ -367,53 +381,49 @@ export class MapVisual extends ExpandableVisual {
 // Сomplementary
 //
 
-type InternalPathSegment = string | number;
+// type InternalPathSegment = string | number;
 
-export class MutationConsent {
-  constructor(private sync: SyncNode, private internalPath: InternalPathSegment[] = []) {}
+// export class MutationConsent {
+//   constructor(private sync: DataSync, private internalPath: InternalPathSegment[] = []) {}
 
-  cloneWithInternalPath(internalPath: InternalPathSegment[]) {
-    return new MutationConsent(this.sync, internalPath);
-  }
+//   cloneWithInternalPath(internalPath: InternalPathSegment[]) {
+//     return new MutationConsent(this.sync, internalPath);
+//   }
 
-  mutate(value: BrpValue) {
-    let result = structuredClone(this.sync.access());
-    const modify = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
-      const firstSegment = path[0];
-      if (isBrpObject(access) && typeof firstSegment === 'string' && path.length === 1) {
-        access[firstSegment] = value;
-      }
-      if (isBrpArray(access) && typeof firstSegment === 'number' && path.length === 1) {
-        access[firstSegment] = value;
-      }
-      if (isBrpObject(access) && typeof firstSegment === 'string') {
-        const next = access[firstSegment];
-        if (isBrpIterable(next)) modify(next, path.slice(1));
-      }
-      if (isBrpArray(access) && typeof firstSegment === 'number') {
-        const next = access[firstSegment];
-        if (isBrpIterable(next)) modify(next, path.slice(1));
-      }
-      return console.error(
-        `${this.constructor.name}.mutate().modify(): access is not Object/Array`
-      );
-    };
+//   mutate(value: BrpValue) {
+//     let result = structuredClone(this.sync.getValue());
+//     const modify = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
+//       const firstSegment = path[0];
+//       if (isBrpObject(access) && typeof firstSegment === 'string' && path.length === 1) {
+//         access[firstSegment] = value;
+//       }
+//       if (isBrpArray(access) && typeof firstSegment === 'number' && path.length === 1) {
+//         access[firstSegment] = value;
+//       }
+//       if (isBrpObject(access) && typeof firstSegment === 'string') {
+//         const next = access[firstSegment];
+//         if (isBrpIterable(next)) modify(next, path.slice(1));
+//       }
+//       if (isBrpArray(access) && typeof firstSegment === 'number') {
+//         const next = access[firstSegment];
+//         if (isBrpIterable(next)) modify(next, path.slice(1));
+//       }
+//       return console.error(
+//         `${this.constructor.name}.mutate().modify(): access is not Object/Array`
+//       );
+//     };
 
-    if (this.internalPath.length === 0) result = value;
-    else if (isBrpIterable(result)) modify(result, this.internalPath);
+//     if (this.internalPath.length === 0) result = value;
+//     else if (isBrpIterable(result)) modify(result, this.internalPath);
 
-    const focus = this.sync.source().focus;
-    const component = this.sync.pathComponent;
-    const path = this.sync.pathSerialized;
-    if (focus === undefined) return console.error('MutationConsent.mutate(): no focus');
-    if (component === '') return console.error('MutationConsent.mutate(): no component');
-    postWebviewMessage({
-      cmd: 'mutate_component',
-      data: { focus, component, path, value: result },
-    });
-  }
-}
-
-function resolveTypePathFromRef(ref: TypePathReference): TypePath {
-  return ref.type.$ref.slice('#/$defs/'.length);
-}
+//     const focus = this.sync.getSection().getFocus();
+//     const component = this.sync.getComponent();
+//     const path = this.sync.getMutationPath();
+//     if (focus === undefined) return console.error('MutationConsent.mutate(): no focus');
+//     if (component === '') return console.error('MutationConsent.mutate(): no component');
+//     postWebviewMessage({
+//       cmd: 'mutate_component',
+//       data: { focus, component, path, value: result },
+//     });
+//   }
+// }
