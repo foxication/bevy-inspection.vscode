@@ -239,6 +239,9 @@ export abstract class DataSync extends DataSyncBasic {
         .join(''),
     ];
   }
+  getDebugInfo(): string {
+    return this.getPathSerialized() + ' = ' + JSON.stringify(this.getValue());
+  }
   getDebugTree(): string {
     let result = this.label.toString();
     if ('schema' in this.visual) result += ' => ' + this.visual.schema;
@@ -308,7 +311,7 @@ export class ArraySync extends DataSync {
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
@@ -333,7 +336,7 @@ export class ListSync extends DataSync {
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
@@ -360,7 +363,7 @@ export class MapSync extends DataSync {
     );
     if (value === undefined || !isBrpObject(value) || childSchema === undefined) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedLabels(Object.keys(value), (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
@@ -385,7 +388,7 @@ export class SetSync extends DataSync {
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
@@ -410,7 +413,7 @@ export class StructSync extends DataSync {
     const properties = this.visual.schema.properties;
     if (value === undefined || !isBrpObject(value) || properties === undefined) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedLabels(Object.keys(properties), (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(properties[segment]));
@@ -440,7 +443,7 @@ export class TupleSync extends DataSync {
     if (prefixItems === undefined) return this.children.clear();
     if (value === undefined || !isBrpArray(value)) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
@@ -470,7 +473,7 @@ export class TupleStructSync extends DataSync {
     if (prefixItems === undefined) return this.children.clear();
     if (value === undefined || !isBrpArray(value)) {
       this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
@@ -498,7 +501,7 @@ export class SerializedSync extends DataSync {
     const value = this.getValue();
     if (value !== undefined) this.visual.set(value);
     else {
-      return console.error(`Cannot read a BrpValue: ${this.getPathSerialized()}`);
+      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.forEach((node) => node.sync());
   }
