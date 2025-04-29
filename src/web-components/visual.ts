@@ -119,7 +119,10 @@ export abstract class VisualDescribed extends Visual {
     }
     return result;
   }
-
+  getComponentNameOrLabel(): string {
+    if (this.schema.reflectTypes?.includes('Component') === true) return this.schema.shortPath;
+    return this.sync.label.toString();
+  }
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
     return path.length;
@@ -131,17 +134,18 @@ export class SerializedVisual extends VisualDescribed {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSchemaUnit) {
     super();
+    const label = this.getComponentNameOrLabel();
     const value = this.sync.getValue();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     if (value !== undefined) this.dom.brpValue = value;
     if (this.dom.htmlRight !== undefined && sync.requestValueMutation !== undefined) {
       this.dom.htmlRight.value.mutability = sync.requestValueMutation;
     }
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -196,13 +200,14 @@ export class EnumVisual extends ExpandableVisual {
     public variantTypePath: TypePath
   ) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.onEnumEdit = sync;
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label + ' / ' + this.variantName;
+    this.dom.label = label + ' / ' + this.variantName;
     this.dom.tooltip = this.tooltipExtended;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -240,12 +245,13 @@ export class StructVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpStructSchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -265,12 +271,13 @@ export class TupleVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleSchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -289,12 +296,13 @@ export class TupleStructVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleStructSchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -313,12 +321,13 @@ export class ArrayVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpArraySchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -334,12 +343,13 @@ export class ListVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpListSchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -355,12 +365,13 @@ export class SetVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSetSchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
@@ -376,12 +387,13 @@ export class MapVisual extends ExpandableVisual {
 
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpMapSchema) {
     super();
+    const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
-    this.dom.label = this.sync.label.toString();
+    this.dom.label = label;
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
-      label: this.sync.label.toString(),
+      label: label,
       type: this.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
