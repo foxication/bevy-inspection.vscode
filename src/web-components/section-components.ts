@@ -22,17 +22,20 @@ import {
   ArrayVisual,
   ComponentListVisual,
   ErrorVisual,
+  ExpandableVisual,
   ListVisual,
   MapVisual,
   SerializedVisual,
   SetVisual,
   StructVisual,
-  TupleStructVisual,
   TupleVisual,
   Visual,
 } from './visual';
 
 export type PathSegment = string | number;
+export type OptionalLabel =
+  | { type: 'default'; segment: PathSegment }
+  | { type: 'skip'; previous: PathSegment };
 
 //
 // Children of DataSync
@@ -43,7 +46,7 @@ class ChildrenOfSyncNode {
   constructor(public node: RootOfData) {}
 
   private updateIsExpandable() {
-    if ('isExpandable' in this.node.visual) {
+    if (this.node.visual instanceof ExpandableVisual) {
       this.node.visual.isExpandable = this.collection.length > 0;
     }
   }
@@ -51,11 +54,16 @@ class ChildrenOfSyncNode {
     node.children.forEach((child) => this.removeVisualsRecursively(child));
     node.visual.dom.remove();
   }
-  private filter(segments: PathSegment[]) {
+  private filter(segments: PathSegment[], onWithoutLabel = false) {
     this.collection = this.collection.filter((child) => {
-      if (segments.includes(child.label)) return true;
-      this.removeVisualsRecursively(child);
-      return false;
+      switch (child.label.type) {
+        case 'default':
+          if (segments.includes(child.label.segment)) return true;
+          this.removeVisualsRecursively(child);
+          return false;
+        case 'skip':
+          return onWithoutLabel; // remove by default
+      }
     });
   }
 
@@ -69,7 +77,14 @@ class ChildrenOfSyncNode {
     this.updateIsExpandable();
   }
   get(segment: PathSegment): DataWithAccess | undefined {
-    return this.collection.find((node) => node.label === segment);
+    return this.collection.find((node) => {
+      switch (node.label.type) {
+        case 'default':
+          return node.label.segment === segment;
+        case 'skip':
+          return node.label.previous === segment;
+      }
+    });
   }
   getLast(): DataWithAccess | undefined {
     if (this.collection.length === 0) return undefined;
@@ -220,19 +235,27 @@ export abstract class DataWithAccess extends RootOfData {
     return this.parent.getRoot();
   }
   getValue(): BrpValue | undefined {
+    if (this.label.type === 'skip') return this.parent.getValue();
     const iterable = this.parent.getValue();
     if (iterable === undefined) return undefined;
-    if (isBrpObject(iterable) && typeof this.label === 'string') {
-      return iterable[this.label];
+    if (isBrpObject(iterable) && typeof this.label.segment === 'string') {
+      return iterable[this.label.segment];
     }
-    if (isBrpArray(iterable) && typeof this.label === 'number') {
-      return iterable[this.label];
+    if (isBrpArray(iterable) && typeof this.label.segment === 'number') {
+      return iterable[this.label.segment];
     }
     return undefined;
   }
   getPath(): [string, ...PathSegment[]] {
-    if (this.parent instanceof ComponentListData) return [this.label.toString()];
-    return [...this.parent.getPath(), this.label];
+    if (this.parent instanceof ComponentListData) {
+      if (this.label.type === 'skip') {
+        console.error('component is not with label');
+        return [''];
+      }
+      return [this.label.segment.toString()];
+    }
+    if (this.label.type === 'skip') return this.parent.getPath();
+    return [...this.parent.getPath(), this.label.segment];
   }
   getMutationPath(): [string, string] {
     const [component, ...path] = this.getPath();
@@ -250,7 +273,7 @@ export abstract class DataWithAccess extends RootOfData {
     return this.getPathSerialized() + ' = ' + JSON.stringify(this.getValue());
   }
   getDebugTree(): string {
-    let result = this.label.toString();
+    let result = this.getLabelToRender();
     if (this instanceof DataSync) result += ' => ' + this.schema;
     this.children.forEach((node) => (result += node.getDebugTree()));
     return result;
@@ -261,9 +284,17 @@ export abstract class DataWithAccess extends RootOfData {
     if (focus === undefined) return;
     postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
   };
+  getLabelToRender(): string {
+    switch (this.label.type) {
+      case 'default':
+        return this.label.segment.toString();
+      case 'skip':
+        return this.label.previous.toString();
+    }
+  }
 
   abstract parent: ComponentListData | DataWithAccess;
-  abstract label: PathSegment;
+  abstract label: OptionalLabel;
 }
 
 export abstract class DataSync extends DataWithAccess {
@@ -279,30 +310,32 @@ function createSyncFromSchema(
   parent: ComponentListData | DataWithAccess,
   label: PathSegment,
   schema: BrpSchemaUnit,
-  anchor: HTMLElement
+  anchor: HTMLElement,
+  labelType: 'default' | 'skip' = 'default'
 ) {
+  const asLabel: OptionalLabel =
+    labelType === 'skip' ? { type: 'skip', previous: label } : { type: 'default', segment: label };
   if (schema.reflectTypes !== undefined && schema.reflectTypes.includes('Serialize')) {
-    return new SerializedSync(parent, label, schema, anchor);
+    return new SerializedSync(parent, asLabel, schema, anchor);
   }
   switch (schema.kind) {
     case 'Array':
-      return new ArraySync(parent, label, schema, anchor);
+      return new ArraySync(parent, asLabel, schema, anchor);
     case 'Enum':
       return new ErrorData(parent, label, undefined, 'Not implemented', anchor);
     case 'List':
-      return new ListSync(parent, label, schema, anchor);
+      return new ListSync(parent, asLabel, schema, anchor);
     case 'Map':
-      return new MapSync(parent, label, schema, anchor);
+      return new MapSync(parent, asLabel, schema, anchor);
     case 'Set':
-      return new SetSync(parent, label, schema, anchor);
+      return new SetSync(parent, asLabel, schema, anchor);
     case 'Struct':
-      return new StructSync(parent, label, schema, anchor);
+      return new StructSync(parent, asLabel, schema, anchor);
     case 'Tuple':
-      return new TupleSync(parent, label, schema, anchor);
     case 'TupleStruct':
-      return new TupleStructSync(parent, label, schema, anchor);
+      return new TupleSync(parent, asLabel, schema, anchor);
     case 'Value':
-      return new SerializedSync(parent, label, schema, anchor);
+      return new SerializedSync(parent, asLabel, schema, anchor);
   }
 }
 
@@ -310,7 +343,7 @@ export class ArraySync extends DataSync {
   visual: ArrayVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
+    public label: OptionalLabel,
     public schema: BrpArraySchema,
     anchor: HTMLElement
   ) {
@@ -335,7 +368,7 @@ export class ListSync extends DataSync {
   visual: ListVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
+    public label: OptionalLabel,
     public schema: BrpListSchema,
     anchor: HTMLElement
   ) {
@@ -360,7 +393,7 @@ export class MapSync extends DataSync {
   visual: MapVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
+    public label: OptionalLabel,
     public schema: BrpMapSchema,
     anchor: HTMLElement
   ) {
@@ -385,7 +418,7 @@ export class SetSync extends DataSync {
   visual: SetVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
+    public label: OptionalLabel,
     public schema: BrpSetSchema,
     anchor: HTMLElement
   ) {
@@ -410,7 +443,7 @@ export class StructSync extends DataSync {
   visual: StructVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
+    public label: OptionalLabel,
     public schema: BrpStructSchema,
     anchor: HTMLElement
   ) {
@@ -436,54 +469,46 @@ export class StructSync extends DataSync {
 }
 
 export class TupleSync extends DataSync {
-  visual: TupleVisual;
+  visual: Visual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
-    public schema: BrpTupleSchema,
+    public label: OptionalLabel,
+    public schema: BrpTupleSchema | BrpTupleStructSchema,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new TupleVisual(this, anchor);
+    // Scenario: tuple struct by default
+    const prefixItems = this.schema.prefixItems ?? [];
+    if (prefixItems.length !== 1) {
+      this.visual = new TupleVisual(this, anchor);
+      return;
+    }
+    // Scenario: tuple struct with controls/visuals of single child
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[0]));
+    const childLabel = label.type === 'default' ? label.segment : label.previous;
+    if (childSchema !== undefined) {
+      const created = createSyncFromSchema(this, childLabel, childSchema, anchor, 'skip');
+      this.children.push(created);
+      this.visual = created.visual;
+      return;
+    }
+    // Error
+    const errorMessage = 'schema is not found for child';
+    this.visual = new ErrorVisual(this, anchor, { code: undefined, message: errorMessage });
   }
   sync(): void {
-    const value = this.getValue();
-    const prefixItems = this.schema.prefixItems;
-    if (prefixItems === undefined) return this.children.clear();
-    if (value === undefined || !isBrpArray(value)) {
-      this.children.clear();
-      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
-    }
-    this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
-      const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
-      if (childSchema !== undefined) {
-        return createSyncFromSchema(this, segment, childSchema, anchor);
-      }
-      return new ErrorData(this, segment, undefined, 'Schema is not found', anchor);
-    });
-    this.children.sync();
-  }
-}
+    // scenario: empty tuplestruct
+    // scenario: tuplestruct is single value
+    const prefixItems = this.schema.prefixItems ?? [];
+    if (prefixItems.length === 1) return this.children.sync();
 
-export class TupleStructSync extends DataSync {
-  visual: TupleStructVisual;
-  constructor(
-    public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
-    public schema: BrpTupleStructSchema,
-    anchor: HTMLElement
-  ) {
-    super();
-    this.visual = new TupleStructVisual(this, anchor);
-  }
-  sync(): void {
+    // exception: BrpValue is not array
     const value = this.getValue();
-    const prefixItems = this.schema.prefixItems;
-    if (prefixItems === undefined) return this.children.clear();
     if (value === undefined || !isBrpArray(value)) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
+
     this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
       if (childSchema !== undefined) {
@@ -499,7 +524,7 @@ export class SerializedSync extends DataSync {
   visual: SerializedVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: PathSegment,
+    public label: OptionalLabel,
     public schema: BrpSchemaUnit,
     anchor: HTMLElement
   ) {
@@ -519,19 +544,21 @@ export class SerializedSync extends DataSync {
 export class ErrorData extends DataWithAccess {
   visual: ErrorVisual;
   requestValueMutation = undefined;
+  label: { type: 'default'; segment: PathSegment };
 
   constructor(
     public parent: DataWithAccess | ComponentListData,
-    public label: PathSegment,
+    segment: PathSegment,
     code: number | undefined,
     message: string,
     anchor: HTMLElement
   ) {
     super();
+    this.label = { type: 'default', segment: segment };
     this.visual = new ErrorVisual(this, anchor, { code, message });
   }
   getDebugTree(): string {
-    return `${this.label} => ${this.visual.error.message}`;
+    return `${this.getLabelToRender()} => ${this.visual.error.message}`;
   }
 }
 

@@ -10,7 +10,6 @@ import {
   RootOfData,
   SetSync,
   StructSync,
-  TupleStructSync,
   TupleSync,
   resolveTypePathFromRef,
 } from './section-components';
@@ -72,7 +71,7 @@ export class ErrorVisual extends Visual {
     public error: { code: number | undefined; message: string }
   ) {
     super();
-    const label = this.sync.label.toString();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -87,7 +86,7 @@ export class ErrorVisual extends Visual {
   }
   getErrorTooltip(): string {
     let result = '';
-    result += `label: ${this.sync.label.toString()}`;
+    result += `label: ${this.sync.getLabelToRender()}`;
     if (this.error.code !== undefined) result += `\ncode: ${this.error.code}`;
     return result;
   }
@@ -105,7 +104,7 @@ export abstract class VisualOnDataSync extends Visual {
   abstract sync: DataSync;
 
   get tooltip(): string {
-    let result = 'label: ' + this.sync.label;
+    let result = 'label: ' + this.sync.getLabelToRender();
     result += '\ntype: ' + this.sync.schema.typePath;
     result += '\nkind: ' + this.sync.schema.kind;
     if (this.sync.schema.reflectTypes !== undefined) {
@@ -117,7 +116,7 @@ export abstract class VisualOnDataSync extends Visual {
     if (this.sync.schema.reflectTypes?.includes('Component') === true) {
       return this.sync.schema.shortPath;
     }
-    return this.sync.label.toString();
+    return this.sync.getLabelToRender();
   }
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
@@ -264,31 +263,6 @@ export class TupleVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
   constructor(public sync: TupleSync, anchor: HTMLElement) {
-    super();
-    const label = this.getComponentNameOrLabel();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
-  }
-
-  get childTypePaths(): readonly TypePath[] {
-    return (this.sync.schema.prefixItems ?? []).map((ref) => {
-      return resolveTypePathFromRef(ref);
-    });
-  }
-}
-
-export class TupleStructVisual extends ExpandableVisual {
-  readonly dom: HTMLMerged;
-
-  constructor(public sync: TupleStructSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
