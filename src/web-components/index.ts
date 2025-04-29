@@ -1,65 +1,9 @@
-import {
-  BrpValue,
-  BrpComponentRegistry,
-  BrpRegistrySchema,
-  BrpObject,
-  TypePath,
-  BrpResponseErrors,
-  isBrpIterable,
-} from '../protocol/types';
+import { BrpRegistrySchema, BrpObject, isBrpIterable } from '../protocol/types';
 import { defineCustomElements } from './elements';
-import { EntityFocus } from '../connection-list';
+import { EntityFocus, VSCodeMessage, WebviewMessage } from '../common';
 import { SectionErrors } from './section-errors';
 import { SectionDetails } from './section-details';
 import { ComponentListSync } from './section-sync';
-
-export type WebviewMessage =
-  | {
-      cmd: 'mutate_component';
-      data: { focus: EntityFocus; component: string; path: string; value: BrpValue };
-    }
-  | {
-      cmd: 'request_for_registry_schema';
-      host: string;
-    }
-  | {
-      cmd: 'ready_for_watch';
-      focus: EntityFocus;
-      components: TypePath[];
-    }
-  | {
-      cmd: 'write_clipboard';
-      text: string;
-    };
-
-export type VSCodeMessage =
-  | { cmd: 'debug_output' }
-  | {
-      cmd: 'update_all';
-      focus: EntityFocus;
-      components: BrpComponentRegistry;
-      errors: BrpResponseErrors;
-    }
-  | {
-      cmd: 'sync_registry_schema';
-      host: string;
-      data: BrpRegistrySchema;
-      available: string[];
-    }
-  | {
-      cmd: 'update_components';
-      focus: EntityFocus;
-      components: BrpObject;
-      removed: TypePath[];
-    }
-  | {
-      cmd: 'copy_error_message_to_clipboard';
-      component: string;
-    }
-  | {
-      cmd: 'copy_value_to_clipboard';
-      path: string;
-    };
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
@@ -85,12 +29,7 @@ defineCustomElements();
   const errorsSection = new SectionErrors(errorsHTML);
 
   // buffer
-  let dataBuffer:
-    | {
-        focus: EntityFocus;
-        data: BrpObject;
-      }
-    | undefined = undefined;
+  let buffer: { focus: EntityFocus; data: BrpObject } | undefined = undefined;
   const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
 
   // Event listener
@@ -108,42 +47,58 @@ defineCustomElements();
             registryBuffer.delete(host);
           });
         registryBuffer.set(message.host, message.data);
-        if (dataBuffer === undefined) break;
-        syncRoot.syncRoot(message.data, dataBuffer.focus, dataBuffer.data);
+        if (buffer === undefined) break;
+
+        // Success
+        syncRoot.syncRoot(message.data, buffer.focus, buffer.data);
+        postWebviewMessage({
+          cmd: 'ready_for_watch',
+          focus: buffer.focus,
+          components: Object.keys(buffer.data),
+        });
         break;
       }
       case 'update_all': {
         // Buffer
-        dataBuffer = { focus: message.focus, data: message.components };
+        buffer = { focus: EntityFocus.fromObject(message.focus), data: message.components };
 
         // Details
-        detailsSection.update(message.focus);
+        detailsSection.update(buffer.focus);
 
         // Components
         const registry = registryBuffer.get(message.focus.host);
-        if (registry !== undefined) syncRoot.syncRoot(registry, dataBuffer.focus, dataBuffer.data);
-        else postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
+        if (registry !== undefined) {
+          syncRoot.syncRoot(registry, buffer.focus, buffer.data);
+          postWebviewMessage({
+            cmd: 'ready_for_watch',
+            focus: buffer.focus,
+            components: Object.keys(buffer.data),
+          });
+        } else {
+          postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
+        }
 
         // Errors
         errorsSection.update(message.errors);
         break;
       }
       case 'update_components': {
-        if (dataBuffer === undefined) break;
-        if (!dataBuffer.focus.compare(message.focus)) break;
-        const registry = registryBuffer.get(dataBuffer.focus.host);
+        // Checks
+        if (buffer === undefined) break;
+        if (!buffer.focus.compare(message.focus)) break;
+        const registry = registryBuffer.get(buffer.focus.host);
         if (registry === undefined) break;
 
         // Apply changes
         for (const [typePath, value] of Object.entries(message.components)) {
-          dataBuffer.data[typePath] = value;
+          buffer.data[typePath] = value;
         }
         for (const typePath of message.removed) {
-          delete dataBuffer.data[typePath];
+          delete buffer.data[typePath];
         }
 
         // Sync visuals
-        syncRoot.syncRoot(registry, dataBuffer.focus, dataBuffer.data);
+        syncRoot.syncRoot(registry, buffer.focus, buffer.data);
         break;
       }
       case 'copy_error_message_to_clipboard': {

@@ -1,5 +1,5 @@
 import { postWebviewMessage } from '.';
-import { EntityFocus } from '../connection-list';
+import { EntityFocus } from '../common';
 import {
   BrpArraySchema,
   BrpComponentRegistry,

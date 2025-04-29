@@ -1,24 +1,14 @@
 import * as vscode from 'vscode';
 import {
-  EntityId,
   BrpGetWatchResult,
   DEFAULT_BEVY_URL,
   initializeBevyRemoteProtocol,
   TypePath,
 } from './protocol';
 import { Connection } from './connection';
+import { EntityFocus } from './common';
 
 type AddBehavior = 'prompt' | 'last';
-
-export class EntityFocus {
-  constructor(public host: string, public entityId: EntityId) {}
-  compare(another: EntityFocus): boolean {
-    return this.host === another.host && this.entityId === another.entityId;
-  }
-  clone() {
-    return new EntityFocus(this.host, this.entityId);
-  }
-}
 
 export class ConnectionList {
   // Properties

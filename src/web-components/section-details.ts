@@ -1,4 +1,4 @@
-import { EntityFocus } from '../connection-list';
+import { EntityFocus } from '../common';
 import { HTMLMerged } from './elements';
 
 export class SectionDetails {

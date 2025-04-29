@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { ConnectionList, EntityFocus } from './connection-list';
-import { VSCodeMessage, WebviewMessage } from './web-components';
-import { BrpObject, TypePath } from './protocol';
+import { ConnectionList } from './connection-list';
+import { BrpObject, TypePath } from './protocol/types';
+import { EntityFocus, VSCodeMessage, WebviewMessage } from './common';
 
 export function createComponentsView(
   context: vscode.ExtensionContext,
@@ -64,7 +64,13 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     await connection.requestInspectionElements(focus.entityId);
     const entityData = connection.getInspectionElements();
     const errorData = connection.getInspectionErrors();
-    this.postVSCodeMessage({ cmd: 'update_all', focus, components: entityData, errors: errorData });
+    // console.log(`SENDING FOCUS: ${focus.compare(focus.clone())}`);
+    this.postVSCodeMessage({
+      cmd: 'update_all',
+      focus: focus.toObject(),
+      components: entityData,
+      errors: errorData,
+    });
   }
 
   private changesToApply = 0;
