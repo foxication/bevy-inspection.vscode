@@ -451,12 +451,17 @@ export class StructSync extends DataSync {
     this.visual = new StructVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
+    // Scenario: empty struct
     const properties = this.schema.properties;
-    if (value === undefined || !isBrpObject(value) || properties === undefined) {
+    if (properties === undefined) return this.children.sync();
+
+    // Exception
+    const value = this.getValue();
+    if (value === undefined || !isBrpObject(value)) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
+
     this.children.updateOnOrderedLabels(Object.keys(properties), (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(properties[segment]));
       if (childSchema !== undefined) {
