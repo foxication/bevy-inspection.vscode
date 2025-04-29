@@ -1,22 +1,17 @@
-import {
-  BrpArraySchema,
-  BrpEnumAsObjectSchema,
-  BrpEnumAsStringSchema,
-  BrpListSchema,
-  BrpMapSchema,
-  BrpSchemaUnit,
-  BrpSetSchema,
-  BrpStructSchema,
-  BrpTupleSchema,
-  BrpTupleStructSchema,
-  BrpValue,
-  TypePath,
-} from '../protocol/types';
+import { BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 import {
-  ComponentListSync,
+  ArraySync,
+  ComponentListData,
   DataSync,
-  DataSyncBasic,
+  DataWithAccess,
+  ListSync,
+  MapSync,
+  RootOfData,
+  SetSync,
+  StructSync,
+  TupleStructSync,
+  TupleSync,
   resolveTypePathFromRef,
 } from './section-components';
 
@@ -26,7 +21,7 @@ import {
 
 export abstract class Visual {
   abstract dom: HTMLElement;
-  abstract sync: DataSyncBasic;
+  abstract sync: RootOfData;
 
   show() {
     this.dom.style.removeProperty('display');
@@ -51,7 +46,7 @@ export abstract class Visual {
 export class ComponentListVisual extends Visual {
   readonly dom: HTMLHeadingElement;
 
-  constructor(public sync: ComponentListSync, anchor: HTMLElement) {
+  constructor(public sync: ComponentListData, anchor: HTMLElement) {
     super();
     this.dom = ComponentListVisual.createHTML();
     anchor.append(this.dom);
@@ -72,7 +67,7 @@ export class ErrorVisual extends Visual {
   readonly dom: HTMLMerged;
 
   constructor(
-    public sync: DataSync,
+    public sync: DataWithAccess,
     anchor: HTMLElement,
     public error: { code: number | undefined; message: string }
   ) {
@@ -106,21 +101,22 @@ export class ErrorVisual extends Visual {
 // Visual with schema
 //
 
-export abstract class VisualDescribed extends Visual {
-  abstract schema: BrpSchemaUnit;
+export abstract class VisualOnDataSync extends Visual {
   abstract sync: DataSync;
 
   get tooltip(): string {
     let result = 'label: ' + this.sync.label;
-    result += '\ntype: ' + this.schema.typePath;
-    result += '\nkind: ' + this.schema.kind;
-    if (this.schema.reflectTypes !== undefined) {
-      result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
+    result += '\ntype: ' + this.sync.schema.typePath;
+    result += '\nkind: ' + this.sync.schema.kind;
+    if (this.sync.schema.reflectTypes !== undefined) {
+      result += '\nreflect: ' + this.sync.schema.reflectTypes.join(', ');
     }
     return result;
   }
   getComponentNameOrLabel(): string {
-    if (this.schema.reflectTypes?.includes('Component') === true) return this.schema.shortPath;
+    if (this.sync.schema.reflectTypes?.includes('Component') === true) {
+      return this.sync.schema.shortPath;
+    }
     return this.sync.label.toString();
   }
   getLevel(): number {
@@ -129,10 +125,10 @@ export abstract class VisualDescribed extends Visual {
   }
 }
 
-export class SerializedVisual extends VisualDescribed {
+export class SerializedVisual extends VisualOnDataSync {
   dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSchemaUnit) {
+  constructor(public sync: DataSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     const value = this.sync.getValue();
@@ -146,7 +142,7 @@ export class SerializedVisual extends VisualDescribed {
     }
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
@@ -166,7 +162,7 @@ export class SerializedVisual extends VisualDescribed {
 // Expandable visual
 //
 
-export abstract class ExpandableVisual extends VisualDescribed {
+export abstract class ExpandableVisual extends VisualOnDataSync {
   abstract dom: HTMLMerged;
 
   set isExpandable(able: boolean) {
@@ -190,60 +186,55 @@ export abstract class ExpandableVisual extends VisualDescribed {
   }
 }
 
-export class EnumVisual extends ExpandableVisual {
-  readonly dom: HTMLMerged;
+// export class EnumVisual extends ExpandableVisual {
+//   readonly dom: HTMLMerged;
 
-  constructor(
-    public sync: DataSync,
-    anchor: HTMLElement,
-    public schema: BrpEnumAsObjectSchema | BrpEnumAsStringSchema,
-    public variantTypePath: TypePath
-  ) {
-    super();
-    const label = this.getComponentNameOrLabel();
-    this.dom = HTMLMerged.create();
-    this.dom.onEnumEdit = sync;
-    this.dom.level = this.getLevel();
-    this.dom.label = label + ' / ' + this.variantName;
-    this.dom.tooltip = this.tooltipExtended;
-    this.dom.vscodeContext({
-      label: label,
-      type: this.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
-    if (!this.variantTypePaths.includes(this.variantTypePath)) {
-      console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
-    }
-  }
-  get tooltipExtended(): string {
-    let result = this.tooltip;
-    result += '\nvariant: ' + this.variantName;
-    result += '\navailable_variants: ' + this.variantShortPaths.join(', ');
-    return result;
-  }
-  get variantName(): string {
-    const parent = this.schema.typePath + '::';
-    return this.variantTypePath.slice(parent.length);
-  }
-  get variantTypePaths(): readonly TypePath[] {
-    return this.schema.oneOf.map((value) => {
-      if (typeof value === 'string') return this.schema.typePath + '::' + value;
-      return value.typePath;
-    });
-  }
-  get variantShortPaths(): readonly string[] {
-    return this.schema.oneOf.map((value) => {
-      if (typeof value === 'string') return value;
-      return value.shortPath;
-    });
-  }
-}
+//   constructor(public sync: DataSync, anchor: HTMLElement, public variantTypePath: TypePath) {
+//     super();
+//     const label = this.getComponentNameOrLabel();
+//     this.dom = HTMLMerged.create();
+//     this.dom.onEnumEdit = sync;
+//     this.dom.level = this.getLevel();
+//     this.dom.label = label + ' / ' + this.variantName;
+//     this.dom.tooltip = this.tooltipExtended;
+//     this.dom.vscodeContext({
+//       label: label,
+//       type: this.sync.schema.typePath,
+//       path: this.sync.getPathSerialized(),
+//     });
+//     anchor.after(this.dom);
+//     if (!this.variantTypePaths.includes(this.variantTypePath)) {
+//       console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
+//     }
+//   }
+//   get tooltipExtended(): string {
+//     let result = this.tooltip;
+//     result += '\nvariant: ' + this.variantName;
+//     result += '\navailable_variants: ' + this.variantShortPaths.join(', ');
+//     return result;
+//   }
+//   get variantName(): string {
+//     const parent = this.sync.schema.typePath + '::';
+//     return this.variantTypePath.slice(parent.length);
+//   }
+//   get variantTypePaths(): readonly TypePath[] {
+//     return this.sync.schema.oneOf.map((value) => {
+//       if (typeof value === 'string') return this.sync.schema.typePath + '::' + value;
+//       return value.typePath;
+//     });
+//   }
+//   get variantShortPaths(): readonly string[] {
+//     return this.sync.schema.oneOf.map((value) => {
+//       if (typeof value === 'string') return value;
+//       return value.shortPath;
+//     });
+//   }
+// }
 
 export class StructVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpStructSchema) {
+  constructor(public sync: StructSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -252,16 +243,19 @@ export class StructVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
 
   get properties(): readonly { property: string; typePath: TypePath }[] {
-    return (this.schema.required ?? []).map((name) => {
-      if (this.schema.properties === undefined) return { property: name, typePath: '()' };
-      return { property: name, typePath: resolveTypePathFromRef(this.schema.properties[name]) };
+    return (this.sync.schema.required ?? []).map((name) => {
+      if (this.sync.schema.properties === undefined) return { property: name, typePath: '()' };
+      return {
+        property: name,
+        typePath: resolveTypePathFromRef(this.sync.schema.properties[name]),
+      };
     });
   }
 }
@@ -269,7 +263,7 @@ export class StructVisual extends ExpandableVisual {
 export class TupleVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleSchema) {
+  constructor(public sync: TupleSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -278,14 +272,14 @@ export class TupleVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
 
   get childTypePaths(): readonly TypePath[] {
-    return (this.schema.prefixItems ?? []).map((ref) => {
+    return (this.sync.schema.prefixItems ?? []).map((ref) => {
       return resolveTypePathFromRef(ref);
     });
   }
@@ -294,7 +288,7 @@ export class TupleVisual extends ExpandableVisual {
 export class TupleStructVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleStructSchema) {
+  constructor(public sync: TupleStructSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -303,14 +297,14 @@ export class TupleStructVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
 
   get childTypePaths(): readonly TypePath[] {
-    return (this.schema.prefixItems ?? []).map((ref) => {
+    return (this.sync.schema.prefixItems ?? []).map((ref) => {
       return resolveTypePathFromRef(ref);
     });
   }
@@ -319,7 +313,7 @@ export class TupleStructVisual extends ExpandableVisual {
 export class ArrayVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpArraySchema) {
+  constructor(public sync: ArraySync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -328,20 +322,20 @@ export class ArrayVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
-    return resolveTypePathFromRef(this.schema.items);
+    return resolveTypePathFromRef(this.sync.schema.items);
   }
 }
 
 export class ListVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpListSchema) {
+  constructor(public sync: ListSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -350,20 +344,20 @@ export class ListVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
-    return resolveTypePathFromRef(this.schema.items);
+    return resolveTypePathFromRef(this.sync.schema.items);
   }
 }
 
 export class SetVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSetSchema) {
+  constructor(public sync: SetSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -372,20 +366,20 @@ export class SetVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get childTypePath(): TypePath {
-    return resolveTypePathFromRef(this.schema.items);
+    return resolveTypePathFromRef(this.sync.schema.items);
   }
 }
 
 export class MapVisual extends ExpandableVisual {
   readonly dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpMapSchema) {
+  constructor(public sync: MapSync, anchor: HTMLElement) {
     super();
     const label = this.getComponentNameOrLabel();
     this.dom = HTMLMerged.create();
@@ -394,16 +388,16 @@ export class MapVisual extends ExpandableVisual {
     this.dom.tooltip = this.tooltip;
     this.dom.vscodeContext({
       label: label,
-      type: this.schema.typePath,
+      type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
   }
   get keyTypePath(): TypePath {
-    return resolveTypePathFromRef(this.schema.keyType);
+    return resolveTypePathFromRef(this.sync.schema.keyType);
   }
   get valueTypePath(): TypePath {
-    return resolveTypePathFromRef(this.schema.valueType);
+    return resolveTypePathFromRef(this.sync.schema.valueType);
   }
 }
 

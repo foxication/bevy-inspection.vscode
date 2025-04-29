@@ -3,7 +3,7 @@ import { defineCustomElements } from './elements';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from '../common';
 import { SectionErrors } from './section-errors';
 import { SectionDetails } from './section-details';
-import { ComponentListSync } from './section-components';
+import { ComponentListData } from './section-components';
 
 // VSCode Access
 const vscode = acquireVsCodeApi();
@@ -22,7 +22,7 @@ defineCustomElements();
 
   const componentsHTML = document.querySelector('#component-tree') as HTMLDivElement;
   if (componentsHTML === null) return console.error('#component-tree is not found in DOM');
-  const syncRoot = new ComponentListSync(componentsHTML);
+  const syncRoot = new ComponentListData(componentsHTML);
 
   const errorsHTML = document.querySelector('#error-list') as HTMLDListElement;
   if (errorsHTML === null) return console.error('#error-list is not found in DOM');

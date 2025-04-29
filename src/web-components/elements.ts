@@ -1,4 +1,4 @@
-import { DataSync } from './section-components';
+import { DataWithAccess } from './section-components';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
@@ -68,7 +68,7 @@ export class HTMLMerged extends HTMLElement {
       }
     }
   }
-  set onEnumEdit(sync: DataSync) {
+  set onEnumEdit(sync: DataWithAccess) {
     if (this.htmlIcons.enum === undefined) {
       this.htmlIcons.enum = document.createElement('vscode-icon');
       this.htmlIcons.enum.setAttribute('name', 'symbol-property');
@@ -82,7 +82,7 @@ export class HTMLMerged extends HTMLElement {
     result.setAttribute('class', 'rotatable');
     return result;
   }
-  makeExpandable(sync: DataSync) {
+  makeExpandable(sync: DataWithAccess) {
     // create element
     this.htmlIcons.expand?.remove();
     this.htmlIcons.expand = this.createConfiguredChevron();

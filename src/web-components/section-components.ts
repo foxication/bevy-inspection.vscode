@@ -39,15 +39,15 @@ export type PathSegment = string | number;
 //
 
 class ChildrenOfSyncNode {
-  private collection: DataSync[] = [];
-  constructor(public node: DataSyncBasic) {}
+  private collection: DataWithAccess[] = [];
+  constructor(public node: RootOfData) {}
 
   private updateIsExpandable() {
     if ('isExpandable' in this.node.visual) {
       this.node.visual.isExpandable = this.collection.length > 0;
     }
   }
-  private removeVisualsRecursively(node: DataSync) {
+  private removeVisualsRecursively(node: DataWithAccess) {
     node.children.forEach((child) => this.removeVisualsRecursively(child));
     node.visual.dom.remove();
   }
@@ -64,21 +64,18 @@ class ChildrenOfSyncNode {
     this.collection = [];
     this.updateIsExpandable();
   }
-  push(node: DataSync) {
+  push(node: DataWithAccess) {
     this.collection.push(node);
     this.updateIsExpandable();
   }
-  get(segment: PathSegment): DataSync | undefined {
+  get(segment: PathSegment): DataWithAccess | undefined {
     return this.collection.find((node) => node.label === segment);
   }
-  getLast(): DataSync | undefined {
+  getLast(): DataWithAccess | undefined {
     if (this.collection.length === 0) return undefined;
     return this.collection[this.collection.length - 1];
   }
-  updateOnOrderedArray(
-    length: number,
-    onCreation: (segment: number, anchor: HTMLElement) => DataSync
-  ) {
+  updateOnOrderedArray(length: number, onCreation: (segment: number, anchor: HTMLElement) => DataWithAccess) {
     const range = [...Array(length).keys()];
     this.filter(range);
     let anchor = this.node.getStartAnchor();
@@ -91,7 +88,7 @@ class ChildrenOfSyncNode {
   }
   updateOnOrderedLabels(
     orderedSegments: string[],
-    onCreation: (segment: string, anchor: HTMLElement) => DataSync
+    onCreation: (segment: string, anchor: HTMLElement) => DataWithAccess
   ) {
     this.filter(orderedSegments);
     let anchor = this.node.getStartAnchor();
@@ -102,8 +99,13 @@ class ChildrenOfSyncNode {
     });
     this.updateIsExpandable();
   }
-  forEach(fn: (value: DataSync, index: number, array: DataSync[]) => void) {
+  forEach(fn: (value: DataWithAccess, index: number, array: DataWithAccess[]) => void) {
     return this.collection.forEach(fn);
+  }
+  sync() {
+    this.collection.forEach((child) => {
+      if (child instanceof DataSync) child.sync();
+    });
   }
 }
 
@@ -111,10 +113,10 @@ class ChildrenOfSyncNode {
 // DataSyncBasic is DataSync shared with ComponentListSync
 //
 
-export abstract class DataSyncBasic {
+export abstract class RootOfData {
   children = new ChildrenOfSyncNode(this);
-  getChild(path: PathSegment[]): DataSync | undefined {
-    if (path.length === 0) return this instanceof DataSync ? this : undefined;
+  getChild(path: PathSegment[]): DataWithAccess | undefined {
+    if (path.length === 0) return this instanceof DataWithAccess ? this : undefined;
     return this.children.get(path[0])?.getChild(path.splice(1));
   }
   getStartAnchor() {
@@ -132,7 +134,7 @@ export abstract class DataSyncBasic {
 // Root DataSync
 //
 
-export class ComponentListSync extends DataSyncBasic {
+export class ComponentListData extends RootOfData {
   // Creation
   constructor(public section: HTMLElement) {
     super();
@@ -168,12 +170,14 @@ export class ComponentListSync extends DataSyncBasic {
       const result =
         schema !== undefined
           ? createSyncFromSchema(this, anchor, typePath, schema)
-          : new ErrorSync(this, anchor, typePath, undefined, 'schema is not found');
+          : new ErrorData(this, anchor, typePath, undefined, 'schema is not found');
       return result;
     });
 
     // Sync children
-    this.children.forEach((node) => node.sync());
+    this.children.forEach((node) => {
+      if (node instanceof DataSync) node.sync();
+    });
 
     // Update visibility of 'Components' section
     if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
@@ -202,14 +206,14 @@ export class ComponentListSync extends DataSyncBasic {
 // DataSync with parent
 //
 
-export abstract class DataSync extends DataSyncBasic {
+export abstract class DataWithAccess extends RootOfData {
   getPathSerialized() {
     return this.getPath()
       .map((value) => value.toString())
       .join('.');
   }
-  getRoot(): ComponentListSync {
-    if (this.parent instanceof ComponentListSync) return this.parent;
+  getRoot(): ComponentListData {
+    if (this.parent instanceof ComponentListData) return this.parent;
     return this.parent.getRoot();
   }
   getValue(): BrpValue | undefined {
@@ -224,7 +228,7 @@ export abstract class DataSync extends DataSyncBasic {
     return undefined;
   }
   getPath(): [string, ...PathSegment[]] {
-    if (this.parent instanceof ComponentListSync) return [this.label.toString()];
+    if (this.parent instanceof ComponentListData) return [this.label.toString()];
     return [...this.parent.getPath(), this.label];
   }
   getMutationPath(): [string, string] {
@@ -244,7 +248,7 @@ export abstract class DataSync extends DataSyncBasic {
   }
   getDebugTree(): string {
     let result = this.label.toString();
-    if ('schema' in this.visual) result += ' => ' + this.visual.schema;
+    if (this instanceof DataSync) result += ' => ' + this.schema;
     this.children.forEach((node) => (result += node.getDebugTree()));
     return result;
   }
@@ -255,8 +259,12 @@ export abstract class DataSync extends DataSyncBasic {
     postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
   };
 
-  abstract parent: ComponentListSync | DataSync;
+  abstract parent: ComponentListData | DataWithAccess;
   abstract label: PathSegment;
+}
+
+export abstract class DataSync extends DataWithAccess {
+  abstract schema: BrpSchemaUnit;
   abstract sync(): void;
 }
 
@@ -265,7 +273,7 @@ export abstract class DataSync extends DataSyncBasic {
 //
 
 function createSyncFromSchema(
-  parent: ComponentListSync | DataSync,
+  parent: ComponentListData | DataWithAccess,
   anchor: HTMLElement,
   label: PathSegment,
   schema: BrpSchemaUnit
@@ -277,7 +285,7 @@ function createSyncFromSchema(
     case 'Array':
       return new ArraySync(parent, anchor, label, schema);
     case 'Enum':
-      return new ErrorSync(parent, anchor, label, undefined, 'Not implemented');
+      return new ErrorData(parent, anchor, label, undefined, 'Not implemented');
     case 'List':
       return new ListSync(parent, anchor, label, schema);
     case 'Map':
@@ -298,17 +306,17 @@ function createSyncFromSchema(
 export class ArraySync extends DataSync {
   visual: ArrayVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpArraySchema
+    public schema: BrpArraySchema
   ) {
     super();
-    this.visual = new ArrayVisual(this, anchor, schema);
+    this.visual = new ArrayVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
@@ -316,24 +324,24 @@ export class ArraySync extends DataSync {
     this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class ListSync extends DataSync {
   visual: ListVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpListSchema
+    public schema: BrpListSchema
   ) {
     super();
-    this.visual = new ListVisual(this, anchor, schema);
+    this.visual = new ListVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
@@ -341,26 +349,24 @@ export class ListSync extends DataSync {
     this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class MapSync extends DataSync {
   visual: MapVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpMapSchema
+    public schema: BrpMapSchema
   ) {
     super();
-    this.visual = new MapVisual(this, anchor, schema);
+    this.visual = new MapVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const childSchema = this.getRoot().getSchema(
-      resolveTypePathFromRef(this.visual.schema.valueType)
-    );
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.valueType));
     if (value === undefined || !isBrpObject(value) || childSchema === undefined) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
@@ -368,24 +374,24 @@ export class MapSync extends DataSync {
     this.children.updateOnOrderedLabels(Object.keys(value), (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class SetSync extends DataSync {
   visual: SetVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpSetSchema
+    public schema: BrpSetSchema
   ) {
     super();
-    this.visual = new SetVisual(this, anchor, schema);
+    this.visual = new SetVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.visual.schema.items));
+    const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
@@ -393,24 +399,24 @@ export class SetSync extends DataSync {
     this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
       return createSyncFromSchema(this, anchor, segment, childSchema);
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class StructSync extends DataSync {
   visual: StructVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpStructSchema
+    public schema: BrpStructSchema
   ) {
     super();
-    this.visual = new StructVisual(this, anchor, schema);
+    this.visual = new StructVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const properties = this.visual.schema.properties;
+    const properties = this.schema.properties;
     if (value === undefined || !isBrpObject(value) || properties === undefined) {
       this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
@@ -420,26 +426,26 @@ export class StructSync extends DataSync {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, anchor, segment, childSchema);
       }
-      return new ErrorSync(this, anchor, segment, undefined, 'Schema is not found');
+      return new ErrorData(this, anchor, segment, undefined, 'Schema is not found');
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class TupleSync extends DataSync {
   visual: TupleVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpTupleSchema
+    public schema: BrpTupleSchema
   ) {
     super();
-    this.visual = new TupleVisual(this, anchor, schema);
+    this.visual = new TupleVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const prefixItems = this.visual.schema.prefixItems;
+    const prefixItems = this.schema.prefixItems;
     if (prefixItems === undefined) return this.children.clear();
     if (value === undefined || !isBrpArray(value)) {
       this.children.clear();
@@ -450,26 +456,26 @@ export class TupleSync extends DataSync {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, anchor, segment, childSchema);
       }
-      return new ErrorSync(this, anchor, segment, undefined, 'Schema is not found');
+      return new ErrorData(this, anchor, segment, undefined, 'Schema is not found');
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class TupleStructSync extends DataSync {
   visual: TupleStructVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpTupleStructSchema
+    public schema: BrpTupleStructSchema
   ) {
     super();
-    this.visual = new TupleStructVisual(this, anchor, schema);
+    this.visual = new TupleStructVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    const prefixItems = this.visual.schema.prefixItems;
+    const prefixItems = this.schema.prefixItems;
     if (prefixItems === undefined) return this.children.clear();
     if (value === undefined || !isBrpArray(value)) {
       this.children.clear();
@@ -480,22 +486,22 @@ export class TupleStructSync extends DataSync {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, anchor, segment, childSchema);
       }
-      return new ErrorSync(this, anchor, segment, undefined, 'Schema is not found');
+      return new ErrorData(this, anchor, segment, undefined, 'Schema is not found');
     });
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
 export class SerializedSync extends DataSync {
   visual: SerializedVisual;
   constructor(
-    public parent: ComponentListSync | DataSync,
+    public parent: ComponentListData | DataWithAccess,
     anchor: HTMLElement,
     public label: PathSegment,
-    schema: BrpSchemaUnit
+    public schema: BrpSchemaUnit
   ) {
     super();
-    this.visual = new SerializedVisual(this, anchor, schema);
+    this.visual = new SerializedVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
@@ -503,16 +509,16 @@ export class SerializedSync extends DataSync {
     else {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
-    this.children.forEach((node) => node.sync());
+    this.children.sync();
   }
 }
 
-export class ErrorSync extends DataSync {
+export class ErrorData extends DataWithAccess {
   visual: ErrorVisual;
   requestValueMutation = undefined;
 
   constructor(
-    public parent: DataSync | ComponentListSync,
+    public parent: DataWithAccess | ComponentListData,
     anchor: HTMLElement,
     public label: PathSegment,
     code: number | undefined,
@@ -520,10 +526,6 @@ export class ErrorSync extends DataSync {
   ) {
     super();
     this.visual = new ErrorVisual(this, anchor, { code, message });
-  }
-  sync(): void {}
-  getValue(): BrpValue | undefined {
-    return this.visual.error.message;
   }
   getDebugTree(): string {
     return `${this.label} => ${this.visual.error.message}`;
