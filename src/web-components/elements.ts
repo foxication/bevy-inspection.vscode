@@ -82,29 +82,39 @@ export class HTMLMerged extends HTMLElement {
     result.setAttribute('class', 'rotatable');
     return result;
   }
-  set onExpansion(sync: DataSync) {
+  makeExpandable(sync: DataSync) {
+    // create element
+    this.htmlIcons.expand?.remove();
+    this.htmlIcons.expand = this.createConfiguredChevron();
+    this.htmlIcons.wrapper.append(this.htmlIcons.expand);
+
+    // implement
     this.onclick = () => {
       if (this.htmlIcons.expand === undefined) return; // skip - no children
-      const state = this.htmlIcons.expand.getAttribute('name');
-      if (state === 'chevron-up') {
-        this.htmlIcons.expand.setAttribute('name', 'chevron-down');
-        sync.children.forEach((node) => node.visual.hide());
-      }
-      if (state === 'chevron-down') {
-        this.htmlIcons.expand.setAttribute('name', 'chevron-up');
-        sync.children.forEach((node) => node.visual.show());
+      switch (this.expansionState) {
+        case 'expanded':
+          this.htmlIcons.expand.setAttribute('name', 'chevron-down');
+          sync.children.forEach((node) => node.visual.hide());
+          break;
+        case 'disabled':
+        case 'collapsed':
+          this.htmlIcons.expand.setAttribute('name', 'chevron-up');
+          sync.children.forEach((node) => node.visual.show());
+          break;
       }
     };
   }
-  set isExpandable(is: boolean) {
-    if (is) {
-      this.htmlIcons.expand?.remove();
-      this.htmlIcons.expand = this.createConfiguredChevron();
-      this.htmlIcons.wrapper.append(this.htmlIcons.expand);
-    } else {
-      this.htmlIcons.expand?.remove();
-      this.htmlIcons.expand = undefined;
-    }
+  removeExpansibility() {
+    this.onclick = () => {};
+    this.htmlIcons.expand?.remove();
+    this.htmlIcons.expand = undefined;
+  }
+  get expansionState(): 'expanded' | 'collapsed' | 'disabled' {
+    if (this.htmlIcons.expand === undefined) return 'disabled';
+    const state = this.htmlIcons.expand.getAttribute('name');
+    if (state === 'chevron-up') return 'expanded';
+    if (state === 'chevron-down') return 'collapsed';
+    return 'expanded';
   }
   get isExpandable() {
     return this.htmlIcons.expand !== undefined;

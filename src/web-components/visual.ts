@@ -25,19 +25,22 @@ export abstract class Visual {
 
   show() {
     this.dom.style.removeProperty('display');
+    this.showChildren();
   }
   hide() {
     this.dom.style.display = 'none';
+    this.hideChildren();
+  }
+  showChildren() {
+    if (this instanceof ExpandableVisual && this.isExpanded) {
+      this.sync.children.forEach((child) => child.visual.show());
+    }
+  }
+  hideChildren() {
+    this.sync.children.forEach((child) => child.visual.hide());
   }
 
   abstract getLevel(): number;
-
-  // get level() {
-  //   let level = 0;
-  //   if ('path' in this.sync.data) level += this.sync.data.path.length;
-  //   if ('pathVirtual' in this.sync.data) level += this.sync.data.pathVirtual.length;
-  //   return level;
-  // }
 }
 
 export class ComponentListVisual extends Visual {
@@ -73,7 +76,7 @@ export class ErrorVisual extends Visual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = (this.error.code ?? 'Error').toString();
+    this.dom.tooltip = this.getErrorTooltip();
     this.dom.brpValue = this.error.message;
     this.dom.allowValueWrapping();
     this.dom.vscodeContext({
@@ -82,7 +85,12 @@ export class ErrorVisual extends Visual {
     });
     anchor.after(this.dom);
   }
-
+  getErrorTooltip(): string {
+    let result = '';
+    result += `label: ${this.sync.label.toString()}`;
+    if (this.error.code !== undefined) result += `\ncode: ${this.error.code}`;
+    return result;
+  }
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
     return path.length;
@@ -153,10 +161,17 @@ export abstract class ExpandableVisual extends VisualDescribed {
   abstract dom: HTMLMerged;
 
   set isExpandable(able: boolean) {
-    this.dom.isExpandable = able;
+    if (able) this.dom.makeExpandable(this.sync);
+    else this.dom.removeExpansibility();
   }
   get isExpanded(): boolean {
-    return this.dom.htmlIcons.expand !== undefined;
+    switch (this.dom.expansionState) {
+      case 'expanded':
+      case 'disabled': // by default return true as nothing to hide
+        return true;
+      case 'collapsed':
+        return false;
+    }
   }
 }
 
@@ -171,7 +186,6 @@ export class EnumVisual extends ExpandableVisual {
   ) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.onEnumEdit = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label + ' / ' + this.variantName;
@@ -216,7 +230,6 @@ export class StructVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpStructSchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
@@ -242,7 +255,6 @@ export class TupleVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleSchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
@@ -267,7 +279,6 @@ export class TupleStructVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpTupleStructSchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
@@ -292,7 +303,6 @@ export class ArrayVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpArraySchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
@@ -314,7 +324,6 @@ export class ListVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpListSchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
@@ -336,7 +345,6 @@ export class SetVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpSetSchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
@@ -358,7 +366,6 @@ export class MapVisual extends ExpandableVisual {
   constructor(public sync: DataSync, anchor: HTMLElement, public schema: BrpMapSchema) {
     super();
     this.dom = HTMLMerged.create();
-    this.dom.onExpansion = sync;
     this.dom.level = this.getLevel();
     this.dom.label = this.sync.label.toString();
     this.dom.tooltip = this.tooltip;
