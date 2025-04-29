@@ -13,7 +13,12 @@ import {
   TypePath,
 } from '../protocol/types';
 import { HTMLMerged } from './elements';
-import { ComponentListSync, DataSync, DataSyncBasic, resolveTypePathFromRef } from './section-components';
+import {
+  ComponentListSync,
+  DataSync,
+  DataSyncBasic,
+  resolveTypePathFromRef,
+} from './section-components';
 
 //
 // Visual
@@ -161,8 +166,14 @@ export abstract class ExpandableVisual extends VisualDescribed {
   abstract dom: HTMLMerged;
 
   set isExpandable(able: boolean) {
-    if (able) this.dom.makeExpandable(this.sync);
-    else this.dom.removeExpansibility();
+    if (able && this.dom.expansionState === 'disabled') {
+      this.dom.makeExpandable(this.sync);
+      return;
+    }
+    if (!able && this.dom.expansionState !== 'disabled') {
+      this.dom.removeExpansibility();
+      return;
+    }
   }
   get isExpanded(): boolean {
     switch (this.dom.expansionState) {
