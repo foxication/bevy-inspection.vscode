@@ -34,7 +34,7 @@ import {
 
 export type PathSegment = string | number;
 export type OptionalLabel =
-  | { type: 'default'; segment: PathSegment }
+  | { type: 'default'; segment: PathSegment; short?: string }
   | { type: 'skip'; previous: PathSegment };
 
 //
@@ -287,9 +287,10 @@ export abstract class DataWithAccess extends RootOfData {
   getLabelToRender(): string {
     switch (this.label.type) {
       case 'default':
-        return this.label.segment.toString();
+        return this.label.short ?? this.label.segment.toString();
       case 'skip':
-        return this.label.previous.toString();
+        if (this.parent instanceof DataWithAccess) return this.parent.getLabelToRender();
+        return '???';
     }
   }
 
@@ -313,8 +314,11 @@ function createSyncFromSchema(
   anchor: HTMLElement,
   labelType: 'default' | 'skip' = 'default'
 ) {
+  const short = schema.reflectTypes?.includes('Component') ? schema.shortPath : undefined;
   const asLabel: OptionalLabel =
-    labelType === 'skip' ? { type: 'skip', previous: label } : { type: 'default', segment: label };
+    labelType === 'skip'
+      ? { type: 'skip', previous: label }
+      : { type: 'default', segment: label, short };
   if (schema.reflectTypes !== undefined && schema.reflectTypes.includes('Serialize')) {
     return new SerializedSync(parent, asLabel, schema, anchor);
   }

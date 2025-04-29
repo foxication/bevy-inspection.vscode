@@ -113,9 +113,6 @@ export abstract class VisualOnDataSync extends Visual {
     return result;
   }
   getComponentNameOrLabel(): string {
-    if (this.sync.schema.reflectTypes?.includes('Component') === true) {
-      return this.sync.schema.shortPath;
-    }
     return this.sync.getLabelToRender();
   }
   getLevel(): number {
