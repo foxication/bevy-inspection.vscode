@@ -13,7 +13,7 @@ import {
   TypePath,
 } from '../protocol/types';
 import { HTMLMerged } from './elements';
-import { ComponentListSync, DataSync, DataSyncBasic, resolveTypePathFromRef } from './section-sync';
+import { ComponentListSync, DataSync, DataSyncBasic, resolveTypePathFromRef } from './section-components';
 
 //
 // Visual

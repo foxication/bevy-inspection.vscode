@@ -3,7 +3,7 @@ import { defineCustomElements } from './elements';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from '../common';
 import { SectionErrors } from './section-errors';
 import { SectionDetails } from './section-details';
-import { ComponentListSync } from './section-sync';
+import { ComponentListSync } from './section-components';
 
 // VSCode Access
 const vscode = acquireVsCodeApi();

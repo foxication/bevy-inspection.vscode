@@ -1,4 +1,4 @@
-import { DataSync } from './section-sync';
+import { DataSync } from './section-components';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
