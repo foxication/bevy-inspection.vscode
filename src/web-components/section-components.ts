@@ -289,17 +289,6 @@ function createSyncFromSchema(
     case 'Tuple':
       return new TupleSync(parent, anchor, label, schema);
     case 'TupleStruct':
-      if (schema.prefixItems?.length === 1) {
-        const root = parent instanceof ComponentListSync ? parent : parent.getRoot();
-        const childTypePath = resolveTypePathFromRef(schema.prefixItems[0]);
-        const childSchema = root.getSchema(childTypePath);
-        if (childSchema === undefined) {
-          const errorMsg = `Schema is not found for single value in ${childTypePath}`;
-          return new ErrorSync(parent, anchor, label, undefined, errorMsg);
-        } else {
-          return createSyncFromSchema(parent, anchor, label, childSchema);
-        }
-      }
       return new TupleStructSync(parent, anchor, label, schema);
     case 'Value':
       return new SerializedSync(parent, anchor, label, schema);
