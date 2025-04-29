@@ -354,12 +354,11 @@ export class ArraySync extends DataSync {
     const value = this.getValue();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
-      this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
-    this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
-      return createSyncFromSchema(this, segment, childSchema, anchor);
-    });
+    this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
+      createSyncFromSchema(this, segment, childSchema, anchor)
+    );
     this.children.sync();
   }
 }
@@ -379,12 +378,11 @@ export class ListSync extends DataSync {
     const value = this.getValue();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
-      this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
-    this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
-      return createSyncFromSchema(this, segment, childSchema, anchor);
-    });
+    this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
+      createSyncFromSchema(this, segment, childSchema, anchor)
+    );
     this.children.sync();
   }
 }
@@ -404,12 +402,11 @@ export class MapSync extends DataSync {
     const value = this.getValue();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.valueType));
     if (value === undefined || !isBrpObject(value) || childSchema === undefined) {
-      this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
-    this.children.updateOnOrderedLabels(Object.keys(value), (segment, anchor) => {
-      return createSyncFromSchema(this, segment, childSchema, anchor);
-    });
+    this.children.updateOnOrderedLabels(Object.keys(value), (segment, anchor) =>
+      createSyncFromSchema(this, segment, childSchema, anchor)
+    );
     this.children.sync();
   }
 }
@@ -429,12 +426,11 @@ export class SetSync extends DataSync {
     const value = this.getValue();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
     if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
-      this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
-    this.children.updateOnOrderedArray(value.length, (segment, anchor) => {
-      return createSyncFromSchema(this, segment, childSchema, anchor);
-    });
+    this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
+      createSyncFromSchema(this, segment, childSchema, anchor)
+    );
     this.children.sync();
   }
 }
@@ -453,15 +449,15 @@ export class StructSync extends DataSync {
   sync(): void {
     // Scenario: empty struct
     const properties = this.schema.properties;
-    if (properties === undefined) return this.children.sync();
+    if (properties === undefined) return;
 
     // Exception
     const value = this.getValue();
     if (value === undefined || !isBrpObject(value)) {
-      this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
 
+    // Default
     this.children.updateOnOrderedLabels(Object.keys(properties), (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(properties[segment]));
       if (childSchema !== undefined) {
@@ -510,10 +506,10 @@ export class TupleSync extends DataSync {
     // exception: BrpValue is not array
     const value = this.getValue();
     if (value === undefined || !isBrpArray(value)) {
-      this.children.clear();
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
 
+    // scenario: update children and sync
     this.children.updateOnOrderedArray(prefixItems.length, (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[segment]));
       if (childSchema !== undefined) {
