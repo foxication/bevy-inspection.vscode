@@ -23,7 +23,6 @@ import {
   BooleanVisual,
   ComponentListVisual,
   ErrorVisual,
-  ExpandableVisual,
   JsonArrayVisual,
   JsonObjectVisual,
   ListVisual,
@@ -36,6 +35,7 @@ import {
   StructVisual,
   TupleVisual,
   Visual,
+  VisualWithSync,
 } from './visual';
 
 export type PathSegment = string | number;
@@ -52,7 +52,7 @@ class ChildrenOfSyncNode {
   constructor(public node: RootOfData) {}
 
   private updateIsExpandable() {
-    if (this.node.visual instanceof ExpandableVisual) {
+    if (this.node.visual instanceof VisualWithSync) {
       this.node.visual.isExpandable = this.collection.length > 0;
     }
   }

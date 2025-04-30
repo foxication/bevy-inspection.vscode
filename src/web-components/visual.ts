@@ -2,7 +2,6 @@ import { BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 import {
   ArraySync,
-  BrpValueSync,
   ComponentListData,
   DataSync,
   ErrorData,
@@ -34,7 +33,7 @@ export abstract class Visual {
     this.hideChildren();
   }
   showChildren() {
-    if (this instanceof ExpandableVisual && this.isExpanded) {
+    if (this instanceof VisualWithSync && this.isExpanded) {
       this.sync.children.forEach((child) => child.visual.show());
     }
   }
@@ -97,16 +96,36 @@ export class ErrorVisual extends Visual {
 // Visual with schema
 //
 
-export abstract class VisualOnDataSync extends Visual {
+export abstract class VisualWithSync extends Visual {
+  abstract dom: HTMLMerged;
   abstract sync: DataSync;
 
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
     return path.length;
   }
+  set isExpandable(able: boolean) {
+    if (able && this.dom.expansionState === 'disabled') {
+      this.dom.makeExpandable(this.sync);
+      return;
+    }
+    if (!able && this.dom.expansionState !== 'disabled') {
+      this.dom.removeExpansibility();
+      return;
+    }
+  }
+  get isExpanded(): boolean {
+    switch (this.dom.expansionState) {
+      case 'expanded':
+      case 'disabled': // by default return true as nothing to hide
+        return true;
+      case 'collapsed':
+        return false;
+    }
+  }
 }
 
-export class SerializedVisual extends VisualOnDataSync {
+export class SerializedVisual extends VisualWithSync {
   dom: HTMLMerged;
 
   constructor(public sync: SerializedSync, anchor: HTMLElement) {
@@ -129,31 +148,7 @@ export class SerializedVisual extends VisualOnDataSync {
 // Expandable visual
 //
 
-export abstract class ExpandableVisual extends VisualOnDataSync {
-  abstract dom: HTMLMerged;
-
-  set isExpandable(able: boolean) {
-    if (able && this.dom.expansionState === 'disabled') {
-      this.dom.makeExpandable(this.sync);
-      return;
-    }
-    if (!able && this.dom.expansionState !== 'disabled') {
-      this.dom.removeExpansibility();
-      return;
-    }
-  }
-  get isExpanded(): boolean {
-    switch (this.dom.expansionState) {
-      case 'expanded':
-      case 'disabled': // by default return true as nothing to hide
-        return true;
-      case 'collapsed':
-        return false;
-    }
-  }
-}
-
-// export class EnumVisual extends ExpandableVisual {
+// export class EnumVisual extends VisualOnDataSync {
 //   readonly dom: HTMLMerged;
 
 //   constructor(public sync: DataSync, anchor: HTMLElement, public variantTypePath: TypePath) {
@@ -198,7 +193,7 @@ export abstract class ExpandableVisual extends VisualOnDataSync {
 //   }
 // }
 
-export class StructVisual extends ExpandableVisual {
+export class StructVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
 
   constructor(public sync: StructSync, anchor: HTMLElement) {
@@ -227,7 +222,7 @@ export class StructVisual extends ExpandableVisual {
   }
 }
 
-export class TupleVisual extends ExpandableVisual {
+export class TupleVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
 
   constructor(public sync: TupleSync, anchor: HTMLElement) {
@@ -252,7 +247,7 @@ export class TupleVisual extends ExpandableVisual {
   }
 }
 
-export class ArrayVisual extends ExpandableVisual {
+export class ArrayVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
 
   constructor(public sync: ArraySync, anchor: HTMLElement) {
@@ -274,7 +269,7 @@ export class ArrayVisual extends ExpandableVisual {
   }
 }
 
-export class ListVisual extends ExpandableVisual {
+export class ListVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
 
   constructor(public sync: ListSync, anchor: HTMLElement) {
@@ -296,7 +291,7 @@ export class ListVisual extends ExpandableVisual {
   }
 }
 
-export class SetVisual extends ExpandableVisual {
+export class SetVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
 
   constructor(public sync: SetSync, anchor: HTMLElement) {
@@ -318,7 +313,7 @@ export class SetVisual extends ExpandableVisual {
   }
 }
 
-export class MapVisual extends ExpandableVisual {
+export class MapVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
 
   constructor(public sync: MapSync, anchor: HTMLElement) {
@@ -347,7 +342,7 @@ export class MapVisual extends ExpandableVisual {
 // BrpValue representations
 //
 
-export abstract class BrpValueVisual extends Visual {
+export abstract class BrpValueVisual extends VisualWithSync {
   set(value: BrpValue) {
     this.dom.brpValue = value;
   }
@@ -355,8 +350,6 @@ export abstract class BrpValueVisual extends Visual {
     const [, ...path] = this.sync.getPath();
     return path.length;
   }
-  abstract dom: HTMLMerged;
-  abstract sync: BrpValueSync;
 }
 
 export class NullVisual extends BrpValueVisual {
