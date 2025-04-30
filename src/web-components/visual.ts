@@ -350,6 +350,11 @@ export abstract class BrpValueVisual extends VisualWithSync {
     const [, ...path] = this.sync.getPath();
     return path.length;
   }
+  getParentTypePath(): TypePath | undefined {
+    return this.sync.parent instanceof SerializedSync
+      ? this.sync.parent.schema.typePath
+      : undefined;
+  }
 }
 
 export class NullVisual extends BrpValueVisual {
@@ -368,6 +373,7 @@ export class NullVisual extends BrpValueVisual {
     }
     this.dom.vscodeContext({
       label: label,
+      type: this.getParentTypePath(),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
@@ -395,6 +401,7 @@ export class StringVisual extends BrpValueVisual {
     }
     this.dom.vscodeContext({
       label: label,
+      type: this.getParentTypePath(),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
@@ -422,6 +429,7 @@ export class NumberVisual extends BrpValueVisual {
     }
     this.dom.vscodeContext({
       label: label,
+      type: this.getParentTypePath(),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
@@ -449,6 +457,7 @@ export class BooleanVisual extends BrpValueVisual {
     }
     this.dom.vscodeContext({
       label: label,
+      type: this.getParentTypePath(),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
@@ -467,6 +476,7 @@ export class JsonObjectVisual extends BrpValueVisual {
     this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
+      type: this.getParentTypePath(),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
@@ -485,6 +495,7 @@ export class JsonArrayVisual extends BrpValueVisual {
     this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
+      type: this.getParentTypePath(),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
