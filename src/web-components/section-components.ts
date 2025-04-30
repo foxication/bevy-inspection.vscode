@@ -41,7 +41,7 @@ import {
 export type PathSegment = string | number;
 export type OptionalLabel =
   | { type: 'default'; segment: PathSegment; short?: string }
-  | { type: 'skip'; segment: PathSegment };
+  | { type: 'skip' };
 
 //
 // Children of DataSync
@@ -83,14 +83,16 @@ class ChildrenOfSyncNode {
     this.updateIsExpandable();
   }
   get(segment: PathSegment): DataWithAccess | undefined {
-    return this.collection.find((node) => {
+    const result = this.collection.find((node) => {
       switch (node.label.type) {
         case 'default':
           return node.label.segment === segment;
         case 'skip':
-          return node.label.segment === segment;
+          return true;
       }
     });
+    if (result?.label.type === 'skip') return result.children.get(segment);
+    return result;
   }
   getLast(): DataWithAccess | undefined {
     if (this.collection.length === 0) return undefined;
@@ -138,9 +140,10 @@ class ChildrenOfSyncNode {
           case 'default':
             return child.label.segment;
           case 'skip':
-            return child.label.segment;
+            return undefined;
         }
       })
+      .filter((childSegment) => childSegment !== undefined)
       .filter((childSegment) => childSegment !== toRemove);
     if (whiteList.length < this.collection.length) this.filter(whiteList);
   }
@@ -324,6 +327,15 @@ export abstract class DataWithAccess extends RootOfData {
     if (focus === undefined) return;
     postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
   };
+  getLabel(): PathSegment {
+    switch (this.label.type) {
+      case 'default':
+        return this.label.segment;
+      case 'skip':
+        if (this.parent instanceof DataWithAccess) return this.parent.getLabel();
+        else return '';
+    }
+  }
   getLabelToRender(): string {
     switch (this.label.type) {
       case 'default':
@@ -385,16 +397,13 @@ export abstract class BrpValueSync extends DataSync {
 
 function createSyncFromSchema(
   parent: ComponentListData | DataWithAccess,
-  label: PathSegment,
+  label: PathSegment | undefined,
   schema: BrpSchemaUnit,
-  anchor: HTMLElement,
-  labelType: 'default' | 'skip' = 'default'
+  anchor: HTMLElement
 ) {
   const short = schema.reflectTypes?.includes('Component') ? schema.shortPath : undefined;
   const asLabel: OptionalLabel =
-    labelType === 'skip'
-      ? { type: 'skip', segment: label }
-      : { type: 'default', segment: label, short };
+    label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
   if (schema.reflectTypes !== undefined && schema.reflectTypes.includes('Serialize')) {
     return new SerializedSync(parent, asLabel, schema, anchor);
   }
@@ -572,22 +581,15 @@ export class TupleSync extends DataSyncWithSchema {
     }
     // Scenario: tuple struct with controls/visuals of single child
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[0]));
-    const childLabel = label.type === 'default' ? label.segment : label.segment;
     if (childSchema !== undefined) {
-      const created = createSyncFromSchema(this, childLabel, childSchema, anchor, 'skip');
+      const created = createSyncFromSchema(this, undefined, childSchema, anchor);
       this.children.push(created);
       this.visual = created.visual;
       return;
     }
     // Error
     const errorMessage = 'schema is not found for child';
-    const created = new ErrorData(
-      this,
-      { type: 'skip', segment: childLabel },
-      undefined,
-      errorMessage,
-      anchor
-    );
+    const created = new ErrorData(this, { type: 'skip' }, undefined, errorMessage, anchor);
     this.children.push(created);
     this.visual = created.visual;
   }
@@ -635,7 +637,7 @@ export class SerializedSync extends DataSyncWithSchema {
     if (value === undefined) {
       const created = new ErrorData(
         this,
-        { type: 'skip', segment: label.segment },
+        { type: 'skip' },
         undefined,
         'BrpValue is undefined',
         anchor
@@ -644,7 +646,7 @@ export class SerializedSync extends DataSyncWithSchema {
       this.visual = created.visual;
       return;
     }
-    const created = createBrpValueSync(this, label.segment, value, anchor, 'skip');
+    const created = createBrpValueSync(this, undefined, value, anchor);
     this.children.push(created);
     this.visual = created.visual;
   }
@@ -657,10 +659,9 @@ export class SerializedSync extends DataSyncWithSchema {
 
 function createBrpValueSync(
   parent: SerializedSync | BrpValueSync,
-  label: PathSegment,
+  label: PathSegment | undefined,
   value: BrpValue,
-  anchor: HTMLElement,
-  labelType: 'default' | 'skip' = 'default'
+  anchor: HTMLElement
 ) {
   const short =
     parent instanceof SerializedSync
@@ -669,9 +670,7 @@ function createBrpValueSync(
         : undefined
       : undefined;
   const asLabel: OptionalLabel =
-    labelType === 'skip'
-      ? { type: 'skip', segment: label }
-      : { type: 'default', segment: label, short };
+    label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
 
   // Scenario: null
   if (value === null) {
