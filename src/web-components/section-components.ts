@@ -306,7 +306,7 @@ export abstract class DataWithAccess extends RootOfData {
       component,
       path
         .map((segment) => {
-          if (typeof segment === 'string') return '[' + segment + ']';
+          if (typeof segment === 'number') return '[' + segment + ']';
           else return '.' + segment;
         })
         .join(''),
