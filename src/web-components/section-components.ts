@@ -366,7 +366,14 @@ export abstract class BrpValueSync extends DataSync {
     if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
       result += this.parent.getTooltip() + '\n';
     }
-    result += '\ntype: ' + typeof this.getValue();
+    const value = this.getValue();
+    if (value === undefined) result += '\ntype: undefined';
+    if (value === null) result += '\ntype: null';
+    if (typeof value === 'string') result += '\ntype: string';
+    if (typeof value === 'number') result += '\ntype: number';
+    if (typeof value === 'boolean') result += '\ntype: boolean';
+    if (value !== undefined && isBrpObject(value)) result += '\ntype: object';
+    if (value !== undefined && isBrpArray(value)) result += '\ntype: array';
     return result;
   }
   abstract parent: SerializedSync | BrpValueSync;
