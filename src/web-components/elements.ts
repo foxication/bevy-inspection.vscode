@@ -205,6 +205,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
       this.setAttribute('focused', '');
     };
     this.jsonElement.onkeydown = (e) => {
+      // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
         this.setTextFromBuffer();
         this.jsonElement.blur();
@@ -219,7 +220,6 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
         } catch {
           console.error(`Error in parsing brpValue`);
         }
-        this.setTextFromBuffer();
         this.jsonElement.blur();
       }
     };
@@ -266,6 +266,7 @@ export class HTMLString extends HTMLMutatable<string> {
       this.setAttribute('focused', '');
     };
     this.textElement.onkeydown = (e) => {
+      // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
         this.setTextFromBuffer();
         this.textElement.blur();
@@ -280,7 +281,6 @@ export class HTMLString extends HTMLMutatable<string> {
         } catch {
           /* empty */
         }
-        this.setTextFromBuffer();
         this.textElement.blur();
       }
     };
