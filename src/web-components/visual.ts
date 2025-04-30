@@ -2,12 +2,15 @@ import { BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 import {
   ArraySync,
+  BrpValueSync,
   ComponentListData,
   DataSync,
   ErrorData,
   ListSync,
   MapSync,
+  NullSync,
   RootOfData,
+  SerializedSync,
   SetSync,
   StructSync,
   TupleSync,
@@ -97,9 +100,6 @@ export class ErrorVisual extends Visual {
 export abstract class VisualOnDataSync extends Visual {
   abstract sync: DataSync;
 
-  getComponentNameOrLabel(): string {
-    return this.sync.getLabelToRender();
-  }
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
     return path.length;
@@ -109,33 +109,19 @@ export abstract class VisualOnDataSync extends Visual {
 export class SerializedVisual extends VisualOnDataSync {
   dom: HTMLMerged;
 
-  constructor(public sync: DataSync, anchor: HTMLElement) {
+  constructor(public sync: SerializedSync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
-    const value = this.sync.getValue();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = this.sync.getTooltip();
-    if (value !== undefined) this.dom.brpValue = value;
-    if (this.dom.htmlRight !== undefined && sync.requestValueMutation !== undefined) {
-      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
-    }
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
-  }
-
-  set(value: BrpValue) {
-    this.dom.brpValue = value;
-  }
-
-  getLevel(): number {
-    const [, ...path] = this.sync.getPath();
-    return path.length;
   }
 }
 
@@ -172,7 +158,7 @@ export abstract class ExpandableVisual extends VisualOnDataSync {
 
 //   constructor(public sync: DataSync, anchor: HTMLElement, public variantTypePath: TypePath) {
 //     super();
-//     const label = this.getComponentNameOrLabel();
+//     const label = this.sync.getLabelToRender();
 //     this.dom = HTMLMerged.create();
 //     this.dom.onEnumEdit = sync;
 //     this.dom.level = this.getLevel();
@@ -217,7 +203,7 @@ export class StructVisual extends ExpandableVisual {
 
   constructor(public sync: StructSync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -246,7 +232,7 @@ export class TupleVisual extends ExpandableVisual {
 
   constructor(public sync: TupleSync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -271,7 +257,7 @@ export class ArrayVisual extends ExpandableVisual {
 
   constructor(public sync: ArraySync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -293,7 +279,7 @@ export class ListVisual extends ExpandableVisual {
 
   constructor(public sync: ListSync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -315,7 +301,7 @@ export class SetVisual extends ExpandableVisual {
 
   constructor(public sync: SetSync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -337,7 +323,7 @@ export class MapVisual extends ExpandableVisual {
 
   constructor(public sync: MapSync, anchor: HTMLElement) {
     super();
-    const label = this.getComponentNameOrLabel();
+    const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
@@ -358,52 +344,156 @@ export class MapVisual extends ExpandableVisual {
 }
 
 //
-// Сomplementary
+// BrpValue representations
 //
 
-// type InternalPathSegment = string | number;
+export abstract class BrpValueVisual extends Visual {
+  set(value: BrpValue) {
+    this.dom.brpValue = value;
+  }
+  getLevel(): number {
+    const [, ...path] = this.sync.getPath();
+    return path.length;
+  }
+  abstract dom: HTMLMerged;
+  abstract sync: BrpValueSync;
+}
 
-// export class MutationConsent {
-//   constructor(private sync: DataSync, private internalPath: InternalPathSegment[] = []) {}
+export class NullVisual extends BrpValueVisual {
+  dom: HTMLMerged;
 
-//   cloneWithInternalPath(internalPath: InternalPathSegment[]) {
-//     return new MutationConsent(this.sync, internalPath);
-//   }
+  constructor(public sync: NullSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    this.dom = HTMLMerged.create();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.brpValue = null;
+    if (this.dom.htmlRight !== undefined && sync.requestValueMutation !== undefined) {
+      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
+    }
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+}
 
-//   mutate(value: BrpValue) {
-//     let result = structuredClone(this.sync.getValue());
-//     const modify = (access: BrpObject | BrpValue[], path: InternalPathSegment[]) => {
-//       const firstSegment = path[0];
-//       if (isBrpObject(access) && typeof firstSegment === 'string' && path.length === 1) {
-//         access[firstSegment] = value;
-//       }
-//       if (isBrpArray(access) && typeof firstSegment === 'number' && path.length === 1) {
-//         access[firstSegment] = value;
-//       }
-//       if (isBrpObject(access) && typeof firstSegment === 'string') {
-//         const next = access[firstSegment];
-//         if (isBrpIterable(next)) modify(next, path.slice(1));
-//       }
-//       if (isBrpArray(access) && typeof firstSegment === 'number') {
-//         const next = access[firstSegment];
-//         if (isBrpIterable(next)) modify(next, path.slice(1));
-//       }
-//       return console.error(
-//         `${this.constructor.name}.mutate().modify(): access is not Object/Array`
-//       );
-//     };
+export class StringVisual extends BrpValueVisual {
+  dom: HTMLMerged;
 
-//     if (this.internalPath.length === 0) result = value;
-//     else if (isBrpIterable(result)) modify(result, this.internalPath);
+  constructor(public sync: NullSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    const value = this.sync.getValue();
+    this.dom = HTMLMerged.create();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.brpValue = value ?? '';
+    if (
+      value !== undefined &&
+      this.dom.htmlRight !== undefined &&
+      sync.requestValueMutation !== undefined
+    ) {
+      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
+    }
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+}
 
-//     const focus = this.sync.getSection().getFocus();
-//     const component = this.sync.getComponent();
-//     const path = this.sync.getMutationPath();
-//     if (focus === undefined) return console.error('MutationConsent.mutate(): no focus');
-//     if (component === '') return console.error('MutationConsent.mutate(): no component');
-//     postWebviewMessage({
-//       cmd: 'mutate_component',
-//       data: { focus, component, path, value: result },
-//     });
-//   }
-// }
+export class NumberVisual extends BrpValueVisual {
+  dom: HTMLMerged;
+
+  constructor(public sync: NullSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    const value = this.sync.getValue();
+    this.dom = HTMLMerged.create();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.brpValue = value ?? '';
+    if (
+      value !== undefined &&
+      this.dom.htmlRight !== undefined &&
+      sync.requestValueMutation !== undefined
+    ) {
+      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
+    }
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+}
+
+export class BooleanVisual extends BrpValueVisual {
+  dom: HTMLMerged;
+
+  constructor(public sync: NullSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    const value = this.sync.getValue();
+    this.dom = HTMLMerged.create();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.brpValue = value ?? false;
+    if (
+      value !== undefined &&
+      this.dom.htmlRight !== undefined &&
+      sync.requestValueMutation !== undefined
+    ) {
+      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
+    }
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+}
+
+export class JsonObjectVisual extends BrpValueVisual {
+  dom: HTMLMerged;
+
+  constructor(public sync: NullSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    this.dom = HTMLMerged.create();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+}
+
+export class JsonArrayVisual extends BrpValueVisual {
+  dom: HTMLMerged;
+
+  constructor(public sync: NullSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    this.dom = HTMLMerged.create();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.vscodeContext({
+      label: label,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+}

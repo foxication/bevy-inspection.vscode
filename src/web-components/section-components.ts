@@ -20,13 +20,19 @@ import {
 } from '../protocol/types';
 import {
   ArrayVisual,
+  BooleanVisual,
   ComponentListVisual,
   ErrorVisual,
   ExpandableVisual,
+  JsonArrayVisual,
+  JsonObjectVisual,
   ListVisual,
   MapVisual,
+  NullVisual,
+  NumberVisual,
   SerializedVisual,
   SetVisual,
+  StringVisual,
   StructVisual,
   TupleVisual,
   Visual,
@@ -35,7 +41,7 @@ import {
 export type PathSegment = string | number;
 export type OptionalLabel =
   | { type: 'default'; segment: PathSegment; short?: string }
-  | { type: 'skip'; previous: PathSegment };
+  | { type: 'skip'; segment: PathSegment };
 
 //
 // Children of DataSync
@@ -82,7 +88,7 @@ class ChildrenOfSyncNode {
         case 'default':
           return node.label.segment === segment;
         case 'skip':
-          return node.label.previous === segment;
+          return node.label.segment === segment;
       }
     });
   }
@@ -132,7 +138,7 @@ class ChildrenOfSyncNode {
           case 'default':
             return child.label.segment;
           case 'skip':
-            return child.label.previous;
+            return child.label.segment;
         }
       })
       .filter((childSegment) => childSegment !== toRemove);
@@ -308,7 +314,7 @@ export abstract class DataWithAccess extends RootOfData {
   }
   getDebugTree(): string {
     let result = this.getLabelToRender();
-    if (this instanceof DataSync) result += ' => ' + this.schema;
+    if (this instanceof DataSyncWithSchema) result += ' => ' + this.schema;
     this.children.forEach((node) => (result += node.getDebugTree()));
     return result;
   }
@@ -333,10 +339,14 @@ export abstract class DataWithAccess extends RootOfData {
 }
 
 export abstract class DataSync extends DataWithAccess {
+  abstract sync(): void;
+}
+
+export abstract class DataSyncWithSchema extends DataSync {
   getTooltip(): string {
     let result = '';
     if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
-    if (this.label.type === 'skip' && this.parent instanceof DataSync) {
+    if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
       result += this.parent.getTooltip() + '\n';
     }
     result += '\ntype: ' + this.schema.typePath;
@@ -347,7 +357,19 @@ export abstract class DataSync extends DataWithAccess {
     return result;
   }
   abstract schema: BrpSchemaUnit;
-  abstract sync(): void;
+}
+
+export abstract class BrpValueSync extends DataSync {
+  getTooltip(): string {
+    let result = '';
+    if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
+    if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
+      result += this.parent.getTooltip() + '\n';
+    }
+    result += '\ntype: ' + typeof this.getValue();
+    return result;
+  }
+  abstract parent: SerializedSync | BrpValueSync;
 }
 
 //
@@ -364,7 +386,7 @@ function createSyncFromSchema(
   const short = schema.reflectTypes?.includes('Component') ? schema.shortPath : undefined;
   const asLabel: OptionalLabel =
     labelType === 'skip'
-      ? { type: 'skip', previous: label }
+      ? { type: 'skip', segment: label }
       : { type: 'default', segment: label, short };
   if (schema.reflectTypes !== undefined && schema.reflectTypes.includes('Serialize')) {
     return new SerializedSync(parent, asLabel, schema, anchor);
@@ -390,7 +412,7 @@ function createSyncFromSchema(
   }
 }
 
-export class ArraySync extends DataSync {
+export class ArraySync extends DataSyncWithSchema {
   visual: ArrayVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
@@ -414,7 +436,7 @@ export class ArraySync extends DataSync {
   }
 }
 
-export class ListSync extends DataSync {
+export class ListSync extends DataSyncWithSchema {
   visual: ListVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
@@ -438,7 +460,7 @@ export class ListSync extends DataSync {
   }
 }
 
-export class MapSync extends DataSync {
+export class MapSync extends DataSyncWithSchema {
   visual: MapVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
@@ -455,14 +477,14 @@ export class MapSync extends DataSync {
     if (value === undefined || !isBrpObject(value) || childSchema === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
-    this.children.updateOnOrderedLabels(Object.keys(value), (segment, anchor) =>
+    this.children.updateOnOrderedLabels(Object.keys(value).sort(), (segment, anchor) =>
       createSyncFromSchema(this, segment, childSchema, anchor)
     );
     this.children.sync();
   }
 }
 
-export class SetSync extends DataSync {
+export class SetSync extends DataSyncWithSchema {
   visual: SetVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
@@ -486,7 +508,7 @@ export class SetSync extends DataSync {
   }
 }
 
-export class StructSync extends DataSync {
+export class StructSync extends DataSyncWithSchema {
   visual: StructVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
@@ -509,7 +531,7 @@ export class StructSync extends DataSync {
     }
 
     // Default
-    this.children.updateOnOrderedLabels(Object.keys(properties), (segment, anchor) => {
+    this.children.updateOnOrderedLabels(Object.keys(properties).sort(), (segment, anchor) => {
       const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(properties[segment]));
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, segment, childSchema, anchor);
@@ -526,7 +548,7 @@ export class StructSync extends DataSync {
   }
 }
 
-export class TupleSync extends DataSync {
+export class TupleSync extends DataSyncWithSchema {
   visual: Visual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
@@ -543,7 +565,7 @@ export class TupleSync extends DataSync {
     }
     // Scenario: tuple struct with controls/visuals of single child
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(prefixItems[0]));
-    const childLabel = label.type === 'default' ? label.segment : label.previous;
+    const childLabel = label.type === 'default' ? label.segment : label.segment;
     if (childSchema !== undefined) {
       const created = createSyncFromSchema(this, childLabel, childSchema, anchor, 'skip');
       this.children.push(created);
@@ -554,7 +576,7 @@ export class TupleSync extends DataSync {
     const errorMessage = 'schema is not found for child';
     const created = new ErrorData(
       this,
-      { type: 'skip', previous: childLabel },
+      { type: 'skip', segment: childLabel },
       undefined,
       errorMessage,
       anchor
@@ -592,8 +614,8 @@ export class TupleSync extends DataSync {
   }
 }
 
-export class SerializedSync extends DataSync {
-  visual: SerializedVisual;
+export class SerializedSync extends DataSyncWithSchema {
+  visual: SerializedVisual | NullVisual | StringVisual | NumberVisual | ErrorVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public label: OptionalLabel,
@@ -601,15 +623,187 @@ export class SerializedSync extends DataSync {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new SerializedVisual(this, anchor);
+    // Scneario: undefined
+    const value = this.getValue();
+    if (value === undefined) {
+      const created = new ErrorData(
+        this,
+        { type: 'skip', segment: label.segment },
+        undefined,
+        'BrpValue is undefined',
+        anchor
+      );
+      this.children.push(created);
+      this.visual = created.visual;
+      return;
+    }
+    const created = createBrpValueSync(this, label.segment, value, anchor, 'skip');
+    this.children.push(created);
+    this.visual = created.visual;
   }
   sync(): void {
     const value = this.getValue();
-    if (value !== undefined) this.visual.set(value);
-    else {
-      return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
+    if (value === undefined) return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
+    this.children.sync();
+  }
+}
+
+function createBrpValueSync(
+  parent: SerializedSync | BrpValueSync,
+  label: PathSegment,
+  value: BrpValue,
+  anchor: HTMLElement,
+  labelType: 'default' | 'skip' = 'default'
+) {
+  const short =
+    parent instanceof SerializedSync
+      ? parent.schema.reflectTypes?.includes('Component')
+        ? parent.schema.shortPath
+        : undefined
+      : undefined;
+  const asLabel: OptionalLabel =
+    labelType === 'skip'
+      ? { type: 'skip', segment: label }
+      : { type: 'default', segment: label, short };
+
+  // Scenario: null
+  if (value === null) {
+    return new NullSync(parent, asLabel, anchor);
+  }
+
+  // Scenario: string
+  if (typeof value === 'string') {
+    return new StringSync(parent, asLabel, anchor);
+  }
+
+  // Scenario: number
+  if (typeof value === 'number') {
+    return new NumberSync(parent, asLabel, anchor);
+  }
+
+  // Scenario: boolean
+  if (typeof value === 'boolean') {
+    return new BooleanSync(parent, asLabel, anchor);
+  }
+
+  // Scenario: object
+  if (isBrpObject(value)) {
+    return new JsonObjectSync(parent, asLabel, anchor);
+  }
+
+  // Scenario: array
+  return new JsonArraySync(parent, asLabel, anchor);
+}
+
+export class NullSync extends BrpValueSync {
+  visual: NullVisual;
+  constructor(
+    public parent: SerializedSync | BrpValueSync,
+    public label: OptionalLabel,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new NullVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    this.visual.set(value ?? null);
+    if (value === undefined) console.error(`BrpValue is not found`);
+  }
+}
+
+export class StringSync extends BrpValueSync {
+  visual: StringVisual;
+  constructor(
+    public parent: SerializedSync | BrpValueSync,
+    public label: OptionalLabel,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new NullVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    this.visual.set(value ?? '');
+    if (value === undefined) console.error(`BrpValue is not found`);
+  }
+}
+
+export class NumberSync extends BrpValueSync {
+  visual: NumberVisual;
+  constructor(
+    public parent: SerializedSync | BrpValueSync,
+    public label: OptionalLabel,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new NumberVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    this.visual.set(value ?? 0);
+    if (value === undefined) console.error(`BrpValue is not found`);
+  }
+}
+
+export class BooleanSync extends BrpValueSync {
+  visual: BooleanVisual;
+  constructor(
+    public parent: SerializedSync | BrpValueSync,
+    public label: OptionalLabel,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new BooleanVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    this.visual.set(value ?? 0);
+    if (value === undefined) console.error(`BrpValue is not found`);
+  }
+}
+
+export class JsonObjectSync extends BrpValueSync {
+  visual: JsonObjectVisual;
+  constructor(
+    public parent: SerializedSync | BrpValueSync,
+    public label: OptionalLabel,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new JsonObjectVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    if (value !== undefined && isBrpObject(value)) {
+      this.children.updateOnOrderedLabels(Object.keys(value).sort(), (segment, anchor) =>
+        createBrpValueSync(this, segment, value[segment], anchor)
+      );
     }
     this.children.sync();
+    if (value === undefined) console.error(`BrpValue is not found`);
+  }
+}
+
+export class JsonArraySync extends BrpValueSync {
+  visual: JsonArrayVisual;
+  constructor(
+    public parent: SerializedSync | BrpValueSync,
+    public label: OptionalLabel,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new JsonArrayVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    if (value !== undefined && isBrpArray(value)) {
+      this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
+        createBrpValueSync(this, segment, value[segment], anchor)
+      );
+    }
+    this.children.sync();
+    if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
@@ -630,7 +824,7 @@ export class ErrorData extends DataWithAccess {
   getTooltip(): string {
     let result = '';
     if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
-    if (this.label.type === 'skip' && this.parent instanceof DataSync) {
+    if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
       result += this.parent.getTooltip() + '\n';
     }
     if (this.code !== undefined) result += `\ncode: ${this.code}`;
