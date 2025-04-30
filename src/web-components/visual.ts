@@ -4,7 +4,7 @@ import {
   ArraySync,
   ComponentListData,
   DataSync,
-  DataWithAccess,
+  ErrorData,
   ListSync,
   MapSync,
   RootOfData,
@@ -66,7 +66,7 @@ export class ErrorVisual extends Visual {
   readonly dom: HTMLMerged;
 
   constructor(
-    public sync: DataWithAccess,
+    public sync: ErrorData,
     anchor: HTMLElement,
     public error: { code: number | undefined; message: string }
   ) {
@@ -75,7 +75,7 @@ export class ErrorVisual extends Visual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.getErrorTooltip();
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.brpValue = this.error.message;
     this.dom.allowValueWrapping();
     this.dom.vscodeContext({
@@ -83,12 +83,6 @@ export class ErrorVisual extends Visual {
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
-  }
-  getErrorTooltip(): string {
-    let result = '';
-    result += `label: ${this.sync.getLabelToRender()}`;
-    if (this.error.code !== undefined) result += `\ncode: ${this.error.code}`;
-    return result;
   }
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
@@ -103,15 +97,6 @@ export class ErrorVisual extends Visual {
 export abstract class VisualOnDataSync extends Visual {
   abstract sync: DataSync;
 
-  get tooltip(): string {
-    let result = 'label: ' + this.sync.getLabelToRender();
-    result += '\ntype: ' + this.sync.schema.typePath;
-    result += '\nkind: ' + this.sync.schema.kind;
-    if (this.sync.schema.reflectTypes !== undefined) {
-      result += '\nreflect: ' + this.sync.schema.reflectTypes.join(', ');
-    }
-    return result;
-  }
   getComponentNameOrLabel(): string {
     return this.sync.getLabelToRender();
   }
@@ -131,7 +116,7 @@ export class SerializedVisual extends VisualOnDataSync {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     if (value !== undefined) this.dom.brpValue = value;
     if (this.dom.htmlRight !== undefined && sync.requestValueMutation !== undefined) {
       this.dom.htmlRight.value.mutability = sync.requestValueMutation;
@@ -236,7 +221,7 @@ export class StructVisual extends ExpandableVisual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,
@@ -265,7 +250,7 @@ export class TupleVisual extends ExpandableVisual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,
@@ -290,7 +275,7 @@ export class ArrayVisual extends ExpandableVisual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,
@@ -312,7 +297,7 @@ export class ListVisual extends ExpandableVisual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,
@@ -334,7 +319,7 @@ export class SetVisual extends ExpandableVisual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,
@@ -356,7 +341,7 @@ export class MapVisual extends ExpandableVisual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.tooltip;
+    this.dom.tooltip = this.sync.getTooltip();
     this.dom.vscodeContext({
       label: label,
       type: this.sync.schema.typePath,

@@ -171,12 +171,12 @@ export class ComponentListData extends RootOfData {
     this.registry = registry;
     this.focus = focus;
     this.mapOfComponents = components;
+    function shortPath(typePath: string) {
+      return typePath.split('<')[0].split('::')[0];
+    }
 
     // Get TypePaths
     const TypePathListOrdered = Object.keys(this.mapOfComponents).sort((a, b) => {
-      function shortPath(typePath: string) {
-        return typePath.split('<')[0].split('::')[0];
-      }
       const aShort = this.getSchema(a)?.shortPath ?? shortPath(a);
       const bShort = this.getSchema(b)?.shortPath ?? shortPath(b);
       return aShort > bShort ? 1 : bShort > aShort ? -1 : 0;
@@ -188,7 +188,13 @@ export class ComponentListData extends RootOfData {
       const result =
         schema !== undefined
           ? createSyncFromSchema(this, typePath, schema, anchor)
-          : new ErrorData(this, typePath, undefined, 'schema is not found', anchor);
+          : new ErrorData(
+              this,
+              { type: 'default', segment: typePath, short: shortPath(typePath) },
+              undefined,
+              'schema is not found',
+              anchor
+            );
       return result;
     });
 
@@ -299,6 +305,19 @@ export abstract class DataWithAccess extends RootOfData {
 }
 
 export abstract class DataSync extends DataWithAccess {
+  getTooltip(): string {
+    let result = '';
+    if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
+    if (this.label.type === 'skip' && this.parent instanceof DataSync) {
+      result += this.parent.getTooltip() + '\n';
+    }
+    result += '\ntype: ' + this.schema.typePath;
+    result += '\nkind: ' + this.schema.kind;
+    if (this.schema.reflectTypes !== undefined) {
+      result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
+    }
+    return result;
+  }
   abstract schema: BrpSchemaUnit;
   abstract sync(): void;
 }
@@ -326,7 +345,7 @@ function createSyncFromSchema(
     case 'Array':
       return new ArraySync(parent, asLabel, schema, anchor);
     case 'Enum':
-      return new ErrorData(parent, label, undefined, 'Not implemented', anchor);
+      return new ErrorData(parent, asLabel, undefined, 'Not implemented', anchor);
     case 'List':
       return new ListSync(parent, asLabel, schema, anchor);
     case 'Map':
@@ -467,7 +486,13 @@ export class StructSync extends DataSync {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, segment, childSchema, anchor);
       }
-      return new ErrorData(this, segment, undefined, 'Schema is not found', anchor);
+      return new ErrorData(
+        this,
+        { type: 'default', segment },
+        undefined,
+        'Schema is not found',
+        anchor
+      );
     });
     this.children.sync();
   }
@@ -499,7 +524,15 @@ export class TupleSync extends DataSync {
     }
     // Error
     const errorMessage = 'schema is not found for child';
-    this.visual = new ErrorVisual(this, anchor, { code: undefined, message: errorMessage });
+    const created = new ErrorData(
+      this,
+      { type: 'skip', previous: childLabel },
+      undefined,
+      errorMessage,
+      anchor
+    );
+    this.children.push(created);
+    this.visual = created.visual;
   }
   sync(): void {
     // scenario: empty tuplestruct
@@ -519,7 +552,13 @@ export class TupleSync extends DataSync {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, segment, childSchema, anchor);
       }
-      return new ErrorData(this, segment, undefined, 'Schema is not found', anchor);
+      return new ErrorData(
+        this,
+        { type: 'default', segment },
+        undefined,
+        'Schema is not found',
+        anchor
+      );
     });
     this.children.sync();
   }
@@ -549,18 +588,25 @@ export class SerializedSync extends DataSync {
 export class ErrorData extends DataWithAccess {
   visual: ErrorVisual;
   requestValueMutation = undefined;
-  label: { type: 'default'; segment: PathSegment };
 
   constructor(
     public parent: DataWithAccess | ComponentListData,
-    segment: PathSegment,
-    code: number | undefined,
+    public label: OptionalLabel,
+    public code: number | undefined,
     message: string,
     anchor: HTMLElement
   ) {
     super();
-    this.label = { type: 'default', segment: segment };
     this.visual = new ErrorVisual(this, anchor, { code, message });
+  }
+  getTooltip(): string {
+    let result = '';
+    if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
+    if (this.label.type === 'skip' && this.parent instanceof DataSync) {
+      result += this.parent.getTooltip() + '\n';
+    }
+    if (this.code !== undefined) result += `\ncode: ${this.code}`;
+    return result;
   }
   getDebugTree(): string {
     return `${this.getLabelToRender()} => ${this.visual.error.message}`;
