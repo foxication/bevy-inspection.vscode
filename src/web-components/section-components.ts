@@ -125,6 +125,19 @@ class ChildrenOfSyncNode {
       if (child instanceof DataSync) child.sync();
     });
   }
+  remove(toRemove: PathSegment) {
+    const whiteList = this.collection
+      .map((child) => {
+        switch (child.label.type) {
+          case 'default':
+            return child.label.segment;
+          case 'skip':
+            return child.label.previous;
+        }
+      })
+      .filter((childSegment) => childSegment !== toRemove);
+    if (whiteList.length < this.collection.length) this.filter(whiteList);
+  }
 }
 
 //
@@ -206,6 +219,21 @@ export class ComponentListData extends RootOfData {
     // Update visibility of 'Components' section
     if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
     else this.section.style.removeProperty('display');
+  }
+  syncComponent(component: TypePath, data: BrpValue) {
+    if (!Object.keys(this.mapOfComponents).includes(component)) {
+      return console.error(`syncComponent(): specified component is not found`);
+    }
+    this.mapOfComponents[component] = data;
+    const node = this.children.get(component);
+    if (node instanceof DataSync) node.sync();
+  }
+  removeComponent(component: TypePath) {
+    if (!Object.keys(this.mapOfComponents).includes(component)) {
+      return console.error(`syncComponent(): specified component is not found`);
+    }
+    delete this.mapOfComponents[component];
+    this.children.remove(component);
   }
   getFocus() {
     return this.focus;

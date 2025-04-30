@@ -84,21 +84,15 @@ defineCustomElements();
       }
       case 'update_components': {
         // Checks
-        if (buffer === undefined) break;
-        if (!buffer.focus.compare(message.focus)) break;
-        const registry = registryBuffer.get(buffer.focus.host);
-        if (registry === undefined) break;
+        if (syncRoot.getFocus()?.compare(message.focus) !== true) break;
 
         // Apply changes
         for (const [typePath, value] of Object.entries(message.components)) {
-          buffer.data[typePath] = value;
+          syncRoot.syncComponent(typePath, value);
         }
         for (const typePath of message.removed) {
-          delete buffer.data[typePath];
+          syncRoot.removeComponent(typePath);
         }
-
-        // Sync visuals
-        syncRoot.syncRoot(registry, buffer.focus, buffer.data);
         break;
       }
       case 'copy_error_message_to_clipboard': {
