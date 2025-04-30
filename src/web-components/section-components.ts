@@ -388,6 +388,34 @@ export abstract class BrpValueSync extends DataSync {
     if (value !== undefined && isBrpArray(value)) result += '\ntype: array';
     return result;
   }
+  requestValueMutation = (value: BrpValue) => {
+    // Modify parent.value
+    if (this.parent instanceof BrpValueSync) {
+      const parentValue = this.parent.getValue();
+      if (parentValue === undefined) return console.error('parent.value is undefined');
+      switch (this.label.type) {
+        case 'default':
+          if (typeof this.label.segment === 'string' && isBrpObject(parentValue)) {
+            parentValue[this.label.segment] = value;
+          }
+          if (typeof this.label.segment === 'number' && isBrpArray(parentValue)) {
+            parentValue[this.label.segment] = value;
+          }
+          this.parent.requestValueMutation(parentValue);
+          break;
+        case 'skip':
+          this.parent.requestValueMutation(value);
+          break;
+      }
+      return;
+    }
+    // Or submit modifications
+    const [component, path] = this.getMutationPath();
+    const focus = this.getRoot().getFocus();
+    if (focus === undefined) return;
+    postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
+  };
+
   abstract parent: SerializedSync | BrpValueSync;
 }
 
