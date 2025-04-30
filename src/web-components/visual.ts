@@ -2,15 +2,20 @@ import { BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 import {
   ArraySync,
+  BooleanSync,
   ComponentListData,
   DataSync,
   ErrorData,
+  JsonArraySync,
+  JsonObjectSync,
   ListSync,
   MapSync,
   NullSync,
+  NumberSync,
   RootOfData,
   SerializedSync,
   SetSync,
+  StringSync,
   StructSync,
   TupleSync,
   resolveTypePathFromRef,
@@ -383,7 +388,7 @@ export class NullVisual extends BrpValueVisual {
 export class StringVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
-  constructor(public sync: NullSync, anchor: HTMLElement) {
+  constructor(public sync: StringSync, anchor: HTMLElement) {
     super();
     const label = this.sync.getLabelToRender();
     const value = this.sync.getValue();
@@ -411,7 +416,7 @@ export class StringVisual extends BrpValueVisual {
 export class NumberVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
-  constructor(public sync: NullSync, anchor: HTMLElement) {
+  constructor(public sync: NumberSync, anchor: HTMLElement) {
     super();
     const label = this.sync.getLabelToRender();
     const value = this.sync.getValue();
@@ -439,7 +444,7 @@ export class NumberVisual extends BrpValueVisual {
 export class BooleanVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
-  constructor(public sync: NullSync, anchor: HTMLElement) {
+  constructor(public sync: BooleanSync, anchor: HTMLElement) {
     super();
     const label = this.sync.getLabelToRender();
     const value = this.sync.getValue();
@@ -467,7 +472,7 @@ export class BooleanVisual extends BrpValueVisual {
 export class JsonObjectVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
-  constructor(public sync: NullSync, anchor: HTMLElement) {
+  constructor(public sync: JsonObjectSync, anchor: HTMLElement) {
     super();
     const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();
@@ -486,7 +491,7 @@ export class JsonObjectVisual extends BrpValueVisual {
 export class JsonArrayVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
-  constructor(public sync: NullSync, anchor: HTMLElement) {
+  constructor(public sync: JsonArraySync, anchor: HTMLElement) {
     super();
     const label = this.sync.getLabelToRender();
     this.dom = HTMLMerged.create();

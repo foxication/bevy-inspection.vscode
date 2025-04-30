@@ -321,7 +321,7 @@ export abstract class DataWithAccess extends RootOfData {
     this.children.forEach((node) => (result += node.getDebugTree()));
     return result;
   }
-  requestValueMutation: ((value: BrpValue) => void) | undefined = (value: BrpValue) => {
+  requestValueMutation: (value: BrpValue) => void = (value: BrpValue) => {
     const [component, path] = this.getMutationPath();
     const focus = this.getRoot().getFocus();
     if (focus === undefined) return;
@@ -390,30 +390,26 @@ export abstract class BrpValueSync extends DataSync {
   }
   requestValueMutation = (value: BrpValue) => {
     // Modify parent.value
-    if (this.parent instanceof BrpValueSync) {
-      const parentValue = this.parent.getValue();
-      if (parentValue === undefined) return console.error('parent.value is undefined');
-      switch (this.label.type) {
-        case 'default':
-          if (typeof this.label.segment === 'string' && isBrpObject(parentValue)) {
-            parentValue[this.label.segment] = value;
-          }
-          if (typeof this.label.segment === 'number' && isBrpArray(parentValue)) {
-            parentValue[this.label.segment] = value;
-          }
+    const parentValue = this.parent.getValue();
+    if (parentValue === undefined) return console.error('parent.value is undefined');
+    switch (this.label.type) {
+      case 'default':
+        if (typeof this.label.segment === 'string' && isBrpObject(parentValue)) {
+          parentValue[this.label.segment] = value;
+        }
+        if (typeof this.label.segment === 'number' && isBrpArray(parentValue)) {
+          parentValue[this.label.segment] = value;
+        }
+        if (this.parent.requestValueMutation !== undefined) {
           this.parent.requestValueMutation(parentValue);
-          break;
-        case 'skip':
+        }
+        break;
+      case 'skip':
+        if (this.parent.requestValueMutation !== undefined) {
           this.parent.requestValueMutation(value);
-          break;
-      }
-      return;
+        }
+        break;
     }
-    // Or submit modifications
-    const [component, path] = this.getMutationPath();
-    const focus = this.getRoot().getFocus();
-    if (focus === undefined) return;
-    postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
   };
 
   abstract parent: SerializedSync | BrpValueSync;
@@ -754,7 +750,7 @@ export class StringSync extends BrpValueSync {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new NullVisual(this, anchor);
+    this.visual = new StringVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
@@ -843,7 +839,6 @@ export class JsonArraySync extends BrpValueSync {
 
 export class ErrorData extends DataWithAccess {
   visual: ErrorVisual;
-  requestValueMutation = undefined;
 
   constructor(
     public parent: DataWithAccess | ComponentListData,
