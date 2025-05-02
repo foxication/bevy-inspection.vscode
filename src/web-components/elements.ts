@@ -1,4 +1,4 @@
-import { DataWithAccess } from './section-components';
+import { DataWithAccess, EnumAsStringSync } from './section-components';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
@@ -6,11 +6,13 @@ import { BrpValue } from '../protocol/types';
 const HTML_MERGED_NAME = 'visual-merged';
 const HTML_JSON_NAME = 'visual-json';
 const HTML_STRING_NAME = 'visual-string';
+const HTML_SELECT_NAME = 'visual-select';
 
 export function defineCustomElements() {
   customElements.define(HTML_MERGED_NAME, HTMLMerged);
   customElements.define(HTML_JSON_NAME, HTMLJson);
   customElements.define(HTML_STRING_NAME, HTMLString);
+  customElements.define(HTML_SELECT_NAME, HTMLSelect);
 }
 
 export class HTMLMerged extends HTMLElement {
@@ -68,13 +70,25 @@ export class HTMLMerged extends HTMLElement {
       }
     }
   }
-  set onEnumEdit(sync: DataWithAccess) {
-    if (this.htmlIcons.enum === undefined) {
-      this.htmlIcons.enum = document.createElement('vscode-icon');
-      this.htmlIcons.enum.setAttribute('name', 'symbol-property');
-      this.htmlIcons.wrapper.append(this.htmlIcons.enum);
+  set options(sync: EnumAsStringSync) {
+    if (this.htmlRight === undefined) {
+      // Move label to left & create elements
+      this.htmlLeft.classList.add('left-side');
+      const selectElement = HTMLSelect.create();
+      selectElement.setAvailable(sync.getAvailableVariants(), sync.getVariant());
+      this.htmlRight = {
+        wrapper: document.createElement('div'),
+        value: selectElement,
+      };
+      this.htmlRight.wrapper.classList.add('right-side');
+
+      // Structurize
+      this.htmlRight.wrapper.append(this.htmlRight.value);
+      this.shadowRoot?.append(this.htmlRight.wrapper);
     }
-    this.htmlIcons.enum.onclick = () => {}; // TODO
+    if (this.htmlRight.value instanceof HTMLString) {
+      this.htmlRight.value.value = sync.getVariant() ?? '...';
+    }
   }
   private createConfiguredChevron() {
     const result = document.createElement('vscode-icon');
@@ -173,14 +187,14 @@ abstract class HTMLMutatable<T> extends HTMLElement {
   }
   set value(v: T) {
     this._buffer = v;
-    if (!this.inEdit) this.setTextFromBuffer();
+    if (!this.inEdit) this.renderValueFromBuffer();
   }
   set mutability(f: (v: BrpValue) => void) {
     this._mutability = f;
     this.allowEditing();
   }
 
-  abstract setTextFromBuffer(): void;
+  abstract renderValueFromBuffer(): void;
   abstract allowEditing(): void;
   mutate(value: BrpValue) {
     if (this._mutability !== undefined) this._mutability(value);
@@ -207,7 +221,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
     this.jsonElement.onkeydown = (e) => {
       // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.setTextFromBuffer();
+        this.renderValueFromBuffer();
         this.jsonElement.blur();
         e.preventDefault();
       }
@@ -225,7 +239,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
     };
     this.jsonElement.onblur = () => {
       this.inEdit = false;
-      this.setTextFromBuffer();
+      this.renderValueFromBuffer();
       this.jsonElement.scrollTo(0, 0);
       this.removeAttribute('focused');
     };
@@ -238,7 +252,7 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
     shadow.append(this.jsonElement);
   }
 
-  setTextFromBuffer() {
+  renderValueFromBuffer() {
     this.jsonElement.innerText = JSON.stringify(this.buffer, null, 4);
   }
   allowEditing() {
@@ -268,7 +282,7 @@ export class HTMLString extends HTMLMutatable<string> {
     this.textElement.onkeydown = (e) => {
       // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.setTextFromBuffer();
+        this.renderValueFromBuffer();
         this.textElement.blur();
         e.preventDefault();
       }
@@ -299,7 +313,7 @@ export class HTMLString extends HTMLMutatable<string> {
     shadow.append(this.textElement);
   }
 
-  setTextFromBuffer() {
+  renderValueFromBuffer() {
     this.textElement.innerText = this.buffer;
   }
   allowEditing() {
@@ -308,5 +322,67 @@ export class HTMLString extends HTMLMutatable<string> {
   allowWrapping(): void {
     this.textElement.style.textWrap = 'wrap';
     this.textElement.style.wordBreak = 'break-all';
+  }
+}
+
+export class HTMLSelect extends HTMLMutatable<string> {
+  private selectElement: HTMLSelectElement;
+  private selectedVariant: HTMLOptionElement;
+  private availableVariants: { [variant: string]: HTMLOptionElement };
+
+  static create() {
+    return document.createElement(HTML_SELECT_NAME) as HTMLSelect;
+  }
+
+  constructor() {
+    super('');
+    const defaultVariant = 'undefined';
+    this.selectedVariant = document.createElement('option');
+    this.selectedVariant.value = defaultVariant;
+    this.selectedVariant.textContent = defaultVariant;
+
+    this.availableVariants = { [defaultVariant]: this.selectedVariant };
+
+    this.selectElement = document.createElement('select');
+    this.selectElement.replaceChildren(...Object.values(this.availableVariants));
+    this.selectElement.onchange = () => {
+      this.mutate(this.selectElement.value);
+    };
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return; // already exists
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.select];
+    shadow.append(this.selectElement);
+  }
+
+  renderValueFromBuffer() {
+    this.selectElement.innerText = this.buffer;
+  }
+  allowEditing() {
+    // Do nothing
+  }
+  allowWrapping(): void {
+    // Do nothing
+  }
+  setAvailable(available: string[], selection?: string) {
+    if (available.length < 1) return console.error(`Cannot set empty variants`);
+    this.availableVariants = available.reduce((acc, variant) => {
+      const element = document.createElement('option');
+      element.value = variant;
+      element.textContent = variant;
+      acc[variant] = element;
+      return acc;
+    }, {} as typeof this.availableVariants);
+    this.selectElement.replaceChildren(...Object.values(this.availableVariants));
+    this.select(selection ?? available[0]);
+  }
+  select(selection: string) {
+    if (!Object.keys(this.availableVariants).includes(selection)) {
+      return console.error(`No such variant in available`);
+    }
+    this.selectElement.value = selection;
+    this.selectedVariant = this.availableVariants[selection];
   }
 }

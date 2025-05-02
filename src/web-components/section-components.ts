@@ -3,6 +3,7 @@ import { EntityFocus } from '../common';
 import {
   BrpArraySchema,
   BrpComponentRegistry,
+  BrpEnumAsStringSchema,
   BrpListSchema,
   BrpMapSchema,
   BrpObject,
@@ -22,6 +23,7 @@ import {
   ArrayVisual,
   BooleanVisual,
   ComponentListVisual,
+  EnumVisual,
   ErrorVisual,
   JsonArrayVisual,
   JsonObjectVisual,
@@ -435,7 +437,13 @@ function createSyncFromSchema(
     case 'Array':
       return new ArraySync(parent, asLabel, schema, anchor);
     case 'Enum':
-      return new ErrorData(parent, asLabel, undefined, 'Not implemented', anchor);
+      switch (schema.type) {
+        case 'string':
+          return new EnumAsStringSync(parent, asLabel, schema, anchor);
+        case 'object':
+          return new ErrorData(parent, asLabel, undefined, 'Not Implemented', anchor);
+      }
+      break;
     case 'List':
       return new ListSync(parent, asLabel, schema, anchor);
     case 'Map':
@@ -473,6 +481,40 @@ export class ArraySync extends DataSyncWithSchema {
       createSyncFromSchema(this, segment, childSchema, anchor)
     );
     this.children.sync();
+  }
+}
+
+export class EnumAsStringSync extends DataSyncWithSchema {
+  visual: EnumVisual;
+  constructor(
+    public parent: ComponentListData | DataWithAccess,
+    public label: OptionalLabel,
+    public schema: BrpEnumAsStringSchema,
+    anchor: HTMLElement
+  ) {
+    super();
+    this.visual = new EnumVisual(this, anchor);
+  }
+  sync(): void {
+    const value = this.getValue();
+    if (typeof value !== 'string') return console.error(`BrpValue is not string`);
+    this.visual.select(value);
+  }
+  getVariant(): string | undefined {
+    const value = this.getValue();
+    const variant = typeof value === 'string' ? value : undefined;
+    return variant;
+    // case 'object': {
+    //   const keys = value !== undefined ? (isBrpObject(value) ? Object.keys(value) : []) : [];
+    //   const variant = keys.length === 1 ? keys[0] : undefined;
+    //   return variant;
+    // }
+  }
+  getAvailableVariants(): string[] {
+    return this.schema.oneOf;
+    // case 'object': {
+    //   return this.schema.oneOf.map((variant) => variant.shortPath);
+    // }
   }
 }
 

@@ -1,10 +1,11 @@
 import { BrpValue, TypePath } from '../protocol/types';
-import { HTMLMerged } from './elements';
+import { HTMLMerged, HTMLSelect } from './elements';
 import {
   ArraySync,
   BooleanSync,
   ComponentListData,
   DataSync,
+  EnumAsStringSync,
   ErrorData,
   JsonArraySync,
   JsonObjectSync,
@@ -153,50 +154,38 @@ export class SerializedVisual extends VisualWithSync {
 // Expandable visual
 //
 
-// export class EnumVisual extends VisualOnDataSync {
-//   readonly dom: HTMLMerged;
+export class EnumVisual extends VisualWithSync {
+  readonly dom: HTMLMerged;
 
-//   constructor(public sync: DataSync, anchor: HTMLElement, public variantTypePath: TypePath) {
-//     super();
-//     const label = this.sync.getLabelToRender();
-//     this.dom = HTMLMerged.create();
-//     this.dom.onEnumEdit = sync;
-//     this.dom.level = this.getLevel();
-//     this.dom.label = label + ' / ' + this.variantName;
-//     this.dom.tooltip = this.tooltipExtended;
-//     this.dom.vscodeContext({
-//       label: label,
-//       type: this.sync.schema.typePath,
-//       path: this.sync.getPathSerialized(),
-//     });
-//     anchor.after(this.dom);
-//     if (!this.variantTypePaths.includes(this.variantTypePath)) {
-//       console.error(`Error: variant ${this.variantTypePath} doesn't exist`);
-//     }
-//   }
-//   get tooltipExtended(): string {
-//     let result = this.tooltip;
-//     result += '\nvariant: ' + this.variantName;
-//     result += '\navailable_variants: ' + this.variantShortPaths.join(', ');
-//     return result;
-//   }
-//   get variantName(): string {
-//     const parent = this.sync.schema.typePath + '::';
-//     return this.variantTypePath.slice(parent.length);
-//   }
-//   get variantTypePaths(): readonly TypePath[] {
-//     return this.sync.schema.oneOf.map((value) => {
-//       if (typeof value === 'string') return this.sync.schema.typePath + '::' + value;
-//       return value.typePath;
-//     });
-//   }
-//   get variantShortPaths(): readonly string[] {
-//     return this.sync.schema.oneOf.map((value) => {
-//       if (typeof value === 'string') return value;
-//       return value.shortPath;
-//     });
-//   }
-// }
+  constructor(public sync: EnumAsStringSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    this.dom = HTMLMerged.create();
+    this.dom.options = sync;
+    this.dom.level = this.getLevel();
+    this.dom.label = this.sync.getLabelToRender();
+    this.dom.tooltip = this.sync.getTooltip();
+    const variant = this.sync.getVariant();
+    if (
+      variant !== undefined &&
+      this.dom.htmlRight !== undefined &&
+      sync.requestValueMutation !== undefined
+    ) {
+      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
+    }
+    this.dom.vscodeContext({
+      label: label,
+      type: this.sync.schema.typePath,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
+  select(selection: string) {
+    const errMsg = 'Wrong HTML in EnumVisual';
+    if (!(this.dom.htmlRight?.value instanceof HTMLSelect)) return console.error(errMsg);
+    return this.dom.htmlRight.value.select(selection);
+  }
+}
 
 export class StructVisual extends VisualWithSync {
   readonly dom: HTMLMerged;
@@ -350,10 +339,6 @@ export class MapVisual extends VisualWithSync {
 export abstract class BrpValueVisual extends VisualWithSync {
   set(value: BrpValue) {
     this.dom.brpValue = value;
-  }
-  getLevel(): number {
-    const [, ...path] = this.sync.getPath();
-    return path.length;
   }
   getParentTypePath(): TypePath | undefined {
     return this.sync.parent instanceof SerializedSync
