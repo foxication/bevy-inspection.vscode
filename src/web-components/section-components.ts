@@ -430,7 +430,11 @@ function createSyncFromSchema(
   const short = schema.reflectTypes?.includes('Component') ? schema.shortPath : undefined;
   const asLabel: OptionalLabel =
     label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
-  if (schema.reflectTypes !== undefined && schema.reflectTypes.includes('Serialize')) {
+  if (
+    schema.reflectTypes !== undefined &&
+    schema.reflectTypes.includes('Serialize') &&
+    !(schema.kind === 'Enum' && schema.type === 'string')
+  ) {
     return new SerializedSync(parent, asLabel, schema, anchor);
   }
   switch (schema.kind) {
