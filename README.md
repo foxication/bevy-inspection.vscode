@@ -34,7 +34,7 @@ Built on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.ht
 
 ```toml
 [dependencies]
-bevy = { version = "=0.16.0-rc.5", features = ["bevy_remote"] }
+bevy = { version = "0.16", features = ["bevy_remote"] }
 ```
 
 2. Initialize plugins in your Bevy app:
