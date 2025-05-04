@@ -21,7 +21,7 @@ import {
 } from '../protocol/types';
 import {
   ArrayVisual,
-  BooleanVisual,
+  JsonBooleanVisual,
   ComponentListVisual,
   EnumVisual,
   ErrorVisual,
@@ -29,11 +29,11 @@ import {
   JsonObjectVisual,
   ListVisual,
   MapVisual,
-  NullVisual,
-  NumberVisual,
+  JsonNullVisual,
+  JsonNumberVisual,
   SerializedVisual,
   SetVisual,
-  StringVisual,
+  JsonStringVisual,
   StructVisual,
   TupleVisual,
   Visual,
@@ -694,7 +694,7 @@ export class TupleSync extends DataSyncWithSchema {
 }
 
 export class SerializedSync extends DataSyncWithSchema {
-  visual: SerializedVisual | NullVisual | StringVisual | NumberVisual | ErrorVisual;
+  visual: SerializedVisual | JsonNullVisual | JsonStringVisual | JsonNumberVisual | ErrorVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public label: OptionalLabel,
@@ -772,69 +772,69 @@ function createBrpValueSync(
 }
 
 export class NullSync extends BrpValueSync {
-  visual: NullVisual;
+  visual: JsonNullVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public label: OptionalLabel,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new NullVisual(this, anchor);
+    this.visual = new JsonNullVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    this.visual.set(value ?? null);
+    this.visual.set(value === null ? value : null);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class StringSync extends BrpValueSync {
-  visual: StringVisual;
+  visual: JsonStringVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public label: OptionalLabel,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new StringVisual(this, anchor);
+    this.visual = new JsonStringVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    this.visual.set(value ?? '');
+    this.visual.set(typeof value === 'string' ? value : null);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class NumberSync extends BrpValueSync {
-  visual: NumberVisual;
+  visual: JsonNumberVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public label: OptionalLabel,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new NumberVisual(this, anchor);
+    this.visual = new JsonNumberVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    this.visual.set(value ?? 0);
+    this.visual.set(typeof value === 'number' ? value : null);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class BooleanSync extends BrpValueSync {
-  visual: BooleanVisual;
+  visual: JsonBooleanVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public label: OptionalLabel,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new BooleanVisual(this, anchor);
+    this.visual = new JsonBooleanVisual(this, anchor);
   }
   sync(): void {
     const value = this.getValue();
-    this.visual.set(value ?? 0);
+    this.visual.set(typeof value === 'boolean' ? value : null);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }

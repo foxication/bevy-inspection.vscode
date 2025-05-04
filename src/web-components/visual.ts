@@ -1,4 +1,4 @@
-import { BrpValue, TypePath } from '../protocol/types';
+import { TypePath } from '../protocol/types';
 import { HTMLMerged, HTMLSelect } from './elements';
 import {
   ArraySync,
@@ -84,7 +84,7 @@ export class ErrorVisual extends Visual {
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = this.sync.getTooltip();
-    this.dom.brpValue = this.error.message;
+    this.dom.setString(this.error.message);
     this.dom.allowValueWrapping();
     this.dom.vscodeContext({
       label: label,
@@ -337,8 +337,11 @@ export class MapVisual extends VisualWithSync {
 //
 
 export abstract class BrpValueVisual extends VisualWithSync {
-  set(value: BrpValue) {
-    this.dom.brpValue = value;
+  set(value: string | number | boolean | null): void {
+    if (typeof value === 'string') return this.dom.setString(value);
+    if (typeof value === 'number') return this.dom.setNumber(value);
+    if (typeof value === 'boolean') return this.dom.setBoolean(value);
+    return this.dom.setNull();
   }
   getParentTypePath(): TypePath | undefined {
     return this.sync.parent instanceof SerializedSync
@@ -347,7 +350,7 @@ export abstract class BrpValueVisual extends VisualWithSync {
   }
 }
 
-export class NullVisual extends BrpValueVisual {
+export class JsonNullVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
   constructor(public sync: NullSync, anchor: HTMLElement) {
@@ -357,10 +360,7 @@ export class NullVisual extends BrpValueVisual {
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = this.sync.getTooltip();
-    this.dom.brpValue = null;
-    if (this.dom.htmlRight !== undefined && sync.requestValueMutation !== undefined) {
-      this.dom.htmlRight.value.mutability = sync.requestValueMutation;
-    }
+    this.dom.setNull();
     this.dom.vscodeContext({
       label: label,
       type: this.getParentTypePath(),
@@ -370,7 +370,7 @@ export class NullVisual extends BrpValueVisual {
   }
 }
 
-export class StringVisual extends BrpValueVisual {
+export class JsonStringVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
   constructor(public sync: StringSync, anchor: HTMLElement) {
@@ -381,7 +381,7 @@ export class StringVisual extends BrpValueVisual {
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = this.sync.getTooltip();
-    this.dom.brpValue = value ?? '';
+    this.dom.setString(typeof value === 'string' ? value : '???');
     if (
       value !== undefined &&
       this.dom.htmlRight !== undefined &&
@@ -398,7 +398,7 @@ export class StringVisual extends BrpValueVisual {
   }
 }
 
-export class NumberVisual extends BrpValueVisual {
+export class JsonNumberVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
   constructor(public sync: NumberSync, anchor: HTMLElement) {
@@ -409,7 +409,7 @@ export class NumberVisual extends BrpValueVisual {
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = this.sync.getTooltip();
-    this.dom.brpValue = value ?? '';
+    this.dom.setNumber(typeof value === 'number' ? value : NaN);
     if (
       value !== undefined &&
       this.dom.htmlRight !== undefined &&
@@ -426,7 +426,7 @@ export class NumberVisual extends BrpValueVisual {
   }
 }
 
-export class BooleanVisual extends BrpValueVisual {
+export class JsonBooleanVisual extends BrpValueVisual {
   dom: HTMLMerged;
 
   constructor(public sync: BooleanSync, anchor: HTMLElement) {
@@ -437,7 +437,7 @@ export class BooleanVisual extends BrpValueVisual {
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.tooltip = this.sync.getTooltip();
-    this.dom.brpValue = value ?? false;
+    this.dom.setBoolean(typeof value === 'boolean' ? value : false);
     if (
       value !== undefined &&
       this.dom.htmlRight !== undefined &&

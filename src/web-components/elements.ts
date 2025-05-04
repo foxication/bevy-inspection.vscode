@@ -3,16 +3,18 @@ import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
 import { BrpValue } from '../protocol/types';
 
+const HTML_BOOLEAN_NAME = 'visual-boolean';
 const HTML_MERGED_NAME = 'visual-merged';
-const HTML_JSON_NAME = 'visual-json';
-const HTML_STRING_NAME = 'visual-string';
+const HTML_NUMBER_NAME = 'visual-number';
 const HTML_SELECT_NAME = 'visual-select';
+const HTML_STRING_NAME = 'visual-string';
 
 export function defineCustomElements() {
+  customElements.define(HTML_BOOLEAN_NAME, HTMLBoolean);
   customElements.define(HTML_MERGED_NAME, HTMLMerged);
-  customElements.define(HTML_JSON_NAME, HTMLJson);
-  customElements.define(HTML_STRING_NAME, HTMLString);
+  customElements.define(HTML_NUMBER_NAME, HTMLNumber);
   customElements.define(HTML_SELECT_NAME, HTMLSelect);
+  customElements.define(HTML_STRING_NAME, HTMLString);
 }
 
 export class HTMLMerged extends HTMLElement {
@@ -37,10 +39,32 @@ export class HTMLMerged extends HTMLElement {
   set tooltip(text: string) {
     this.htmlLeft.title = text;
   }
-  set brpValue(v: BrpValue) {
+  setNumber(v: number) {
     if (this.htmlRight === undefined) {
-      // Move label to left & create elements
+      // Move label to left
       this.htmlLeft.classList.add('left-side');
+
+      // Initialize
+      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLNumber.create() };
+      this.htmlRight.wrapper.classList.add('right-side');
+
+      // Structurize
+      this.htmlRight.wrapper.append(this.htmlRight.value);
+      this.shadowRoot?.append(this.htmlRight.wrapper);
+    }
+    if (!(this.htmlRight.value instanceof HTMLNumber)) {
+      const replacement = HTMLNumber.create();
+      this.htmlRight.value.replaceWith(replacement);
+      this.htmlRight.value = replacement;
+    }
+    this.htmlRight.value.value = v;
+  }
+  setString(v: string) {
+    if (this.htmlRight === undefined) {
+      // Move label to left
+      this.htmlLeft.classList.add('left-side');
+
+      // Initialize
       this.htmlRight = { wrapper: document.createElement('div'), value: HTMLString.create() };
       this.htmlRight.wrapper.classList.add('right-side');
 
@@ -48,27 +72,52 @@ export class HTMLMerged extends HTMLElement {
       this.htmlRight.wrapper.append(this.htmlRight.value);
       this.shadowRoot?.append(this.htmlRight.wrapper);
     }
-    if (this.htmlRight.value instanceof HTMLString) {
-      if (typeof v === 'string') {
-        this.htmlRight.value.value = v;
-      } else {
-        const replacement = HTMLJson.create();
-        replacement.value = v;
-        replacement.mutability = this.htmlRight.value.mutability;
-        this.htmlRight.value.replaceWith(replacement);
-        this.htmlRight.value = replacement;
-      }
-    } /* HTMLJson */ else {
-      if (typeof v === 'string') {
-        const replacement = HTMLString.create();
-        replacement.value = v;
-        replacement.mutability = this.htmlRight.value.mutability;
-        this.htmlRight.value.replaceWith(replacement);
-        this.htmlRight.value = replacement;
-      } else {
-        this.htmlRight.value.value = v;
-      }
+    if (!(this.htmlRight.value instanceof HTMLString)) {
+      const replacement = HTMLString.create();
+      this.htmlRight.value.replaceWith(replacement);
+      this.htmlRight.value = replacement;
     }
+    this.htmlRight.value.value = v;
+  }
+  setBoolean(v: boolean) {
+    if (this.htmlRight === undefined) {
+      // Move label to left
+      this.htmlLeft.classList.add('left-side');
+
+      // Initialize
+      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLBoolean.create() };
+      this.htmlRight.wrapper.classList.add('right-side');
+
+      // Structurize
+      this.htmlRight.wrapper.append(this.htmlRight.value);
+      this.shadowRoot?.append(this.htmlRight.wrapper);
+    }
+    if (!(this.htmlRight.value instanceof HTMLBoolean)) {
+      const replacement = HTMLBoolean.create();
+      this.htmlRight.value.replaceWith(replacement);
+      this.htmlRight.value = replacement;
+    }
+    this.htmlRight.value.value = v;
+  }
+  setNull() {
+    if (this.htmlRight === undefined) {
+      // Move label to left
+      this.htmlLeft.classList.add('left-side');
+
+      // Initialize
+      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLString.create() };
+      this.htmlRight.wrapper.classList.add('right-side');
+
+      // Structurize
+      this.htmlRight.wrapper.append(this.htmlRight.value);
+      this.shadowRoot?.append(this.htmlRight.wrapper);
+    }
+    if (!(this.htmlRight.value instanceof HTMLString)) {
+      const replacement = HTMLString.create();
+      this.htmlRight.value.replaceWith(replacement);
+      this.htmlRight.value = replacement;
+    }
+    this.htmlRight.value.value = 'NULL';
   }
   set options(sync: EnumAsStringSync) {
     if (this.htmlRight === undefined) {
@@ -202,45 +251,45 @@ abstract class HTMLMutatable<T> extends HTMLElement {
   abstract allowWrapping(): void;
 }
 
-export class HTMLJson extends HTMLMutatable<BrpValue> {
-  private jsonElement: HTMLDivElement;
+export class HTMLNumber extends HTMLMutatable<BrpValue> {
+  private numberElement: HTMLDivElement;
 
   static create() {
-    return document.createElement(HTML_JSON_NAME) as HTMLJson;
+    return document.createElement(HTML_NUMBER_NAME) as HTMLNumber;
   }
 
   constructor() {
     super(null);
-    this.jsonElement = document.createElement('div');
+    this.numberElement = document.createElement('div');
 
     // Interactions
-    this.jsonElement.onfocus = () => {
+    this.numberElement.onfocus = () => {
       this.inEdit = true;
       this.setAttribute('focused', '');
     };
-    this.jsonElement.onkeydown = (e) => {
+    this.numberElement.onkeydown = (e) => {
       // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
         this.renderValueFromBuffer();
-        this.jsonElement.blur();
+        this.numberElement.blur();
         e.preventDefault();
       }
 
       // apply changes
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
-          const parsed = JSON.parse(this.jsonElement.innerText);
+          const parsed = JSON.parse(this.numberElement.innerText);
           this.mutate(parsed);
         } catch {
           console.error(`Error in parsing brpValue`);
         }
-        this.jsonElement.blur();
+        this.numberElement.blur();
       }
     };
-    this.jsonElement.onblur = () => {
+    this.numberElement.onblur = () => {
       this.inEdit = false;
       this.renderValueFromBuffer();
-      this.jsonElement.scrollTo(0, 0);
+      this.numberElement.scrollTo(0, 0);
       this.removeAttribute('focused');
     };
   }
@@ -249,14 +298,14 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
     if (this.shadowRoot !== null) return; // already exists
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.editableText];
-    shadow.append(this.jsonElement);
+    shadow.append(this.numberElement);
   }
 
   renderValueFromBuffer() {
-    this.jsonElement.innerText = JSON.stringify(this.buffer, null, 4);
+    this.numberElement.innerText = JSON.stringify(this.buffer, null, 4);
   }
   allowEditing() {
-    this.jsonElement.contentEditable = 'plaintext-only';
+    this.numberElement.contentEditable = 'plaintext-only';
   }
   allowWrapping() {
     // skip
@@ -323,6 +372,36 @@ export class HTMLString extends HTMLMutatable<string> {
     this.textElement.style.textWrap = 'wrap';
     this.textElement.style.wordBreak = 'break-all';
   }
+}
+
+export class HTMLBoolean extends HTMLMutatable<boolean> {
+  private boolElement: HTMLDivElement;
+
+  static create() {
+    return document.createElement(HTML_BOOLEAN_NAME) as HTMLBoolean;
+  }
+
+  constructor() {
+    super(false);
+    this.boolElement = document.createElement('div');
+
+    this.boolElement.onclick = () => {
+      this.mutate(!this.buffer);
+    };
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return; // already exists
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.editableText];
+    shadow.append(this.boolElement);
+  }
+
+  renderValueFromBuffer() {
+    this.boolElement.innerText = this.buffer ? 'True' : 'False';
+  }
+  allowEditing() {}
+  allowWrapping(): void {}
 }
 
 export class HTMLSelect extends HTMLMutatable<string> {

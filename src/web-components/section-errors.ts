@@ -38,7 +38,7 @@ export class SectionErrors {
         `type: ${typePath}\n` +
         `code: ${errors[typePath].code}\n` +
         `with_data: ${errors[typePath].data !== undefined}`;
-      element.brpValue = errors[typePath].message;
+      element.setString(errors[typePath].message);
       element.allowValueWrapping();
       element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
 
