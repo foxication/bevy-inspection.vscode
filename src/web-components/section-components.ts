@@ -41,7 +41,7 @@ import {
 } from './visual';
 
 export type PathSegment = string | number;
-export type OptionalPathSegment = { type: 'default'; segment: PathSegment } | { type: 'skip' };
+export type OptionalPathSegment = PathSegment | undefined;
 
 //
 // Children of DataSync
@@ -62,14 +62,10 @@ class ChildrenOfSyncNode {
   }
   private filter(segments: PathSegment[], onWithoutLabel = false) {
     this.collection = this.collection.filter((child) => {
-      switch (child.label.type) {
-        case 'default':
-          if (segments.includes(child.label.segment)) return true;
-          this.removeVisualsRecursively(child);
-          return false;
-        case 'skip':
-          return onWithoutLabel; // remove by default
-      }
+      if (child.label === undefined) return onWithoutLabel;
+      if (segments.includes(child.label)) return true;
+      this.removeVisualsRecursively(child);
+      return false;
     });
   }
 
@@ -84,14 +80,10 @@ class ChildrenOfSyncNode {
   }
   get(segment: PathSegment): DataWithAccess | undefined {
     const result = this.collection.find((node) => {
-      switch (node.label.type) {
-        case 'default':
-          return node.label.segment === segment;
-        case 'skip':
-          return true;
-      }
+      if (node.label === undefined) return true;
+      return node.label === segment;
     });
-    if (result?.label.type === 'skip') return result.children.get(segment);
+    if (result !== undefined && result.label === undefined) return result.children.get(segment);
     return result;
   }
   getLast(): DataWithAccess | undefined {
@@ -136,12 +128,8 @@ class ChildrenOfSyncNode {
   remove(toRemove: PathSegment) {
     const whiteList = this.collection
       .map((child) => {
-        switch (child.label.type) {
-          case 'default':
-            return child.label.segment;
-          case 'skip':
-            return undefined;
-        }
+        if (child.label === undefined) return undefined;
+        return child.label;
       })
       .filter((childSegment) => childSegment !== undefined)
       .filter((childSegment) => childSegment !== toRemove);
@@ -207,13 +195,7 @@ export class ComponentListData extends RootOfData {
       const result =
         schema !== undefined
           ? createSyncFromSchema(this, typePath, schema, anchor)
-          : new ErrorData(
-              this,
-              { type: 'default', segment: typePath },
-              undefined,
-              'schema is not found',
-              anchor
-            );
+          : new ErrorData(this, typePath, undefined, 'schema is not found', anchor);
       return result;
     });
 
@@ -275,27 +257,27 @@ export abstract class DataWithAccess extends RootOfData {
     return this.parent.getRoot();
   }
   getValue(): BrpValue | undefined {
-    if (this.label.type === 'skip') return this.parent.getValue();
+    if (this.label === undefined) return this.parent.getValue();
     const iterable = this.parent.getValue();
     if (iterable === undefined) return undefined;
-    if (isBrpObject(iterable) && typeof this.label.segment === 'string') {
-      return iterable[this.label.segment];
+    if (isBrpObject(iterable) && typeof this.label === 'string') {
+      return iterable[this.label];
     }
-    if (isBrpArray(iterable) && typeof this.label.segment === 'number') {
-      return iterable[this.label.segment];
+    if (isBrpArray(iterable) && typeof this.label === 'number') {
+      return iterable[this.label];
     }
     return undefined;
   }
   getPath(): [string, ...PathSegment[]] {
     if (this.parent instanceof ComponentListData) {
-      if (this.label.type === 'skip') {
+      if (this.label === undefined) {
         console.error('component is not with label');
         return [''];
       }
-      return [this.label.segment.toString()];
+      return [this.label.toString()];
     }
-    if (this.label.type === 'skip') return this.parent.getPath();
-    return [...this.parent.getPath(), this.label.segment];
+    if (this.label === undefined) return this.parent.getPath();
+    return [...this.parent.getPath(), this.label];
   }
   getMutationPath(): [string, string] {
     const [component, ...path] = this.getPath();
@@ -325,22 +307,18 @@ export abstract class DataWithAccess extends RootOfData {
     postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
   };
   getLabel(): PathSegment {
-    switch (this.label.type) {
-      case 'default':
-        return this.label.segment;
-      case 'skip':
-        if (this.parent instanceof DataWithAccess) return this.parent.getLabel();
-        else return '';
+    if (this.label === undefined) {
+      if (this.parent instanceof DataWithAccess) return this.parent.getLabel();
+      else return '';
     }
+    return this.label;
   }
   getLabelToRender(): string {
-    switch (this.label.type) {
-      case 'default':
-        return this.label.segment.toString();
-      case 'skip':
-        if (this.parent instanceof DataWithAccess) return this.parent.getLabelToRender();
-        return '???';
+    if (this.label === undefined) {
+      if (this.parent instanceof DataWithAccess) return this.parent.getLabelToRender();
+      return '???';
     }
+    return this.label.toString();
   }
 
   abstract parent: ComponentListData | DataWithAccess;
@@ -354,8 +332,8 @@ export abstract class DataSync extends DataWithAccess {
 export abstract class DataSyncWithSchema extends DataSync {
   getTooltip(): string {
     let result = '';
-    if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
-    if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
+    if (this.label !== undefined) result += '\n' + this.label + '\n';
+    if (this.label === undefined && this.parent instanceof DataSyncWithSchema) {
       result += this.parent.getTooltip() + '\n';
     }
     result += '\ntype: ' + this.schema.typePath;
@@ -377,8 +355,8 @@ export abstract class DataSyncWithSchema extends DataSync {
 export abstract class BrpValueSync extends DataSync {
   getTooltip(): string {
     let result = '';
-    if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
-    if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
+    if (this.label !== undefined) result += '\n' + this.label + '\n';
+    if (this.label === undefined && this.parent instanceof DataSyncWithSchema) {
       result += this.parent.getTooltip() + '\n';
     }
     const value = this.getValue();
@@ -395,23 +373,20 @@ export abstract class BrpValueSync extends DataSync {
     // Modify parent.value
     const parentValue = this.parent.getValue();
     if (parentValue === undefined) return console.error('parent.value is undefined');
-    switch (this.label.type) {
-      case 'default':
-        if (typeof this.label.segment === 'string' && isBrpObject(parentValue)) {
-          parentValue[this.label.segment] = value;
-        }
-        if (typeof this.label.segment === 'number' && isBrpArray(parentValue)) {
-          parentValue[this.label.segment] = value;
-        }
-        if (this.parent.requestValueMutation !== undefined) {
-          this.parent.requestValueMutation(parentValue);
-        }
-        break;
-      case 'skip':
-        if (this.parent.requestValueMutation !== undefined) {
-          this.parent.requestValueMutation(value);
-        }
-        break;
+    if (this.label === undefined) {
+      if (this.parent.requestValueMutation !== undefined) {
+        this.parent.requestValueMutation(value);
+      }
+    } else {
+      if (typeof this.label === 'string' && isBrpObject(parentValue)) {
+        parentValue[this.label] = value;
+      }
+      if (typeof this.label === 'number' && isBrpArray(parentValue)) {
+        parentValue[this.label] = value;
+      }
+      if (this.parent.requestValueMutation !== undefined) {
+        this.parent.requestValueMutation(parentValue);
+      }
     }
   };
 
@@ -424,43 +399,41 @@ export abstract class BrpValueSync extends DataSync {
 
 function createSyncFromSchema(
   parent: ComponentListData | DataWithAccess,
-  label: PathSegment | undefined,
+  label: OptionalPathSegment,
   schema: BrpSchemaUnit,
   anchor: HTMLElement
 ) {
-  const asLabel: OptionalPathSegment =
-    label === undefined ? { type: 'skip' } : { type: 'default', segment: label };
   if (
     schema.reflectTypes !== undefined &&
     schema.reflectTypes.includes('Serialize') &&
     !(schema.kind === 'Enum' && schema.type === 'string')
   ) {
-    return new SerializedSync(parent, asLabel, schema, anchor);
+    return new SerializedSync(parent, label, schema, anchor);
   }
   switch (schema.kind) {
     case 'Array':
-      return new ArraySync(parent, asLabel, schema, anchor);
+      return new ArraySync(parent, label, schema, anchor);
     case 'Enum':
       switch (schema.type) {
         case 'string':
-          return new EnumAsStringSync(parent, asLabel, schema, anchor);
+          return new EnumAsStringSync(parent, label, schema, anchor);
         case 'object':
-          return new ErrorData(parent, asLabel, undefined, 'Not Implemented', anchor);
+          return new ErrorData(parent, label, undefined, 'Not Implemented', anchor);
       }
       break;
     case 'List':
-      return new ListSync(parent, asLabel, schema, anchor);
+      return new ListSync(parent, label, schema, anchor);
     case 'Map':
-      return new MapSync(parent, asLabel, schema, anchor);
+      return new MapSync(parent, label, schema, anchor);
     case 'Set':
-      return new SetSync(parent, asLabel, schema, anchor);
+      return new SetSync(parent, label, schema, anchor);
     case 'Struct':
-      return new StructSync(parent, asLabel, schema, anchor);
+      return new StructSync(parent, label, schema, anchor);
     case 'Tuple':
     case 'TupleStruct':
-      return new TupleSync(parent, asLabel, schema, anchor);
+      return new TupleSync(parent, label, schema, anchor);
     case 'Value':
-      return new SerializedSync(parent, asLabel, schema, anchor);
+      return new SerializedSync(parent, label, schema, anchor);
   }
 }
 
@@ -622,13 +595,7 @@ export class StructSync extends DataSyncWithSchema {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, segment, childSchema, anchor);
       }
-      return new ErrorData(
-        this,
-        { type: 'default', segment },
-        undefined,
-        'Schema is not found',
-        anchor
-      );
+      return new ErrorData(this, segment, undefined, 'Schema is not found', anchor);
     });
     this.children.sync();
   }
@@ -659,7 +626,7 @@ export class TupleSync extends DataSyncWithSchema {
     }
     // Error
     const errorMessage = 'schema is not found for child';
-    const created = new ErrorData(this, { type: 'skip' }, undefined, errorMessage, anchor);
+    const created = new ErrorData(this, undefined, undefined, errorMessage, anchor);
     this.children.push(created);
     this.visual = created.visual;
   }
@@ -681,13 +648,7 @@ export class TupleSync extends DataSyncWithSchema {
       if (childSchema !== undefined) {
         return createSyncFromSchema(this, segment, childSchema, anchor);
       }
-      return new ErrorData(
-        this,
-        { type: 'default', segment },
-        undefined,
-        'Schema is not found',
-        anchor
-      );
+      return new ErrorData(this, segment, undefined, 'Schema is not found', anchor);
     });
     this.children.sync();
   }
@@ -705,13 +666,7 @@ export class SerializedSync extends DataSyncWithSchema {
     // Scneario: undefined
     const value = this.getValue();
     if (value === undefined) {
-      const created = new ErrorData(
-        this,
-        { type: 'skip' },
-        undefined,
-        'BrpValue is undefined',
-        anchor
-      );
+      const created = new ErrorData(this, undefined, undefined, 'BrpValue is undefined', anchor);
       this.children.push(created);
       this.visual = created.visual;
       return;
@@ -729,40 +684,37 @@ export class SerializedSync extends DataSyncWithSchema {
 
 function createBrpValueSync(
   parent: SerializedSync | BrpValueSync,
-  label: PathSegment | undefined,
+  label: OptionalPathSegment,
   value: BrpValue,
   anchor: HTMLElement
 ) {
-  const asLabel: OptionalPathSegment =
-    label === undefined ? { type: 'skip' } : { type: 'default', segment: label };
-
   // Scenario: null
   if (value === null) {
-    return new NullSync(parent, asLabel, anchor);
+    return new NullSync(parent, label, anchor);
   }
 
   // Scenario: string
   if (typeof value === 'string') {
-    return new StringSync(parent, asLabel, anchor);
+    return new StringSync(parent, label, anchor);
   }
 
   // Scenario: number
   if (typeof value === 'number') {
-    return new NumberSync(parent, asLabel, anchor);
+    return new NumberSync(parent, label, anchor);
   }
 
   // Scenario: boolean
   if (typeof value === 'boolean') {
-    return new BooleanSync(parent, asLabel, anchor);
+    return new BooleanSync(parent, label, anchor);
   }
 
   // Scenario: object
   if (isBrpObject(value)) {
-    return new JsonObjectSync(parent, asLabel, anchor);
+    return new JsonObjectSync(parent, label, anchor);
   }
 
   // Scenario: array
-  return new JsonArraySync(parent, asLabel, anchor);
+  return new JsonArraySync(parent, label, anchor);
 }
 
 export class NullSync extends BrpValueSync {
@@ -892,8 +844,8 @@ export class ErrorData extends DataWithAccess {
   }
   getTooltip(): string {
     let result = '';
-    if (this.label.type === 'default') result += '\n' + this.label.segment + '\n';
-    if (this.label.type === 'skip' && this.parent instanceof DataSyncWithSchema) {
+    if (this.label !== undefined) result += '\n' + this.label + '\n';
+    if (this.label === undefined && this.parent instanceof DataSyncWithSchema) {
       result += this.parent.getTooltip() + '\n';
     }
     if (this.code !== undefined) result += `\ncode: ${this.code}`;
