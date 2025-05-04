@@ -41,7 +41,7 @@ import {
 } from './visual';
 
 export type PathSegment = string | number;
-export type OptionalLabel =
+export type OptionalPathSegment =
   | { type: 'default'; segment: PathSegment; short?: string }
   | { type: 'skip' };
 
@@ -349,7 +349,7 @@ export abstract class DataWithAccess extends RootOfData {
   }
 
   abstract parent: ComponentListData | DataWithAccess;
-  abstract label: OptionalLabel;
+  abstract label: OptionalPathSegment;
 }
 
 export abstract class DataSync extends DataWithAccess {
@@ -428,7 +428,7 @@ function createSyncFromSchema(
   anchor: HTMLElement
 ) {
   const short = schema.reflectTypes?.includes('Component') ? schema.shortPath : undefined;
-  const asLabel: OptionalLabel =
+  const asLabel: OptionalPathSegment =
     label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
   if (
     schema.reflectTypes !== undefined &&
@@ -468,7 +468,7 @@ export class ArraySync extends DataSyncWithSchema {
   visual: ArrayVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpArraySchema,
     anchor: HTMLElement
   ) {
@@ -492,7 +492,7 @@ export class EnumAsStringSync extends DataSyncWithSchema {
   visual: EnumVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpEnumAsStringSchema,
     anchor: HTMLElement
   ) {
@@ -526,7 +526,7 @@ export class ListSync extends DataSyncWithSchema {
   visual: ListVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpListSchema,
     anchor: HTMLElement
   ) {
@@ -550,7 +550,7 @@ export class MapSync extends DataSyncWithSchema {
   visual: MapVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpMapSchema,
     anchor: HTMLElement
   ) {
@@ -574,7 +574,7 @@ export class SetSync extends DataSyncWithSchema {
   visual: SetVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpSetSchema,
     anchor: HTMLElement
   ) {
@@ -598,7 +598,7 @@ export class StructSync extends DataSyncWithSchema {
   visual: StructVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpStructSchema,
     anchor: HTMLElement
   ) {
@@ -638,7 +638,7 @@ export class TupleSync extends DataSyncWithSchema {
   visual: Visual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpTupleSchema | BrpTupleStructSchema,
     anchor: HTMLElement
   ) {
@@ -697,7 +697,7 @@ export class SerializedSync extends DataSyncWithSchema {
   visual: SerializedVisual | JsonNullVisual | JsonStringVisual | JsonNumberVisual | ErrorVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public schema: BrpSchemaUnit,
     anchor: HTMLElement
   ) {
@@ -739,7 +739,7 @@ function createBrpValueSync(
         ? parent.schema.shortPath
         : undefined
       : undefined;
-  const asLabel: OptionalLabel =
+  const asLabel: OptionalPathSegment =
     label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
 
   // Scenario: null
@@ -775,7 +775,7 @@ export class NullSync extends BrpValueSync {
   visual: JsonNullVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
@@ -792,7 +792,7 @@ export class StringSync extends BrpValueSync {
   visual: JsonStringVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
@@ -809,7 +809,7 @@ export class NumberSync extends BrpValueSync {
   visual: JsonNumberVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
@@ -826,7 +826,7 @@ export class BooleanSync extends BrpValueSync {
   visual: JsonBooleanVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
@@ -843,7 +843,7 @@ export class JsonObjectSync extends BrpValueSync {
   visual: JsonObjectVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
@@ -865,7 +865,7 @@ export class JsonArraySync extends BrpValueSync {
   visual: JsonArrayVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
@@ -888,7 +888,7 @@ export class ErrorData extends DataWithAccess {
 
   constructor(
     public parent: DataWithAccess | ComponentListData,
-    public label: OptionalLabel,
+    public label: OptionalPathSegment,
     public code: number | undefined,
     message: string,
     anchor: HTMLElement
