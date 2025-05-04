@@ -41,9 +41,7 @@ import {
 } from './visual';
 
 export type PathSegment = string | number;
-export type OptionalPathSegment =
-  | { type: 'default'; segment: PathSegment; short?: string }
-  | { type: 'skip' };
+export type OptionalPathSegment = { type: 'default'; segment: PathSegment } | { type: 'skip' };
 
 //
 // Children of DataSync
@@ -195,14 +193,11 @@ export class ComponentListData extends RootOfData {
     this.registry = registry;
     this.focus = focus;
     this.mapOfComponents = components;
-    function shortPath(typePath: string) {
-      return typePath.split('<')[0].split('::')[0];
-    }
 
     // Get TypePaths
     const TypePathListOrdered = Object.keys(this.mapOfComponents).sort((a, b) => {
-      const aShort = this.getSchema(a)?.shortPath ?? shortPath(a);
-      const bShort = this.getSchema(b)?.shortPath ?? shortPath(b);
+      const aShort = this.getSchema(a)?.shortPath ?? a;
+      const bShort = this.getSchema(b)?.shortPath ?? b;
       return aShort > bShort ? 1 : bShort > aShort ? -1 : 0;
     });
 
@@ -214,7 +209,7 @@ export class ComponentListData extends RootOfData {
           ? createSyncFromSchema(this, typePath, schema, anchor)
           : new ErrorData(
               this,
-              { type: 'default', segment: typePath, short: shortPath(typePath) },
+              { type: 'default', segment: typePath },
               undefined,
               'schema is not found',
               anchor
@@ -341,7 +336,7 @@ export abstract class DataWithAccess extends RootOfData {
   getLabelToRender(): string {
     switch (this.label.type) {
       case 'default':
-        return this.label.short ?? this.label.segment.toString();
+        return this.label.segment.toString();
       case 'skip':
         if (this.parent instanceof DataWithAccess) return this.parent.getLabelToRender();
         return '???';
@@ -370,6 +365,12 @@ export abstract class DataSyncWithSchema extends DataSync {
     }
     return result;
   }
+  getLabelToRender(): string {
+    const result = super.getLabelToRender();
+    if (this.schema.reflectTypes?.includes('Component')) return this.schema.shortPath;
+    return result;
+  }
+
   abstract schema: BrpSchemaUnit;
 }
 
@@ -427,9 +428,8 @@ function createSyncFromSchema(
   schema: BrpSchemaUnit,
   anchor: HTMLElement
 ) {
-  const short = schema.reflectTypes?.includes('Component') ? schema.shortPath : undefined;
   const asLabel: OptionalPathSegment =
-    label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
+    label === undefined ? { type: 'skip' } : { type: 'default', segment: label };
   if (
     schema.reflectTypes !== undefined &&
     schema.reflectTypes.includes('Serialize') &&
@@ -733,14 +733,8 @@ function createBrpValueSync(
   value: BrpValue,
   anchor: HTMLElement
 ) {
-  const short =
-    parent instanceof SerializedSync
-      ? parent.schema.reflectTypes?.includes('Component')
-        ? parent.schema.shortPath
-        : undefined
-      : undefined;
   const asLabel: OptionalPathSegment =
-    label === undefined ? { type: 'skip' } : { type: 'default', segment: label, short };
+    label === undefined ? { type: 'skip' } : { type: 'default', segment: label };
 
   // Scenario: null
   if (value === null) {
