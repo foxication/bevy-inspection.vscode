@@ -106,7 +106,7 @@ defineCustomElements();
           if (/^\d+$/.test(segment)) return parseInt(segment);
           return segment;
         });
-        const result = syncRoot.getChild(parsedPath)?.getValue();
+        const result = syncRoot.getByPath(parsedPath)?.getValue();
         switch (true) {
           case result === undefined:
             console.error(`Value is not found: ${message.path}`);

@@ -138,9 +138,9 @@ class ChildrenOfSyncNode {
 
 export abstract class RootOfData {
   children = new ChildrenOfSyncNode(this);
-  getChild(path: PathSegment[]): DataWithAccess | undefined {
+  getByPath(path: PathSegment[]): DataWithAccess | undefined {
     if (path.length === 0) return this instanceof DataWithAccess ? this : undefined;
-    return this.children.get(path[0])?.getChild(path.splice(1));
+    return this.children.get(path[0])?.getByPath(path.splice(1));
   }
   getStartAnchor() {
     return this.visual.dom;
@@ -150,6 +150,7 @@ export abstract class RootOfData {
   }
 
   abstract visual: Visual;
+  abstract getValue(): BrpValue | undefined;
   abstract getDebugTree(): string;
 }
 
@@ -158,19 +159,26 @@ export abstract class RootOfData {
 //
 
 export class ComponentListData extends RootOfData {
-  // Creation
+  visual: ComponentListVisual;
+  private mapOfComponents: BrpComponentRegistry = {};
+  private registry: BrpRegistrySchema = {};
+  private focus: EntityFocus | undefined = undefined;
+
   constructor(public section: HTMLElement) {
     super();
     this.visual = new ComponentListVisual(this, section);
     return this;
   }
 
-  // Data
-  private mapOfComponents: BrpComponentRegistry = {};
-  private registry: BrpRegistrySchema = {};
-  private focus: EntityFocus | undefined = undefined;
   getValue(): BrpObject {
     return this.mapOfComponents;
+  }
+  getFocus() {
+    return this.focus;
+  }
+  getSchema(typePath: TypePath): BrpSchemaUnit | undefined {
+    if (Object.keys(this.registry).includes(typePath)) return this.registry[typePath];
+    return undefined;
   }
   syncRoot(registry: BrpRegistrySchema, focus: EntityFocus, components: BrpComponentRegistry) {
     this.registry = registry;
@@ -179,8 +187,8 @@ export class ComponentListData extends RootOfData {
 
     // Get TypePaths
     const TypePathListOrdered = Object.keys(this.mapOfComponents).sort((a, b) => {
-      const aShort = this.getSchema(a)?.shortPath ?? a;
-      const bShort = this.getSchema(b)?.shortPath ?? b;
+      const aShort = this.getSchema(a)?.shortPath ?? forcedShortPath(a);
+      const bShort = this.getSchema(b)?.shortPath ?? forcedShortPath(b);
       return aShort > bShort ? 1 : bShort > aShort ? -1 : 0;
     });
 
@@ -190,7 +198,7 @@ export class ComponentListData extends RootOfData {
       const result =
         schema !== undefined
           ? createSyncFromSchema(this, typePath, schema, anchor)
-          : new ErrorData(this, typePath, undefined, 'schema is not found', anchor);
+          : new ErrorData(this, typePath, undefined, `schema is not found for ${typePath}`, anchor);
       return result;
     });
 
@@ -218,18 +226,6 @@ export class ComponentListData extends RootOfData {
     delete this.mapOfComponents[component];
     this.children.remove(component);
   }
-  getFocus() {
-    return this.focus;
-  }
-  getSchema(typePath: TypePath): BrpSchemaUnit | undefined {
-    if (Object.keys(this.registry).includes(typePath)) return this.registry[typePath];
-    return undefined;
-  }
-
-  // Visuals
-  visual: ComponentListVisual;
-
-  // Debug
   getDebugTree(): string {
     let result = 'Components:\n';
     this.children.forEach((node) => (result += node.getDebugTree()));
@@ -242,11 +238,6 @@ export class ComponentListData extends RootOfData {
 //
 
 export abstract class DataWithAccess extends RootOfData {
-  getPathSerialized() {
-    return this.getPath()
-      .map((value) => value.toString())
-      .join('.');
-  }
   getRoot(): ComponentListData {
     if (this.parent instanceof ComponentListData) return this.parent;
     return this.parent.getRoot();
@@ -274,6 +265,11 @@ export abstract class DataWithAccess extends RootOfData {
     if (this.segment === undefined) return this.parent.getPath();
     return [...this.parent.getPath(), this.segment];
   }
+  getPathSerialized() {
+    return this.getPath()
+      .map((value) => value.toString())
+      .join('.');
+  }
   getMutationPath(): [string, string] {
     const [component, ...path] = this.getPath();
     return [
@@ -286,34 +282,45 @@ export abstract class DataWithAccess extends RootOfData {
         .join(''),
     ];
   }
-  getDebugInfo(): string {
-    return this.getPathSerialized() + ' = ' + JSON.stringify(this.getValue());
-  }
-  getDebugTree(): string {
-    let result = this.getLabelToRender();
-    if (this instanceof DataSyncWithSchema) result += ' => ' + this.schema;
-    this.children.forEach((node) => (result += node.getDebugTree()));
-    return result;
-  }
   requestValueMutation: (value: BrpValue) => void = (value: BrpValue) => {
     const [component, path] = this.getMutationPath();
     const focus = this.getRoot().getFocus();
     if (focus === undefined) return;
     postWebviewMessage({ cmd: 'mutate_component', data: { focus, component, path, value } });
   };
-  getLabel(): PathSegment {
-    if (this.segment === undefined) {
-      if (this.parent instanceof DataWithAccess) return this.parent.getLabel();
-      else return '';
-    }
-    return this.segment;
-  }
   getLabelToRender(): string {
     if (this.segment === undefined) {
       if (this.parent instanceof DataWithAccess) return this.parent.getLabelToRender();
       return '???';
     }
     return this.segment.toString();
+  }
+  getTooltip(): string {
+    let result = '';
+    if (this.segment === undefined && this.parent instanceof DataWithAccess) {
+      result += this.parent.getTooltip() + '\n';
+    } else {
+      const [component, mutation] = this.getMutationPath();
+      result += this.getLabelToRender() + '\n\n';
+      result += `component = ${component}\n`;
+      result += `mutationPath = ${mutation}\n\n`;
+    }
+    return result;
+  }
+  getDebugInfo(): string {
+    return this.getPathSerialized() + ' = ' + JSON.stringify(this.getValue());
+  }
+  getDebugTree(): string {
+    let result = this.getLabelToRender();
+    if (this instanceof DataSyncWithSchema) result += ' => ' + this.schema.typePath + '\n';
+    function shifted(text: string) {
+      return text
+        .split('\n')
+        .map((line) => '  ' + line)
+        .join('\n');
+    }
+    this.children.forEach((node) => (result += shifted(node.getDebugTree())));
+    return result;
   }
 
   abstract parent: ComponentListData | DataWithAccess;
@@ -326,22 +333,15 @@ export abstract class DataSync extends DataWithAccess {
 
 export abstract class DataSyncWithSchema extends DataSync {
   getTooltip(): string {
-    let result = '';
-    if (this.segment !== undefined) result += '\n' + this.segment + '\n';
-    if (this.segment === undefined && this.parent instanceof DataSyncWithSchema) {
-      result += this.parent.getTooltip() + '\n';
-    }
-    result += '\ntype: ' + this.schema.typePath;
-    result += '\nkind: ' + this.schema.kind;
-    if (this.schema.reflectTypes !== undefined) {
-      result += '\nreflect: ' + this.schema.reflectTypes.join(', ');
+    let result = super.getTooltip();
+    for (const [key, value] of Object.entries(this.schema)) {
+      result += `${key} = ${JSON.stringify(value)}\n`;
     }
     return result;
   }
   getLabelToRender(): string {
-    const result = super.getLabelToRender();
-    if (this.schema.reflectTypes?.includes('Component')) return this.schema.shortPath;
-    return result;
+    if (this.parent instanceof ComponentListData) return this.schema.shortPath;
+    return super.getLabelToRender();
   }
 
   abstract schema: BrpSchemaUnit;
@@ -349,19 +349,9 @@ export abstract class DataSyncWithSchema extends DataSync {
 
 export abstract class BrpValueSync extends DataSync {
   getTooltip(): string {
-    let result = '';
-    if (this.segment !== undefined) result += '\n' + this.segment + '\n';
-    if (this.segment === undefined && this.parent instanceof DataSyncWithSchema) {
-      result += this.parent.getTooltip() + '\n';
-    }
+    let result = super.getTooltip();
     const value = this.getValue();
-    if (value === undefined) result += '\ntype: undefined';
-    if (value === null) result += '\ntype: null';
-    if (typeof value === 'string') result += '\ntype: string';
-    if (typeof value === 'number') result += '\ntype: number';
-    if (typeof value === 'boolean') result += '\ntype: boolean';
-    if (value !== undefined && isBrpObject(value)) result += '\ntype: object';
-    if (value !== undefined && isBrpArray(value)) result += '\ntype: array';
+    result += `responseData = ${typeof value}\n`;
     return result;
   }
   requestValueMutation = (value: BrpValue) => {
@@ -838,19 +828,21 @@ export class ErrorData extends DataWithAccess {
     this.visual = new ErrorVisual(this, anchor, { code, message });
   }
   getTooltip(): string {
-    let result = '';
-    if (this.segment !== undefined) result += '\n' + this.segment + '\n';
-    if (this.segment === undefined && this.parent instanceof DataSyncWithSchema) {
-      result += this.parent.getTooltip() + '\n';
-    }
-    if (this.code !== undefined) result += `\ncode: ${this.code}`;
+    let result = super.getTooltip();
+    result += `treeItem = Error\n`;
+    result += `errorCode = ${JSON.stringify(this.code)}\n`;
     return result;
   }
   getDebugTree(): string {
-    return `${this.getLabelToRender()} => ${this.visual.error.message}`;
+    return `${this.getLabelToRender()} => ${this.visual.error.message}\n`;
   }
 }
 
 export function resolveTypePathFromRef(ref: TypePathReference): TypePath {
   return ref.type.$ref.slice('#/$defs/'.length);
+}
+
+function forcedShortPath(typePath: string) {
+  const splitted = typePath.split('<')[0].split('::');
+  return splitted[splitted.length - 1];
 }
