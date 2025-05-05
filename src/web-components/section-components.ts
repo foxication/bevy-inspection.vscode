@@ -387,7 +387,13 @@ export abstract class DataSyncWithSchema extends DataSync {
 export abstract class BrpValueSync extends DataSync {
   getTooltip(): TooltipData {
     const result = super.getTooltip();
-    result.sections.push({ treeItem: this.constructor.name });
+    const addSection = (name: string) => result.sections.push({ treeItem: name });
+    if (this instanceof NullSync) addSection('Null');
+    if (this instanceof StringSync) addSection('String');
+    if (this instanceof NumberSync) addSection('Number');
+    if (this instanceof BooleanSync) addSection('Boolean');
+    if (this instanceof JsonObjectSync) addSection('Object');
+    if (this instanceof JsonArraySync) addSection('Array');
     return result;
   }
   requestValueMutation = (value: BrpValue) => {
