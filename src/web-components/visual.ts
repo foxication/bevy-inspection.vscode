@@ -5,6 +5,7 @@ import {
   BooleanSync,
   ComponentListData,
   DataSync,
+  DataSyncWithSchema,
   EnumAsStringSync,
   ErrorData,
   JsonArraySync,
@@ -103,8 +104,21 @@ export class ErrorVisual extends Visual {
 //
 
 export abstract class VisualWithSync extends Visual {
-  abstract dom: HTMLMerged;
-  abstract sync: DataSync;
+  dom: HTMLMerged = (this.dom = HTMLMerged.create());
+
+  constructor(public sync: DataSync, anchor: HTMLElement) {
+    super();
+    const label = this.sync.getLabelToRender();
+    this.dom.level = this.getLevel();
+    this.dom.label = label;
+    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.vscodeContext({
+      label: label,
+      type: this.sync instanceof DataSyncWithSchema ? this.sync.schema.typePath : undefined,
+      path: this.sync.getPathSerialized(),
+    });
+    anchor.after(this.dom);
+  }
 
   getLevel(): number {
     const [, ...path] = this.sync.getPath();
@@ -132,21 +146,8 @@ export abstract class VisualWithSync extends Visual {
 }
 
 export class SerializedVisual extends VisualWithSync {
-  dom: HTMLMerged;
-
   constructor(public sync: SerializedSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
 }
 
@@ -155,16 +156,9 @@ export class SerializedVisual extends VisualWithSync {
 //
 
 export class EnumVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: EnumAsStringSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
+    super(sync, anchor);
     this.dom.options = sync;
-    this.dom.level = this.getLevel();
-    this.dom.label = this.sync.getLabelToRender();
-    this.dom.tooltip = this.sync.getTooltip();
     const variant = this.sync.getVariant();
     if (
       variant !== undefined &&
@@ -173,12 +167,6 @@ export class EnumVisual extends VisualWithSync {
     ) {
       this.dom.htmlRight.value.mutability = sync.requestValueMutation;
     }
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
   }
   select(selection: string) {
     const errMsg = 'Wrong HTML in EnumVisual';
@@ -188,21 +176,8 @@ export class EnumVisual extends VisualWithSync {
 }
 
 export class StructVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: StructSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
 
   get properties(): readonly { property: string; typePath: TypePath }[] {
@@ -217,21 +192,8 @@ export class StructVisual extends VisualWithSync {
 }
 
 export class TupleVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: TupleSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
 
   get childTypePaths(): readonly TypePath[] {
@@ -242,21 +204,8 @@ export class TupleVisual extends VisualWithSync {
 }
 
 export class ArrayVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: ArraySync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
   get childTypePath(): TypePath {
     return resolveTypePathFromRef(this.sync.schema.items);
@@ -264,21 +213,8 @@ export class ArrayVisual extends VisualWithSync {
 }
 
 export class ListVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: ListSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
   get childTypePath(): TypePath {
     return resolveTypePathFromRef(this.sync.schema.items);
@@ -286,21 +222,8 @@ export class ListVisual extends VisualWithSync {
 }
 
 export class SetVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: SetSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
   get childTypePath(): TypePath {
     return resolveTypePathFromRef(this.sync.schema.items);
@@ -308,21 +231,8 @@ export class SetVisual extends VisualWithSync {
 }
 
 export class MapVisual extends VisualWithSync {
-  readonly dom: HTMLMerged;
-
   constructor(public sync: MapSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.sync.schema.typePath,
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
   get keyTypePath(): TypePath {
     return resolveTypePathFromRef(this.sync.schema.keyType);
@@ -351,36 +261,16 @@ export abstract class BrpValueVisual extends VisualWithSync {
 }
 
 export class JsonNullVisual extends BrpValueVisual {
-  dom: HTMLMerged;
-
   constructor(public sync: NullSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
+    super(sync, anchor);
     this.dom.setNull();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.getParentTypePath(),
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
   }
 }
 
 export class JsonStringVisual extends BrpValueVisual {
-  dom: HTMLMerged;
-
   constructor(public sync: StringSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    const value = this.sync.getValue();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
+    super(sync, anchor);
+    const value = sync.getValue();
     this.dom.setString(typeof value === 'string' ? value : '???');
     if (
       value !== undefined &&
@@ -389,26 +279,13 @@ export class JsonStringVisual extends BrpValueVisual {
     ) {
       this.dom.htmlRight.value.mutability = sync.requestValueMutation;
     }
-    this.dom.vscodeContext({
-      label: label,
-      type: this.getParentTypePath(),
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
   }
 }
 
 export class JsonNumberVisual extends BrpValueVisual {
-  dom: HTMLMerged;
-
   constructor(public sync: NumberSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
+    super(sync, anchor);
     const value = this.sync.getValue();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
     this.dom.setNumber(typeof value === 'number' ? value : NaN);
     if (
       value !== undefined &&
@@ -417,26 +294,13 @@ export class JsonNumberVisual extends BrpValueVisual {
     ) {
       this.dom.htmlRight.value.mutability = sync.requestValueMutation;
     }
-    this.dom.vscodeContext({
-      label: label,
-      type: this.getParentTypePath(),
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
   }
 }
 
 export class JsonBooleanVisual extends BrpValueVisual {
-  dom: HTMLMerged;
-
   constructor(public sync: BooleanSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
+    super(sync, anchor);
     const value = this.sync.getValue();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
     this.dom.setBoolean(typeof value === 'boolean' ? value : false);
     if (
       value !== undefined &&
@@ -445,49 +309,17 @@ export class JsonBooleanVisual extends BrpValueVisual {
     ) {
       this.dom.htmlRight.value.mutability = sync.requestValueMutation;
     }
-    this.dom.vscodeContext({
-      label: label,
-      type: this.getParentTypePath(),
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
   }
 }
 
 export class JsonObjectVisual extends BrpValueVisual {
-  dom: HTMLMerged;
-
   constructor(public sync: JsonObjectSync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.getParentTypePath(),
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
 }
 
 export class JsonArrayVisual extends BrpValueVisual {
-  dom: HTMLMerged;
-
   constructor(public sync: JsonArraySync, anchor: HTMLElement) {
-    super();
-    const label = this.sync.getLabelToRender();
-    this.dom = HTMLMerged.create();
-    this.dom.level = this.getLevel();
-    this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
-    this.dom.vscodeContext({
-      label: label,
-      type: this.getParentTypePath(),
-      path: this.sync.getPathSerialized(),
-    });
-    anchor.after(this.dom);
+    super(sync, anchor);
   }
 }
