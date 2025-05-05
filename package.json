@@ -64,7 +64,7 @@
 		"viewsWelcome": [
 			{
 				"view": "hierarchyView",
-				"contents": "In order to use Bevy Inspection, you have to connect to Bevy instance.\n[Connect to Bevy Instance](command:extension.addConnection)\nTo learn more about how to use Bevy Inspection extension [read our docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
+				"contents": "In order to use Bevy Inspection, you have to connect to Bevy App.\n[Connect to Bevy App](command:extension.addConnection)\nTo learn more about how to use Bevy Inspection extension [read docs](https://github.com/foxication/bevy-inspection.vcscode?tab=readme-ov-file#bevy-inspection)."
 			},
 			{
 				"view": "componentsView",
