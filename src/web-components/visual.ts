@@ -85,7 +85,7 @@ export class ErrorVisual extends Visual {
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.setTooltipFrom(this.sync.getTooltip());
-    this.dom.setString(this.error.message);
+    this.dom.setValue(this.error.message);
     this.dom.allowValueWrapping();
     this.dom.vscodeContext({
       label: label,
@@ -248,10 +248,7 @@ export class MapVisual extends VisualWithSync {
 
 export abstract class BrpValueVisual extends VisualWithSync {
   set(value: string | number | boolean | null): void {
-    if (typeof value === 'string') return this.dom.setString(value);
-    if (typeof value === 'number') return this.dom.setNumber(value);
-    if (typeof value === 'boolean') return this.dom.setBoolean(value);
-    return this.dom.setNull();
+    this.dom.setValue(value);
   }
   getParentTypePath(): TypePath | undefined {
     return this.sync.parent instanceof SerializedSync
@@ -263,7 +260,7 @@ export abstract class BrpValueVisual extends VisualWithSync {
 export class JsonNullVisual extends BrpValueVisual {
   constructor(public sync: NullSync, anchor: HTMLElement) {
     super(sync, anchor);
-    this.dom.setNull();
+    this.dom.setValue(null);
   }
 }
 
@@ -271,7 +268,7 @@ export class JsonStringVisual extends BrpValueVisual {
   constructor(public sync: StringSync, anchor: HTMLElement) {
     super(sync, anchor);
     const value = sync.getValue();
-    this.dom.setString(typeof value === 'string' ? value : '???');
+    this.dom.setValue(typeof value === 'string' ? value : '???');
     if (
       value !== undefined &&
       this.dom.htmlRight !== undefined &&
@@ -286,7 +283,7 @@ export class JsonNumberVisual extends BrpValueVisual {
   constructor(public sync: NumberSync, anchor: HTMLElement) {
     super(sync, anchor);
     const value = this.sync.getValue();
-    this.dom.setNumber(typeof value === 'number' ? value : NaN);
+    this.dom.setValue(typeof value === 'number' ? value : NaN);
     if (
       value !== undefined &&
       this.dom.htmlRight !== undefined &&
@@ -301,7 +298,7 @@ export class JsonBooleanVisual extends BrpValueVisual {
   constructor(public sync: BooleanSync, anchor: HTMLElement) {
     super(sync, anchor);
     const value = this.sync.getValue();
-    this.dom.setBoolean(typeof value === 'boolean' ? value : false);
+    this.dom.setValue(typeof value === 'boolean' ? value : false);
     if (
       value !== undefined &&
       this.dom.htmlRight !== undefined &&

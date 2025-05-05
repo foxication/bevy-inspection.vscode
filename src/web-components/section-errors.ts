@@ -46,7 +46,7 @@ export class SectionErrors {
           },
         ],
       });
-      element.setString(errors[typePath].message);
+      element.setValue(errors[typePath].message);
       element.allowValueWrapping();
       element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
 

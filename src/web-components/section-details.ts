@@ -22,7 +22,7 @@ export class SectionDetails {
 
   update(focus: EntityFocus) {
     this.section.removeAttribute('style');
-    this.connection.setString(focus.host);
-    this.entityId.setString(focus.entityId.toString());
+    this.connection.setValue(focus.host);
+    this.entityId.setValue(focus.entityId.toString());
   }
 }

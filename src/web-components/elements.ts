@@ -56,85 +56,51 @@ export class HTMLMerged extends HTMLElement {
       .join('\n\n');
     this.htmlLeft.title = result;
   }
-  setNumber(v: number) {
+  setValue(v: string | number | boolean | null) {
+    function createValueElement(value: string | number | boolean | null) {
+      switch (typeof value) {
+        case 'string': {
+          const result = HTMLString.create();
+          result.setValue(value);
+          return result;
+        }
+        case 'number': {
+          const result = HTMLNumber.create();
+          result.setValue(value);
+          return result;
+        }
+        case 'boolean': {
+          const result = HTMLBoolean.create();
+          result.setValue(value);
+          return result;
+        }
+        default: {
+          const result = HTMLString.create();
+          result.setValue('NULL');
+          return result;
+        }
+      }
+    }
     if (this.htmlRight === undefined) {
       // Move label to left
       this.htmlLeft.classList.add('left-side');
 
       // Initialize
-      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLNumber.create() };
+      this.htmlRight = { wrapper: document.createElement('div'), value: createValueElement(v) };
       this.htmlRight.wrapper.classList.add('right-side');
 
       // Structurize
       this.htmlRight.wrapper.append(this.htmlRight.value);
       this.shadowRoot?.append(this.htmlRight.wrapper);
+      return;
     }
-    if (!(this.htmlRight.value instanceof HTMLNumber)) {
-      const replacement = HTMLNumber.create();
+    if (typeof v !== typeof this.htmlRight.value.buffer) {
+      const replacement = createValueElement(v);
       this.htmlRight.value.replaceWith(replacement);
       this.htmlRight.value = replacement;
+      return;
     }
-    this.htmlRight.value.value = v;
-  }
-  setString(v: string) {
-    if (this.htmlRight === undefined) {
-      // Move label to left
-      this.htmlLeft.classList.add('left-side');
-
-      // Initialize
-      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLString.create() };
-      this.htmlRight.wrapper.classList.add('right-side');
-
-      // Structurize
-      this.htmlRight.wrapper.append(this.htmlRight.value);
-      this.shadowRoot?.append(this.htmlRight.wrapper);
-    }
-    if (!(this.htmlRight.value instanceof HTMLString)) {
-      const replacement = HTMLString.create();
-      this.htmlRight.value.replaceWith(replacement);
-      this.htmlRight.value = replacement;
-    }
-    this.htmlRight.value.value = v;
-  }
-  setBoolean(v: boolean) {
-    if (this.htmlRight === undefined) {
-      // Move label to left
-      this.htmlLeft.classList.add('left-side');
-
-      // Initialize
-      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLBoolean.create() };
-      this.htmlRight.wrapper.classList.add('right-side');
-
-      // Structurize
-      this.htmlRight.wrapper.append(this.htmlRight.value);
-      this.shadowRoot?.append(this.htmlRight.wrapper);
-    }
-    if (!(this.htmlRight.value instanceof HTMLBoolean)) {
-      const replacement = HTMLBoolean.create();
-      this.htmlRight.value.replaceWith(replacement);
-      this.htmlRight.value = replacement;
-    }
-    this.htmlRight.value.value = v;
-  }
-  setNull() {
-    if (this.htmlRight === undefined) {
-      // Move label to left
-      this.htmlLeft.classList.add('left-side');
-
-      // Initialize
-      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLString.create() };
-      this.htmlRight.wrapper.classList.add('right-side');
-
-      // Structurize
-      this.htmlRight.wrapper.append(this.htmlRight.value);
-      this.shadowRoot?.append(this.htmlRight.wrapper);
-    }
-    if (!(this.htmlRight.value instanceof HTMLString)) {
-      const replacement = HTMLString.create();
-      this.htmlRight.value.replaceWith(replacement);
-      this.htmlRight.value = replacement;
-    }
-    this.htmlRight.value.value = 'NULL';
+    this.htmlRight.value.setValue(v);
   }
   set options(sync: EnumAsStringSync) {
     if (this.htmlRight === undefined) {
@@ -153,7 +119,7 @@ export class HTMLMerged extends HTMLElement {
       this.shadowRoot?.append(this.htmlRight.wrapper);
     }
     if (this.htmlRight.value instanceof HTMLString) {
-      this.htmlRight.value.value = sync.getVariant() ?? '...';
+      this.htmlRight.value.setValue(sync.getVariant() ?? '...');
     }
   }
   private createConfiguredChevron() {
@@ -251,7 +217,7 @@ abstract class HTMLMutatable<T> extends HTMLElement {
   set inEdit(b: boolean) {
     this._inEdit = b;
   }
-  set value(v: T) {
+  setValue(v: T) {
     this._buffer = v;
     if (!this.inEdit) this.renderValueFromBuffer();
   }
