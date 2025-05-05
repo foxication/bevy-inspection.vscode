@@ -1,7 +1,7 @@
 import { DataWithAccess, EnumAsStringSync } from './section-components';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
-import { BrpValue } from '../protocol/types';
+import { BrpValue, TypePath } from '../protocol/types';
 
 const HTML_BOOLEAN_NAME = 'visual-boolean';
 const HTML_MERGED_NAME = 'visual-merged';
@@ -16,6 +16,13 @@ export function defineCustomElements() {
   customElements.define(HTML_SELECT_NAME, HTMLSelect);
   customElements.define(HTML_STRING_NAME, HTMLString);
 }
+
+export type TooltipData = {
+  label: string;
+  componentPath: TypePath;
+  mutationPath: string;
+  sections: { [key: string]: string }[];
+};
 
 export class HTMLMerged extends HTMLElement {
   htmlLeft: HTMLSpanElement;
@@ -36,8 +43,18 @@ export class HTMLMerged extends HTMLElement {
   set label(text: string) {
     this.htmlLeft.textContent = text;
   }
-  set tooltip(text: string) {
-    this.htmlLeft.title = text;
+  setTooltipFrom(data: TooltipData) {
+    let result = data.label + '\n\n';
+    result += `componentPath = ${data.componentPath}\n`;
+    result += `mutationPath = ${data.mutationPath}\n\n`;
+    result += data.sections
+      .map((section) =>
+        Object.entries(section)
+          .map(([key, value]) => key + ' = ' + value)
+          .join('\n')
+      )
+      .join('\n\n');
+    this.htmlLeft.title = result;
   }
   setNumber(v: number) {
     if (this.htmlRight === undefined) {

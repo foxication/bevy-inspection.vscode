@@ -84,7 +84,7 @@ export class ErrorVisual extends Visual {
     this.dom = HTMLMerged.create();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.setTooltipFrom(this.sync.getTooltip());
     this.dom.setString(this.error.message);
     this.dom.allowValueWrapping();
     this.dom.vscodeContext({
@@ -111,7 +111,7 @@ export abstract class VisualWithSync extends Visual {
     const label = this.sync.getLabelToRender();
     this.dom.level = this.getLevel();
     this.dom.label = label;
-    this.dom.tooltip = this.sync.getTooltip();
+    this.dom.setTooltipFrom(this.sync.getTooltip());
     this.dom.vscodeContext({
       label: label,
       type: this.sync instanceof DataSyncWithSchema ? this.sync.schema.typePath : undefined,

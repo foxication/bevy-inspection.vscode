@@ -19,6 +19,7 @@ import {
   TypePath,
   TypePathReference,
 } from '../protocol/types';
+import { TooltipData } from './elements';
 import {
   ArrayVisual,
   JsonBooleanVisual,
@@ -295,17 +296,20 @@ export abstract class DataWithAccess extends RootOfData {
     }
     return this.segment.toString();
   }
-  getTooltip(): string {
-    let result = '';
+  getTooltip(): TooltipData {
     if (this.segment === undefined && this.parent instanceof DataWithAccess) {
-      result += this.parent.getTooltip() + '\n';
+      const result = this.parent.getTooltip();
+      return result;
     } else {
-      const [component, mutation] = this.getMutationPath();
-      result += this.getLabelToRender() + '\n\n';
-      result += `component = ${component}\n`;
-      result += `mutationPath = ${mutation}\n\n`;
+      const [componentPath, mutationPath] = this.getMutationPath();
+      const result: TooltipData = {
+        label: this.getLabelToRender(),
+        componentPath,
+        mutationPath,
+        sections: [],
+      };
+      return result;
     }
-    return result;
   }
   getDebugInfo(): string {
     return this.getPathSerialized() + ' = ' + JSON.stringify(this.getValue());
@@ -332,11 +336,13 @@ export abstract class DataSync extends DataWithAccess {
 }
 
 export abstract class DataSyncWithSchema extends DataSync {
-  getTooltip(): string {
-    let result = super.getTooltip();
-    for (const [key, value] of Object.entries(this.schema)) {
-      result += `${key} = ${JSON.stringify(value)}\n`;
-    }
+  getTooltip(): TooltipData {
+    const result = super.getTooltip();
+    result.sections.push(
+      Object.fromEntries(
+        Object.entries(this.schema).map(([key, value]) => [key, JSON.stringify(value)])
+      )
+    );
     return result;
   }
   getLabelToRender(): string {
@@ -348,10 +354,9 @@ export abstract class DataSyncWithSchema extends DataSync {
 }
 
 export abstract class BrpValueSync extends DataSync {
-  getTooltip(): string {
-    let result = super.getTooltip();
-    const value = this.getValue();
-    result += `responseData = ${typeof value}\n`;
+  getTooltip(): TooltipData {
+    const result = super.getTooltip();
+    result.sections.push({ treeItem: this.constructor.name });
     return result;
   }
   requestValueMutation = (value: BrpValue) => {
@@ -827,10 +832,12 @@ export class ErrorData extends DataWithAccess {
     super();
     this.visual = new ErrorVisual(this, anchor, { code, message });
   }
-  getTooltip(): string {
-    let result = super.getTooltip();
-    result += `treeItem = Error\n`;
-    result += `errorCode = ${JSON.stringify(this.code)}\n`;
+  getTooltip(): TooltipData {
+    const result = super.getTooltip();
+    result.sections.push({
+      treeItem: 'Error',
+      errorCode: JSON.stringify(this.code),
+    });
     return result;
   }
   getDebugTree(): string {

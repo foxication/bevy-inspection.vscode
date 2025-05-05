@@ -34,11 +34,18 @@ export class SectionErrors {
       const element = new HTMLMerged();
       const shortPath = forcedShortPath(typePath);
       element.label = shortPath;
-      element.tooltip =
-        `label: ${shortPath}\n` +
-        `type: ${typePath}\n` +
-        `code: ${errors[typePath].code}\n` +
-        `with_data: ${errors[typePath].data !== undefined}`;
+      element.setTooltipFrom({
+        label: shortPath,
+        componentPath: typePath,
+        mutationPath: '',
+        sections: [
+          {
+            component: typePath,
+            code: errors[typePath].code.toString(),
+            hasData: `${errors[typePath].data !== undefined}`,
+          },
+        ],
+      });
       element.setString(errors[typePath].message);
       element.allowValueWrapping();
       element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
