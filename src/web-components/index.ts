@@ -84,7 +84,7 @@ defineCustomElements();
       }
       case 'update_components': {
         // Checks
-        if (syncRoot.getFocus()?.compare(message.focus) !== true) break;
+        if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) !== true) break;
 
         // Apply changes
         for (const [typePath, value] of Object.entries(message.components)) {

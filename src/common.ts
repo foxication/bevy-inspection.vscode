@@ -31,7 +31,7 @@ export class EntityFocus {
 export type WebviewMessage =
   | {
       cmd: 'mutate_component';
-      data: { focus: EntityFocus; component: string; path: string; value: BrpValue };
+      data: { focus: EntityFocusAsObject; component: string; path: string; value: BrpValue };
     }
   | {
       cmd: 'request_for_registry_schema';
@@ -39,7 +39,7 @@ export type WebviewMessage =
     }
   | {
       cmd: 'ready_for_watch';
-      focus: EntityFocus;
+      focus: EntityFocusAsObject;
       components: TypePath[];
     }
   | {
@@ -63,7 +63,7 @@ export type VSCodeMessage =
     }
   | {
       cmd: 'update_components';
-      focus: EntityFocus;
+      focus: EntityFocusAsObject;
       components: BrpObject;
       removed: TypePath[];
     }

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { BrpObject, TypePath } from './protocol/types';
+import { BrpObject, BrpValue, TypePath } from './protocol/types';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from './common';
 
 export function createComponentsView(
@@ -75,38 +75,46 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
   private changesToApply = 0;
   private changesInProcess = 0;
-  private bufferOfChanges: {
-    [hash: string]: {
-      focus: EntityFocus;
-      components: BrpObject;
-      removed: TypePath[];
-    };
-  } = {};
-  public updateComponentsLazy(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
-    const hash = `${focus.host}@${focus.entityId}`;
-    const access = this.bufferOfChanges[hash] ?? {
-      focus: focus,
-      components: {},
-      removed: [],
-    };
-    for (const key of Object.keys(components)) {
-      access.components[key] = components[key];
-      const found = access.removed.indexOf(key);
-      access.removed.splice(found, found === -1 ? 0 : 1); // component is not removed anymore
+  private focusOfChanges: EntityFocus | undefined;
+  private componentChanges: Map<TypePath, BrpValue | undefined> = new Map();
+  public updateComponentsLazy(
+    focus: EntityFocus,
+    components: BrpObject,
+    removed: TypePath[]
+  ) {
+    if (this.focusOfChanges === undefined || !this.focusOfChanges.compare(focus)) {
+      this.focusOfChanges = focus;
+      this.componentChanges = new Map();
     }
-    access.removed = [...new Set([...access.removed, ...removed])];
-    access.removed.forEach((key) => delete access.components[key]); // component doesn't exist anymore
-    this.bufferOfChanges[hash] = access;
+    for (const [key, value] of Object.entries(components)) this.componentChanges.set(key, value);
+    for (const key of removed) this.componentChanges.set(key, undefined);
     this.changesToApply += 1;
 
-    if (this.changesInProcess === 0) {
+    if (this.changesInProcess === 0 && this.changesToApply > 0) {
       this.changesInProcess = this.changesToApply;
       this.changesToApply = 0;
-      Object.values(this.bufferOfChanges).forEach((v) =>
-        this.updateComponents(v.focus, v.components, v.removed)
-      );
-      this.bufferOfChanges = {};
-      setTimeout(() => (this.changesInProcess = 0), 200);
+      if (this.focusOfChanges !== undefined) {
+        const changes = Object.fromEntries(this.componentChanges.entries());
+        function isComponent(
+          item: [key: string, value: BrpValue | undefined]
+        ): item is [key: string, value: BrpValue] {
+          return item[1] !== undefined;
+        }
+        function isRemoved(
+          item: [key: string, value: BrpValue | undefined]
+        ): item is [key: string, value: undefined] {
+          return item[1] === undefined;
+        }
+        this.updateComponents(
+          this.focusOfChanges,
+          Object.fromEntries(Object.entries(changes).filter((entry) => isComponent(entry))),
+          Object.entries(changes)
+            .filter((entry) => isRemoved(entry))
+            .map((entry) => entry[0])
+        );
+      }
+      this.componentChanges = new Map();
+      setTimeout(() => (this.changesInProcess = 0), 100);
     }
   }
 
@@ -114,7 +122,12 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
-    this.postVSCodeMessage({ cmd: 'update_components', focus, components, removed });
+    this.postVSCodeMessage({
+      cmd: 'update_components',
+      focus: focus.toObject(),
+      components,
+      removed,
+    });
   }
 
   public async resolveWebviewView(
@@ -149,7 +162,10 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'ready_for_watch':
-          this.connections.startComponentWatch(message.focus, message.components);
+          this.connections.startComponentWatch(
+            EntityFocus.fromObject(message.focus),
+            message.components
+          );
           break;
         case 'write_clipboard':
           vscode.env.clipboard.writeText(message.text);
