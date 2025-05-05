@@ -1,18 +1,28 @@
-import { SyncNode } from './section-sync';
+import { DataWithAccess, EnumAsStringSync } from './section-components';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
-import { BrpValue } from '../protocol/types';
-import { MutationConsent } from './visual';
+import { BrpValue, TypePath } from '../protocol/types';
 
+const HTML_BOOLEAN_NAME = 'visual-boolean';
 const HTML_MERGED_NAME = 'visual-merged';
-const HTML_JSON_NAME = 'visual-json';
+const HTML_NUMBER_NAME = 'visual-number';
+const HTML_SELECT_NAME = 'visual-select';
 const HTML_STRING_NAME = 'visual-string';
 
 export function defineCustomElements() {
+  customElements.define(HTML_BOOLEAN_NAME, HTMLBoolean);
   customElements.define(HTML_MERGED_NAME, HTMLMerged);
-  customElements.define(HTML_JSON_NAME, HTMLJson);
+  customElements.define(HTML_NUMBER_NAME, HTMLNumber);
+  customElements.define(HTML_SELECT_NAME, HTMLSelect);
   customElements.define(HTML_STRING_NAME, HTMLString);
 }
+
+export type TooltipData = {
+  label: string;
+  componentPath: TypePath;
+  mutationPath: string;
+  sections: { [key: string]: string }[];
+};
 
 export class HTMLMerged extends HTMLElement {
   htmlLeft: HTMLSpanElement;
@@ -33,14 +43,75 @@ export class HTMLMerged extends HTMLElement {
   set label(text: string) {
     this.htmlLeft.textContent = text;
   }
-  set tooltip(text: string) {
-    this.htmlLeft.title = text;
+  setTooltipFrom(data: TooltipData) {
+    let result = data.label + '\n\n';
+    result += `componentPath = ${data.componentPath}\n`;
+    result += `mutationPath = ${data.mutationPath}\n\n`;
+    result += data.sections
+      .map((section) =>
+        Object.entries(section)
+          .map(([key, value]) => key + ' = ' + value)
+          .join('\n')
+      )
+      .join('\n\n');
+    this.htmlLeft.title = result;
   }
-  set brpValue(v: BrpValue) {
+  setValue(v: string | number | boolean | null) {
+    function createValueElement(value: string | number | boolean | null) {
+      switch (typeof value) {
+        case 'string': {
+          const result = HTMLString.create();
+          result.setValue(value);
+          return result;
+        }
+        case 'number': {
+          const result = HTMLNumber.create();
+          result.setValue(value);
+          return result;
+        }
+        case 'boolean': {
+          const result = HTMLBoolean.create();
+          result.setValue(value);
+          return result;
+        }
+        default: {
+          const result = HTMLString.create();
+          result.setValue('NULL');
+          return result;
+        }
+      }
+    }
+    if (this.htmlRight === undefined) {
+      // Move label to left
+      this.htmlLeft.classList.add('left-side');
+
+      // Initialize
+      this.htmlRight = { wrapper: document.createElement('div'), value: createValueElement(v) };
+      this.htmlRight.wrapper.classList.add('right-side');
+
+      // Structurize
+      this.htmlRight.wrapper.append(this.htmlRight.value);
+      this.shadowRoot?.append(this.htmlRight.wrapper);
+      return;
+    }
+    if (typeof v !== typeof this.htmlRight.value.buffer) {
+      const replacement = createValueElement(v);
+      this.htmlRight.value.replaceWith(replacement);
+      this.htmlRight.value = replacement;
+      return;
+    }
+    this.htmlRight.value.setValue(v);
+  }
+  set options(sync: EnumAsStringSync) {
     if (this.htmlRight === undefined) {
       // Move label to left & create elements
       this.htmlLeft.classList.add('left-side');
-      this.htmlRight = { wrapper: document.createElement('div'), value: HTMLString.create() };
+      const selectElement = HTMLSelect.create();
+      selectElement.setAvailable(sync.getAvailableVariants(), sync.getVariant());
+      this.htmlRight = {
+        wrapper: document.createElement('div'),
+        value: selectElement,
+      };
       this.htmlRight.wrapper.classList.add('right-side');
 
       // Structurize
@@ -48,34 +119,8 @@ export class HTMLMerged extends HTMLElement {
       this.shadowRoot?.append(this.htmlRight.wrapper);
     }
     if (this.htmlRight.value instanceof HTMLString) {
-      if (typeof v === 'string') {
-        this.htmlRight.value.value = v;
-      } else {
-        const replacement = HTMLJson.create();
-        replacement.value = v;
-        replacement.mutability = this.htmlRight.value.mutability;
-        this.htmlRight.value.replaceWith(replacement);
-        this.htmlRight.value = replacement;
-      }
-    } /* HTMLJson */ else {
-      if (typeof v === 'string') {
-        const replacement = HTMLString.create();
-        replacement.value = v;
-        replacement.mutability = this.htmlRight.value.mutability;
-        this.htmlRight.value.replaceWith(replacement);
-        this.htmlRight.value = replacement;
-      } else {
-        this.htmlRight.value.value = v;
-      }
+      this.htmlRight.value.setValue(sync.getVariant() ?? '...');
     }
-  }
-  set onEnumEdit(sync: SyncNode) {
-    if (this.htmlIcons.enum === undefined) {
-      this.htmlIcons.enum = document.createElement('vscode-icon');
-      this.htmlIcons.enum.setAttribute('name', 'symbol-property');
-      this.htmlIcons.wrapper.append(this.htmlIcons.enum);
-    }
-    this.htmlIcons.enum.onclick = () => {}; // TODO
   }
   private createConfiguredChevron() {
     const result = document.createElement('vscode-icon');
@@ -83,29 +128,39 @@ export class HTMLMerged extends HTMLElement {
     result.setAttribute('class', 'rotatable');
     return result;
   }
-  set onExpansion(sync: SyncNode) {
+  makeExpandable(sync: DataWithAccess) {
+    // create element
+    this.htmlIcons.expand?.remove();
+    this.htmlIcons.expand = this.createConfiguredChevron();
+    this.htmlIcons.wrapper.append(this.htmlIcons.expand);
+
+    // implement
     this.onclick = () => {
       if (this.htmlIcons.expand === undefined) return; // skip - no children
-      const state = this.htmlIcons.expand.getAttribute('name');
-      if (state === 'chevron-up') {
-        this.htmlIcons.expand.setAttribute('name', 'chevron-down');
-        sync.hideChildren();
-      }
-      if (state === 'chevron-down') {
-        this.htmlIcons.expand.setAttribute('name', 'chevron-up');
-        sync.showChildren();
+      switch (this.expansionState) {
+        case 'expanded':
+          this.htmlIcons.expand.setAttribute('name', 'chevron-down');
+          sync.children.forEach((node) => node.visual.hide());
+          break;
+        case 'disabled':
+        case 'collapsed':
+          this.htmlIcons.expand.setAttribute('name', 'chevron-up');
+          sync.children.forEach((node) => node.visual.show());
+          break;
       }
     };
   }
-  set isExpandable(is: boolean) {
-    if (is) {
-      this.htmlIcons.expand?.remove();
-      this.htmlIcons.expand = this.createConfiguredChevron();
-      this.htmlIcons.wrapper.append(this.htmlIcons.expand);
-    } else {
-      this.htmlIcons.expand?.remove();
-      this.htmlIcons.expand = undefined;
-    }
+  removeExpansibility() {
+    this.onclick = () => {};
+    this.htmlIcons.expand?.remove();
+    this.htmlIcons.expand = undefined;
+  }
+  get expansionState(): 'expanded' | 'collapsed' | 'disabled' {
+    if (this.htmlIcons.expand === undefined) return 'disabled';
+    const state = this.htmlIcons.expand.getAttribute('name');
+    if (state === 'chevron-up') return 'expanded';
+    if (state === 'chevron-down') return 'collapsed';
+    return 'expanded';
   }
   get isExpandable() {
     return this.htmlIcons.expand !== undefined;
@@ -113,7 +168,11 @@ export class HTMLMerged extends HTMLElement {
   allowValueWrapping() {
     this.htmlRight?.value.allowWrapping();
   }
-  vscodeContext(data: { [key: string]: string }) {
+  vscodeContext(data: { [key: string]: string | undefined }) {
+    const result: { [key: string]: string } = {};
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) result[key] = value;
+    });
     this.setAttribute('data-vscode-context', JSON.stringify(data));
   }
 
@@ -142,7 +201,7 @@ export class HTMLMerged extends HTMLElement {
 abstract class HTMLMutatable<T> extends HTMLElement {
   private _buffer: T;
   private _inEdit: boolean = false;
-  private _mutability: MutationConsent | undefined;
+  private _mutability: ((v: BrpValue) => void) | undefined;
 
   constructor(defaultValue: T) {
     super();
@@ -158,62 +217,62 @@ abstract class HTMLMutatable<T> extends HTMLElement {
   set inEdit(b: boolean) {
     this._inEdit = b;
   }
-  set value(v: T) {
+  setValue(v: T) {
     this._buffer = v;
-    if (!this.inEdit) this.setTextFromBuffer();
+    if (!this.inEdit) this.renderValueFromBuffer();
   }
-  set mutability(m: MutationConsent) {
-    this._mutability = m;
+  set mutability(f: (v: BrpValue) => void) {
+    this._mutability = f;
     this.allowEditing();
   }
 
-  abstract setTextFromBuffer(): void;
+  abstract renderValueFromBuffer(): void;
   abstract allowEditing(): void;
   mutate(value: BrpValue) {
-    this._mutability?.mutate(value);
+    if (this._mutability !== undefined) this._mutability(value);
   }
   abstract allowWrapping(): void;
 }
 
-export class HTMLJson extends HTMLMutatable<BrpValue> {
-  private jsonElement: HTMLDivElement;
+export class HTMLNumber extends HTMLMutatable<BrpValue> {
+  private numberElement: HTMLDivElement;
 
   static create() {
-    return document.createElement(HTML_JSON_NAME) as HTMLJson;
+    return document.createElement(HTML_NUMBER_NAME) as HTMLNumber;
   }
 
   constructor() {
     super(null);
-    this.jsonElement = document.createElement('div');
+    this.numberElement = document.createElement('div');
 
     // Interactions
-    this.jsonElement.onfocus = () => {
+    this.numberElement.onfocus = () => {
       this.inEdit = true;
       this.setAttribute('focused', '');
     };
-    this.jsonElement.onkeydown = (e) => {
+    this.numberElement.onkeydown = (e) => {
+      // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.setTextFromBuffer();
-        this.jsonElement.blur();
+        this.renderValueFromBuffer();
+        this.numberElement.blur();
         e.preventDefault();
       }
 
       // apply changes
       if (!(e.shiftKey || e.ctrlKey) && e.key === 'Enter') {
         try {
-          const parsed = JSON.parse(this.jsonElement.innerText);
+          const parsed = JSON.parse(this.numberElement.innerText);
           this.mutate(parsed);
         } catch {
           console.error(`Error in parsing brpValue`);
         }
-        this.setTextFromBuffer();
-        this.jsonElement.blur();
+        this.numberElement.blur();
       }
     };
-    this.jsonElement.onblur = () => {
+    this.numberElement.onblur = () => {
       this.inEdit = false;
-      this.setTextFromBuffer();
-      this.jsonElement.scrollTo(0, 0);
+      this.renderValueFromBuffer();
+      this.numberElement.scrollTo(0, 0);
       this.removeAttribute('focused');
     };
   }
@@ -222,14 +281,14 @@ export class HTMLJson extends HTMLMutatable<BrpValue> {
     if (this.shadowRoot !== null) return; // already exists
     const shadow = this.attachShadow({ mode: 'open' });
     shadow.adoptedStyleSheets = [VslStyles.editableText];
-    shadow.append(this.jsonElement);
+    shadow.append(this.numberElement);
   }
 
-  setTextFromBuffer() {
-    this.jsonElement.innerText = JSON.stringify(this.buffer, null, 4);
+  renderValueFromBuffer() {
+    this.numberElement.innerText = JSON.stringify(this.buffer, null, 4);
   }
   allowEditing() {
-    this.jsonElement.contentEditable = 'plaintext-only';
+    this.numberElement.contentEditable = 'plaintext-only';
   }
   allowWrapping() {
     // skip
@@ -253,8 +312,9 @@ export class HTMLString extends HTMLMutatable<string> {
       this.setAttribute('focused', '');
     };
     this.textElement.onkeydown = (e) => {
+      // unfocus without changes
       if (e.key === 'Escape' || e.key === 'Esc') {
-        this.setTextFromBuffer();
+        this.renderValueFromBuffer();
         this.textElement.blur();
         e.preventDefault();
       }
@@ -267,7 +327,6 @@ export class HTMLString extends HTMLMutatable<string> {
         } catch {
           /* empty */
         }
-        this.setTextFromBuffer();
         this.textElement.blur();
       }
     };
@@ -286,7 +345,7 @@ export class HTMLString extends HTMLMutatable<string> {
     shadow.append(this.textElement);
   }
 
-  setTextFromBuffer() {
+  renderValueFromBuffer() {
     this.textElement.innerText = this.buffer;
   }
   allowEditing() {
@@ -295,5 +354,97 @@ export class HTMLString extends HTMLMutatable<string> {
   allowWrapping(): void {
     this.textElement.style.textWrap = 'wrap';
     this.textElement.style.wordBreak = 'break-all';
+  }
+}
+
+export class HTMLBoolean extends HTMLMutatable<boolean> {
+  private boolElement: HTMLDivElement;
+
+  static create() {
+    return document.createElement(HTML_BOOLEAN_NAME) as HTMLBoolean;
+  }
+
+  constructor() {
+    super(false);
+    this.boolElement = document.createElement('div');
+
+    this.boolElement.onclick = () => {
+      this.mutate(!this.buffer);
+    };
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return; // already exists
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.editableText];
+    shadow.append(this.boolElement);
+  }
+
+  renderValueFromBuffer() {
+    this.boolElement.innerText = this.buffer ? 'True' : 'False';
+  }
+  allowEditing() {}
+  allowWrapping(): void {}
+}
+
+export class HTMLSelect extends HTMLMutatable<string> {
+  private selectElement: HTMLSelectElement;
+  private selectedVariant: HTMLOptionElement;
+  private availableVariants: { [variant: string]: HTMLOptionElement };
+
+  static create() {
+    return document.createElement(HTML_SELECT_NAME) as HTMLSelect;
+  }
+
+  constructor() {
+    super('');
+    const defaultVariant = 'undefined';
+    this.selectedVariant = document.createElement('option');
+    this.selectedVariant.value = defaultVariant;
+    this.selectedVariant.textContent = defaultVariant;
+
+    this.availableVariants = { [defaultVariant]: this.selectedVariant };
+
+    this.selectElement = document.createElement('select');
+    this.selectElement.replaceChildren(...Object.values(this.availableVariants));
+    this.selectElement.onchange = () => {
+      this.mutate(this.selectElement.value);
+    };
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return; // already exists
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.select];
+    shadow.append(this.selectElement);
+  }
+
+  renderValueFromBuffer() {
+    this.selectElement.innerText = this.buffer;
+  }
+  allowEditing() {
+    // Do nothing
+  }
+  allowWrapping(): void {
+    // Do nothing
+  }
+  setAvailable(available: string[], selection?: string) {
+    if (available.length < 1) return console.error(`Cannot set empty variants`);
+    this.availableVariants = available.reduce((acc, variant) => {
+      const element = document.createElement('option');
+      element.value = variant;
+      element.textContent = variant;
+      acc[variant] = element;
+      return acc;
+    }, {} as typeof this.availableVariants);
+    this.selectElement.replaceChildren(...Object.values(this.availableVariants));
+    this.select(selection ?? available[0]);
+  }
+  select(selection: string) {
+    if (!Object.keys(this.availableVariants).includes(selection)) {
+      return console.error(`No such variant in available`);
+    }
+    this.selectElement.value = selection;
+    this.selectedVariant = this.availableVariants[selection];
   }
 }

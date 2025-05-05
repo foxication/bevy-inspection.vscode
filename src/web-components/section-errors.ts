@@ -1,3 +1,4 @@
+import { forcedShortPath } from '../common';
 import { BrpResponseErrors, BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 
@@ -31,14 +32,21 @@ export class SectionErrors {
     let anchor = this.title as HTMLElement;
     for (const typePath of Object.keys(errors)) {
       const element = new HTMLMerged();
-      const shortPath = this.shortPath(typePath);
+      const shortPath = forcedShortPath(typePath);
       element.label = shortPath;
-      element.tooltip =
-        `label: ${shortPath}\n` +
-        `type: ${typePath}\n` +
-        `code: ${errors[typePath].code}\n` +
-        `with_data: ${errors[typePath].data !== undefined}`;
-      element.brpValue = errors[typePath].message;
+      element.setTooltipFrom({
+        label: shortPath,
+        componentPath: typePath,
+        mutationPath: '',
+        sections: [
+          {
+            component: typePath,
+            code: errors[typePath].code.toString(),
+            hasData: `${errors[typePath].data !== undefined}`,
+          },
+        ],
+      });
+      element.setValue(errors[typePath].message);
       element.allowValueWrapping();
       element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
 
@@ -64,11 +72,5 @@ export class SectionErrors {
     let result = 'ERRORS:\n';
     for (const key of Object.keys(errors)) result += spaced(key) + ' ' + errors[key].message + '\n';
     return result;
-  }
-
-  private shortPath(typePath: TypePath): string {
-    if (typePath === '') return typePath;
-    const segments = typePath.split('<')[0].split('::');
-    return segments[segments.length - 1];
   }
 }

@@ -6,8 +6,9 @@ import {
   EntityElement,
   HierarchyElement,
 } from './hierarchyData';
-import { ConnectionList, EntityFocus } from './connection-list';
+import { ConnectionList } from './connection-list';
 import { Connection } from './connection';
+import { EntityFocus } from './common';
 
 // Context
 function areThereConnections(value: boolean) {

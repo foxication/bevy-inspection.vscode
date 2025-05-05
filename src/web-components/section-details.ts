@@ -1,4 +1,4 @@
-import { EntityFocus } from '../connection-list';
+import { EntityFocus } from '../common';
 import { HTMLMerged } from './elements';
 
 export class SectionDetails {
@@ -22,7 +22,7 @@ export class SectionDetails {
 
   update(focus: EntityFocus) {
     this.section.removeAttribute('style');
-    this.connection.brpValue = focus.host;
-    this.entityId.brpValue = focus.entityId.toString();
+    this.connection.setValue(focus.host);
+    this.entityId.setValue(focus.entityId.toString());
   }
 }

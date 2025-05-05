@@ -1,10 +1,13 @@
 function dontIndent(str: string) {
   return ('' + str).replace(/(\n)\s+/g, '$1');
 }
+function createStyleSheet(text: string): CSSStyleSheet {
+  const result = new CSSStyleSheet();
+  result.replaceSync(dontIndent(text));
+  return result;
+}
 
-export const merged = new CSSStyleSheet();
-merged.replaceSync(
-  dontIndent(`
+export const merged = createStyleSheet(`
   :host {
     border-radius: 2px;
     display: flex;
@@ -36,12 +39,9 @@ merged.replaceSync(
   .icons {
     display: flex;
   }
-`)
-);
+`);
 
-export const buttons = new CSSStyleSheet();
-buttons.replaceSync(
-  dontIndent(`
+export const buttons = createStyleSheet(`
   .button-collection {
     background-color: var(--vscode-settings-textInputBackground);
     border-radius: inherit;
@@ -94,11 +94,8 @@ buttons.replaceSync(
   :host(:hover) > .autohide {
     visibility: inherit;
   }
-`)
-);
-export const editableText = new CSSStyleSheet();
-editableText.replaceSync(
-  dontIndent(`
+`);
+export const editableText = createStyleSheet(`
   div {
     background-color: var(--vscode-settings-textInputBackground, #313131);
     border-radius: inherit;
@@ -122,9 +119,27 @@ editableText.replaceSync(
   div::-webkit-scrollbar { 
     display: none;
   }
-`)
-);
-export const hostIsContent = new CSSStyleSheet();
-hostIsContent.replaceSync(':host { display: contents; }');
-export const wideCheckbox = new CSSStyleSheet();
-wideCheckbox.replaceSync('vscode-checkbox { flex: auto; }');
+`);
+export const select = createStyleSheet(`
+  select {
+    appearance: none;
+    background-color: var(--vscode-settings-textInputBackground, #313131);
+    border-radius: inherit;
+    border: 0px;
+    box-sizing: border-box;
+    color: var(--vscode-settings-textInputForeground, #cccccc);
+    display: block;
+    font-family: var(--vscode-font-family, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    font-weight: var(--vscode-font-weight, normal);
+    line-height: 20px;
+    min-width: 100%;
+    padding: 1px 4px;
+    width: fit-content;
+  }
+  select:focus {
+    outline: none;
+  }
+`);
+export const hostIsContent = createStyleSheet(':host { display: contents; }');
+export const wideCheckbox = createStyleSheet('vscode-checkbox { flex: auto; }');
