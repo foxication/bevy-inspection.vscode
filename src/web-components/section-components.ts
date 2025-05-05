@@ -1,5 +1,5 @@
 import { postWebviewMessage } from '.';
-import { EntityFocus } from '../common';
+import { EntityFocus, forcedShortPath } from '../common';
 import {
   BrpArraySchema,
   BrpComponentRegistry,
@@ -840,9 +840,4 @@ export class ErrorData extends DataWithAccess {
 
 export function resolveTypePathFromRef(ref: TypePathReference): TypePath {
   return ref.type.$ref.slice('#/$defs/'.length);
-}
-
-function forcedShortPath(typePath: string) {
-  const splitted = typePath.split('<')[0].split('::');
-  return splitted[splitted.length - 1];
 }

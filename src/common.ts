@@ -75,3 +75,8 @@ export type VSCodeMessage =
       cmd: 'copy_value_to_clipboard';
       path: string;
     };
+
+export function forcedShortPath(typePath: string) {
+  const splitted = typePath.split('<')[0].split('::');
+  return splitted[splitted.length - 1];
+}

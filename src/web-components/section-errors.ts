@@ -1,3 +1,4 @@
+import { forcedShortPath } from '../common';
 import { BrpResponseErrors, BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 
@@ -31,7 +32,7 @@ export class SectionErrors {
     let anchor = this.title as HTMLElement;
     for (const typePath of Object.keys(errors)) {
       const element = new HTMLMerged();
-      const shortPath = this.shortPath(typePath);
+      const shortPath = forcedShortPath(typePath);
       element.label = shortPath;
       element.tooltip =
         `label: ${shortPath}\n` +
@@ -64,11 +65,5 @@ export class SectionErrors {
     let result = 'ERRORS:\n';
     for (const key of Object.keys(errors)) result += spaced(key) + ' ' + errors[key].message + '\n';
     return result;
-  }
-
-  private shortPath(typePath: TypePath): string {
-    if (typePath === '') return typePath;
-    const segments = typePath.split('<')[0].split('::');
-    return segments[segments.length - 1];
   }
 }
