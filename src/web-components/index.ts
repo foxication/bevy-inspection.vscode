@@ -28,6 +28,9 @@ defineCustomElements();
   if (errorsHTML === null) return console.error('#error-list is not found in DOM');
   const errorsSection = new SectionErrors(errorsHTML);
 
+  const onStartHTML = document.querySelector('#start-information') as HTMLDListElement;
+  if (onStartHTML === null) return console.error('#start-information is not found in DOM');
+
   // buffer
   let buffer: { focus: EntityFocus; data: BrpObject } | undefined = undefined;
   const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
@@ -80,6 +83,9 @@ defineCustomElements();
 
         // Errors
         errorsSection.update(message.errors);
+
+        // Start Information
+        onStartHTML.style.display = 'none';
         break;
       }
       case 'update_components': {

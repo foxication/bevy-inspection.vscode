@@ -168,6 +168,7 @@ export class ComponentListData extends RootOfData {
   constructor(public section: HTMLElement) {
     super();
     this.visual = new ComponentListVisual(this, section);
+    this.section.style.display = 'none';
     return this;
   }
 
