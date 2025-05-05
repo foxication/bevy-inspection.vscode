@@ -255,6 +255,36 @@ export abstract class DataWithAccess extends RootOfData {
     }
     return undefined;
   }
+  getValueAsNull(): null | undefined {
+    const result = this.getValue();
+    if (result === null) return result;
+    return undefined;
+  }
+  getValueAsNumber(): number | undefined {
+    const result = this.getValue();
+    if (typeof result === 'number') return result;
+    return undefined;
+  }
+  getValueAsString(): string | undefined {
+    const result = this.getValue();
+    if (typeof result === 'string') return result;
+    return undefined;
+  }
+  getValueAsBoolean(): boolean | undefined {
+    const result = this.getValue();
+    if (typeof result === 'boolean') return result;
+    return undefined;
+  }
+  getValueAsArray(): BrpValue[] | undefined {
+    const result = this.getValue();
+    if (result !== undefined && isBrpArray(result)) return result;
+    return undefined;
+  }
+  getValueAsObject(): BrpObject | undefined {
+    const result = this.getValue();
+    if (result !== undefined && isBrpObject(result)) return result;
+    return undefined;
+  }
   getPath(): [string, ...PathSegment[]] {
     if (this.parent instanceof ComponentListData) {
       if (this.segment === undefined) {
@@ -439,9 +469,9 @@ export class ArraySync extends DataSyncWithSchema {
     this.visual = new ArrayVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
+    const value = this.getValueAsArray();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
-    if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
+    if (value === undefined || childSchema === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
@@ -497,9 +527,9 @@ export class ListSync extends DataSyncWithSchema {
     this.visual = new ListVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
+    const value = this.getValueAsArray();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
-    if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
+    if (value === undefined || childSchema === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
@@ -521,9 +551,9 @@ export class MapSync extends DataSyncWithSchema {
     this.visual = new MapVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
+    const value = this.getValueAsObject();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.valueType));
-    if (value === undefined || !isBrpObject(value) || childSchema === undefined) {
+    if (value === undefined || childSchema === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedLabels(Object.keys(value).sort(), (segment, anchor) =>
@@ -545,9 +575,9 @@ export class SetSync extends DataSyncWithSchema {
     this.visual = new SetVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
+    const value = this.getValueAsArray();
     const childSchema = this.getRoot().getSchema(resolveTypePathFromRef(this.schema.items));
-    if (value === undefined || !isBrpArray(value) || childSchema === undefined) {
+    if (value === undefined || childSchema === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
     this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
@@ -574,8 +604,8 @@ export class StructSync extends DataSyncWithSchema {
     if (properties === undefined) return;
 
     // Exception
-    const value = this.getValue();
-    if (value === undefined || !isBrpObject(value)) {
+    const value = this.getValueAsObject();
+    if (value === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
 
@@ -627,8 +657,8 @@ export class TupleSync extends DataSyncWithSchema {
     if (prefixItems.length === 1) return this.children.sync();
 
     // exception: BrpValue is not array
-    const value = this.getValue();
-    if (value === undefined || !isBrpArray(value)) {
+    const value = this.getValueAsArray();
+    if (value === undefined) {
       return console.error(`Cannot read a BrpValue: ${this.getDebugInfo()}`);
     }
 
@@ -718,8 +748,8 @@ export class NullSync extends BrpValueSync {
     this.visual = new JsonNullVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
-    this.visual.set(value === null ? value : null);
+    const value = this.getValueAsNull();
+    if (value !== undefined) this.visual.set(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
@@ -735,8 +765,8 @@ export class StringSync extends BrpValueSync {
     this.visual = new JsonStringVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
-    this.visual.set(typeof value === 'string' ? value : null);
+    const value = this.getValueAsString();
+    if (value !== undefined) this.visual.set(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
@@ -752,8 +782,8 @@ export class NumberSync extends BrpValueSync {
     this.visual = new JsonNumberVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
-    this.visual.set(typeof value === 'number' ? value : null);
+    const value = this.getValueAsNumber();
+    if (value !== undefined) this.visual.set(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
@@ -786,8 +816,8 @@ export class JsonObjectSync extends BrpValueSync {
     this.visual = new JsonObjectVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
-    if (value !== undefined && isBrpObject(value)) {
+    const value = this.getValueAsObject();
+    if (value !== undefined) {
       this.children.updateOnOrderedLabels(Object.keys(value).sort(), (segment, anchor) =>
         createBrpValueSync(this, segment, value[segment], anchor)
       );
@@ -808,8 +838,8 @@ export class JsonArraySync extends BrpValueSync {
     this.visual = new JsonArrayVisual(this, anchor);
   }
   sync(): void {
-    const value = this.getValue();
-    if (value !== undefined && isBrpArray(value)) {
+    const value = this.getValueAsArray();
+    if (value !== undefined) {
       this.children.updateOnOrderedArray(value.length, (segment, anchor) =>
         createBrpValueSync(this, segment, value[segment], anchor)
       );
