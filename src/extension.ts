@@ -117,6 +117,8 @@ export function activate(context: vscode.ExtensionContext) {
             connections.tryCreateConnection('last');
           }
         });
+
+      // this seems to be workaround as connection status is not binded between connection and view
       if (connections.focus?.host === connection.getHost()) {
         componentsView.description = 'Disconnected';
         connections.stopComponentWatch();
