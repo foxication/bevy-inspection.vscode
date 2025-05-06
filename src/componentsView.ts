@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { BrpObject, BrpValue, TypePath } from './protocol/types';
+import { BrpObject, TypePath } from './protocol/types';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from './common';
 
 export function createComponentsView(
@@ -73,52 +73,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private changesToApply = 0;
-  private changesInProcess = 0;
-  private focusOfChanges: EntityFocus | undefined;
-  private componentChanges: Map<TypePath, BrpValue | undefined> = new Map();
-  public updateComponentsLazy(
-    focus: EntityFocus,
-    components: BrpObject,
-    removed: TypePath[]
-  ) {
-    if (this.focusOfChanges === undefined || !this.focusOfChanges.compare(focus)) {
-      this.focusOfChanges = focus;
-      this.componentChanges = new Map();
-    }
-    for (const [key, value] of Object.entries(components)) this.componentChanges.set(key, value);
-    for (const key of removed) this.componentChanges.set(key, undefined);
-    this.changesToApply += 1;
-
-    if (this.changesInProcess === 0 && this.changesToApply > 0) {
-      this.changesInProcess = this.changesToApply;
-      this.changesToApply = 0;
-      if (this.focusOfChanges !== undefined) {
-        const changes = Object.fromEntries(this.componentChanges.entries());
-        function isComponent(
-          item: [key: string, value: BrpValue | undefined]
-        ): item is [key: string, value: BrpValue] {
-          return item[1] !== undefined;
-        }
-        function isRemoved(
-          item: [key: string, value: BrpValue | undefined]
-        ): item is [key: string, value: undefined] {
-          return item[1] === undefined;
-        }
-        this.updateComponents(
-          this.focusOfChanges,
-          Object.fromEntries(Object.entries(changes).filter((entry) => isComponent(entry))),
-          Object.entries(changes)
-            .filter((entry) => isRemoved(entry))
-            .map((entry) => entry[0])
-        );
-      }
-      this.componentChanges = new Map();
-      setTimeout(() => (this.changesInProcess = 0), 100);
-    }
-  }
-
-  private updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
+  updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
     if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
