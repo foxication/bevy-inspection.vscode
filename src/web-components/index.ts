@@ -66,7 +66,7 @@ defineCustomElements();
         buffer = { focus: EntityFocus.fromObject(message.focus), data: message.components };
 
         // Details
-        detailsSection.update(buffer.focus);
+        detailsSection.update(buffer.focus, 'online');
 
         // Components
         const registry = registryBuffer.get(message.focus.host);
@@ -86,6 +86,16 @@ defineCustomElements();
 
         // Start Information
         onStartHTML.style.display = 'none';
+        break;
+      }
+      case 'update_all_offline': {
+        const focus = EntityFocus.fromObject(message.focus);
+        if (buffer !== undefined) buffer.focus = focus;
+        detailsSection.update(focus, 'offline');
+        if (syncRoot.getFocus()?.compare(focus) !== true) {
+          syncRoot.syncRoot({}, focus, {});
+          errorsSection.update({});
+        }
         break;
       }
       case 'update_components': {

@@ -28,7 +28,7 @@ export class ConnectionList {
   private removedEmitter = new vscode.EventEmitter<Connection>();
   readonly onRemoved = this.removedEmitter.event;
 
-  private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | undefined>();
+  private focusChangedEmitter = new vscode.EventEmitter<EntityFocus>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
 
   private getWatchResultEmitter = new vscode.EventEmitter<[EntityFocus, BrpComponentRegistry]>();
@@ -79,8 +79,8 @@ export class ConnectionList {
     });
   }
 
-  public async updateFocus(newFocus: EntityFocus | undefined) {
-    if (newFocus instanceof EntityFocus && (this._focus?.compare(newFocus) ?? false)) return; // skip if no changes
+  public async updateFocus(newFocus: EntityFocus) {
+    if (this._focus instanceof EntityFocus && this._focus.compare(newFocus)) return; // skip if no changes
     this._focus = newFocus;
     this.focusChangedEmitter.fire(newFocus);
   }
@@ -106,7 +106,7 @@ export class ConnectionList {
     const srcName = `${this.constructor.name}.watchingController`;
 
     // Stop previous watch
-    clearInterval(this.watchId);
+    this.stopComponentWatch();
 
     // Get connection
     const protocol = this.get(focus.host)?.getProtocol();

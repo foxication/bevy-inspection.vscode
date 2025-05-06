@@ -120,14 +120,14 @@ export function activate(context: vscode.ExtensionContext) {
 
       // this seems to be workaround as connection status is not binded between connection and view
       if (connections.focus?.host === connection.getHost()) {
-        componentsView.description = 'Disconnected';
         connections.stopComponentWatch();
+        componentsView.updateDescription(false);
       }
     });
 
     connection.onReconnection(() => {
       hierarchyData.update(undefined);
-      if (connections.focus?.host === connection.getHost()) componentsView.description = undefined;
+      if (connections.focus?.host === connection.getHost()) componentsView.updateDescription(true);
       if (connections.focus !== undefined) componentsView.updateAll(connections.focus);
     });
   });
@@ -167,8 +167,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   connections.onFocusChanged((focus) => {
     connections.stopComponentWatch();
-    if (focus === undefined) return;
-    const connection = connections.get(focus.host);
-    if (connection?.getNetworkStatus() === 'online') componentsView.updateAll(focus);
+    componentsView.updateAll(focus);
   });
 }

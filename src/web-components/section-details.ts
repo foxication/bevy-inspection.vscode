@@ -20,9 +20,9 @@ export class SectionDetails {
     this.section.append(this.title, this.connection, this.entityId);
   }
 
-  update(focus: EntityFocus) {
+  update(focus: EntityFocus, status: 'online' | 'offline') {
     this.section.removeAttribute('style');
-    this.connection.setValue(focus.host);
+    this.connection.setValue(status === 'online' ? focus.host : 'Offline');
     this.entityId.setValue(focus.entityId.toString());
   }
 }

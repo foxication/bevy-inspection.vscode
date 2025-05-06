@@ -49,9 +49,7 @@ export class Connection {
 
   public disconnect() {
     this.network = 'offline';
-    for (const element of this.entityElements.values()) {
-      element.network = 'offline';
-    }
+    for (const element of this.entityElements.values()) element.network = 'offline';
     this.disconnectionEmitter.fire(this);
   }
 

@@ -56,6 +56,10 @@ export type VSCodeMessage =
       errors: BrpResponseErrors;
     }
   | {
+      cmd: 'update_all_offline';
+      focus: EntityFocusAsObject;
+    }
+  | {
       cmd: 'sync_registry_schema';
       host: string;
       data: BrpRegistrySchema;

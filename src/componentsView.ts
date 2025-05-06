@@ -19,22 +19,27 @@ export function createComponentsView(
 export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private connections: ConnectionList;
   private extensionUri: vscode.Uri;
-  private view?: vscode.WebviewView;
+  private visible?: { view: vscode.WebviewView; focus?: EntityFocus };
 
   constructor(extensionUri: vscode.Uri, connections: ConnectionList) {
     this.connections = connections;
     this.extensionUri = extensionUri;
   }
 
-  set description(text: string | undefined) {
-    if (this.view !== undefined) this.view.description = text;
+  updateDescription(isOnline: boolean) {
+    if (this.visible !== undefined) {
+      this.visible.view.description = isOnline ? undefined : 'Disconnected';
+    }
+  }
+  getFocus() {
+    return this.visible?.focus;
   }
 
   private async postVSCodeMessage(message: VSCodeMessage) {
-    if (this.view === undefined) {
+    if (this.visible === undefined) {
       return console.error(`ComponentsViewProvider.postVSCodeMessage: no view`);
     }
-    await this.view.webview.postMessage(message);
+    await this.visible.view.webview.postMessage(message);
   }
 
   public async syncRegistrySchema(host: string) {
@@ -52,28 +57,40 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   // Called on componentsData.onDidChangeTreeData
-  public async updateAll(focus: EntityFocus): Promise<void> {
-    if (this.view === undefined) return vscode.commands.executeCommand('componentsView.focus');
+  async updateAll(focus: EntityFocus): Promise<void> {
+    if (this.visible === undefined) return vscode.commands.executeCommand('componentsView.focus');
     const connection = this.connections.get(focus.host);
     if (connection === undefined) {
       return console.error(`ComponentsViewProvider.updateAll(): no connection`);
     }
-    
-    this.description = undefined; // remove disconnection status as foucs switched on live entity
 
-    await connection.requestInspectionElements(focus.entityId);
-    const entityData = connection.getInspectionElements();
-    const errorData = connection.getInspectionErrors();
-    this.postVSCodeMessage({
-      cmd: 'update_all',
-      focus: focus.toObject(),
-      components: entityData,
-      errors: errorData,
-    });
+    switch (connection.getNetworkStatus()) {
+      case 'offline': {
+        this.updateDescription(false);
+        this.postVSCodeMessage({
+          cmd: 'update_all_offline',
+          focus: focus.toObject(),
+        });
+        break;
+      }
+      case 'online': {
+        this.updateDescription(true);
+        await connection.requestInspectionElements(focus.entityId);
+        const entityData = connection.getInspectionElements();
+        const errorData = connection.getInspectionErrors();
+        this.postVSCodeMessage({
+          cmd: 'update_all',
+          focus: focus.toObject(),
+          components: entityData,
+          errors: errorData,
+        });
+        break;
+      }
+    }
   }
 
   updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
-    if (this.view === undefined) {
+    if (this.visible === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
     this.postVSCodeMessage({
@@ -126,8 +143,8 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           break;
       }
     });
-    this.view = webviewView;
-    webviewView.onDidDispose(() => (this.view = undefined));
+    this.visible = { view: webviewView };
+    webviewView.onDidDispose(() => (this.visible = undefined));
     if (this.connections.focus !== undefined) this.updateAll(this.connections.focus);
   }
 
