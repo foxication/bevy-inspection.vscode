@@ -64,7 +64,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     await connection.requestInspectionElements(focus.entityId);
     const entityData = connection.getInspectionElements();
     const errorData = connection.getInspectionErrors();
-    // console.log(`SENDING FOCUS: ${focus.compare(focus.clone())}`);
     this.postVSCodeMessage({
       cmd: 'update_all',
       focus: focus.toObject(),
