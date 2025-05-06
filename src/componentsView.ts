@@ -27,9 +27,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   set description(text: string | undefined) {
-    if (this.view !== undefined) {
-      this.view.description = text;
-    }
+    if (this.view !== undefined) this.view.description = text;
   }
 
   private async postVSCodeMessage(message: VSCodeMessage) {
@@ -60,6 +58,8 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     if (connection === undefined) {
       return console.error(`ComponentsViewProvider.updateAll(): no connection`);
     }
+    
+    this.description = undefined; // remove disconnection status as foucs switched on live entity
 
     await connection.requestInspectionElements(focus.entityId);
     const entityData = connection.getInspectionElements();
@@ -128,7 +128,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     });
     this.view = webviewView;
     webviewView.onDidDispose(() => (this.view = undefined));
-    if (this.connections.focus !== null) this.updateAll(this.connections.focus);
+    if (this.connections.focus !== undefined) this.updateAll(this.connections.focus);
   }
 
   private async getHtmlForWebview(webview: vscode.Webview): Promise<string> {

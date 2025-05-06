@@ -14,7 +14,7 @@ export class ConnectionList {
   // Properties
   private connections = new Map<string, Connection>();
   private lastUrl: URL | undefined = undefined;
-  private _focus: EntityFocus | null = null;
+  private _focus: EntityFocus | undefined = undefined;
   private watchId: NodeJS.Timeout | undefined = undefined;
 
   get focus() {
@@ -28,7 +28,7 @@ export class ConnectionList {
   private removedEmitter = new vscode.EventEmitter<Connection>();
   readonly onRemoved = this.removedEmitter.event;
 
-  private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | null>();
+  private focusChangedEmitter = new vscode.EventEmitter<EntityFocus | undefined>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
 
   private getWatchResultEmitter = new vscode.EventEmitter<[EntityFocus, BrpComponentRegistry]>();
@@ -79,27 +79,9 @@ export class ConnectionList {
     });
   }
 
-  public async updateFocus(newFocus: EntityFocus | null) {
-    if (newFocus === this._focus) return; // skip
-    if (newFocus === null) {
-      this._focus = null;
-      this.focusChangedEmitter.fire(null);
-      return; // set focus to null
-    }
-
-    // Check if connection exists and is online
-    const errSrc = 'ConnectionList.updateFocus(): ';
-    const connection = this.connections.get(newFocus.host);
-    if (connection === undefined) return console.error(errSrc + 'no connection');
-    if (connection.getNetworkStatus() !== 'online') {
-      return console.error(errSrc + 'connection is not online');
-    }
-
-    // Change focus
-    this._focus = new EntityFocus(newFocus.host, newFocus.entityId);
-
-    // request data, then emit change
-    await connection.requestInspectionElements(newFocus.entityId);
+  public async updateFocus(newFocus: EntityFocus | undefined) {
+    if (newFocus instanceof EntityFocus && (this._focus?.compare(newFocus) ?? false)) return; // skip if no changes
+    this._focus = newFocus;
     this.focusChangedEmitter.fire(newFocus);
   }
 

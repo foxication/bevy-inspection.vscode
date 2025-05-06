@@ -126,7 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
     connection.onReconnection(() => {
       hierarchyData.update(undefined);
       if (connections.focus?.host === connection.getHost()) componentsView.description = undefined;
-      if (connections.focus !== null) componentsView.updateAll(connections.focus);
+      if (connections.focus !== undefined) componentsView.updateAll(connections.focus);
     });
   });
   connections.onRemoved(() => {
@@ -153,9 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
       case 1: {
         const selection = event.selection[0];
         if (!(selection instanceof EntityElement)) break;
-        if (connections.get(selection.host)?.getNetworkStatus() !== 'online') break;
         connections.updateFocus(new EntityFocus(selection.host, selection.id));
-        componentsView.description = undefined;
         break;
       }
       default: {
@@ -167,6 +165,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   connections.onFocusChanged((focus) => {
     connections.stopComponentWatch();
-    if (focus !== null) componentsView.updateAll(focus);
+    if (focus === undefined) return;
+    const connection = connections.get(focus.host);
+    if (connection?.getNetworkStatus() === 'online') componentsView.updateAll(focus);
   });
 }
