@@ -65,39 +65,34 @@ async function requestStream<R>(
   method: string,
   params: unknown,
   signal: AbortSignal,
-  observer: (arg: R) => void
+  observer: (arg: R) => Promise<void>
 ): Promise<null | BrpError> {
-  let response;
   try {
-    response = await fetch(url, requestWrapper(id, method, params, signal));
-    if (!response.body) return null;
-  } catch (reason) {
-    if (reason instanceof Error && reason.message === 'fetch failed') return 'disconnection';
-    return 'unspecified_error';
-  }
+    const response = await fetch(url, requestWrapper(id, method, params, signal));
+    if (!response.ok || response.body === null) return 'unspecified_error';
 
-  try {
     // https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_streams
     const reader = response.body.getReader();
     while (true) {
       const { done, value } = await reader.read();
+      if (done) break;
       const decoded = decoder.decode(value);
       const parsed = JSON.parse(decoded.substring(decoded.indexOf('{')));
-      if (parsed.result) observer(parsed.result);
-      if (done) break;
+      await observer(parsed.result);
     }
-  } catch {
-    /* ignore */
+    return null;
+  } catch (reason) {
+    if (reason instanceof Error && reason.message === 'fetch failed') return 'disconnection';
+    return 'unspecified_error';
   }
-  return null;
 }
 
 abstract class BevyRemoteProtocolEssential {
-  private id: number = 0;
+  private id: number = 1;
   constructor(public url: URL) {}
 
   get nextId() {
-    return this.id++; // starting from 0
+    return this.id++; // starting from 1
   }
 
   async rawRequest<R>(method: string, params?: unknown) {
@@ -108,7 +103,7 @@ abstract class BevyRemoteProtocolEssential {
     method: string,
     params: unknown,
     signal: AbortSignal,
-    observer: (arg: R) => void
+    observer: (arg: R) => Promise<void>
   ): Promise<null | BrpError> {
     return requestStream<R>(this.url, this.nextId, method, params, signal, observer);
   }
@@ -389,7 +384,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     entity: EntityId,
     components: TypePath[],
     signal: AbortSignal,
-    observer: (arg: BrpGetWatchResult) => void
+    observer: (arg: BrpGetWatchResult) => Promise<void>
   ): Promise<null | BrpError> {
     return this.rawRequestStream(
       'bevy/get+watch',
@@ -421,7 +416,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
     entity: EntityId,
     components: TypePath[],
     signal: AbortSignal,
-    observer: (arg: BrpGetWatchStrictResult) => void
+    observer: (arg: BrpGetWatchStrictResult) => Promise<void>
   ): Promise<null | BrpError> {
     return this.rawRequestStream(
       'bevy/get+watch',
@@ -450,7 +445,7 @@ export class BevyRemoteProtocolV016 extends BevyRemoteProtocolEssential {
    */
   public async listWatch(
     signal: AbortSignal,
-    observer: (arg: BrpListWatchResult) => void,
+    observer: (arg: BrpListWatchResult) => Promise<void>,
     entity?: EntityId
   ): Promise<null | BrpError> {
     return this.rawRequestStream(
