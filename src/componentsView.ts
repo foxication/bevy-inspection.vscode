@@ -89,6 +89,13 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  updateAllAsOffline(focus: EntityFocus) {
+    this.postVSCodeMessage({
+      cmd: 'update_all_offline',
+      focus: focus.toObject(),
+    });
+  }
+
   updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
     if (this.visible === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);

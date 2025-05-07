@@ -122,6 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (connections.focus?.host === connection.getHost()) {
         connections.stopComponentWatch();
         componentsView.updateDescription(false);
+        componentsView.updateAllAsOffline(connections.focus);
       }
     });
 
