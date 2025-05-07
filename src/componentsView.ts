@@ -151,7 +151,10 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       }
     });
     this.visible = { view: webviewView };
-    webviewView.onDidDispose(() => (this.visible = undefined));
+    webviewView.onDidDispose(() => {
+      this.visible = undefined;
+      this.connections.stopComponentWatch(); // if watch is active
+    });
     if (this.connections.focus !== undefined) this.updateAll(this.connections.focus);
   }
 

@@ -88,11 +88,18 @@ defineCustomElements();
       }
       case 'update_all_offline': {
         const focus = EntityFocus.fromObject(message.focus);
+
+        // Details
         detailsSection.update(focus, 'offline');
+
+        // Components + Errors
         if (syncRoot.getFocus()?.compare(focus) !== true) {
           syncRoot.syncRoot({}, focus, {});
           errorsSection.update({});
         }
+        
+        // Start Information
+        onStartHTML.style.display = 'none';
         break;
       }
       case 'update_components': {
