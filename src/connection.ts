@@ -170,13 +170,15 @@ export class Connection {
       title: 'Rename Entity',
       value: element.name,
     }); // Prompt
-    if (newName === undefined) {
-      return 'success'; // ignore bad prompt
+    if (newName === undefined || newName === '') {
+      this.protocol.remove(element.id, ['bevy_ecs::name::Name']);
+      element.name = undefined;
+    } else {
+      const response = await this.protocol.insert(element.id, { 'bevy_ecs::name::Name': newName });
+      if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
+      element.name = newName;
     }
-    const response = await this.protocol.insert(element.id, { 'bevy_ecs::name::Name': newName });
-    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
     const isInserted = element.name === undefined;
-    element.name = newName;
     this.entityRenamedEmitter.fire([element, isInserted]);
     return 'success';
   }
