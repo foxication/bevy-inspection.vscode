@@ -1,4 +1,4 @@
-import { BrpRegistrySchema, BrpObject, isBrpIterable } from '../protocol/types';
+import { BrpRegistrySchema, isBrpIterable } from '../protocol/types';
 import { defineCustomElements } from './elements';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from '../common';
 import { SectionErrors } from './section-errors';
@@ -31,9 +31,9 @@ defineCustomElements();
   const onStartHTML = document.querySelector('#start-information') as HTMLDListElement;
   if (onStartHTML === null) return console.error('#start-information is not found in DOM');
 
-  // buffer
-  let buffer: { focus: EntityFocus; data: BrpObject } | undefined = undefined;
+  // Registry schemas
   const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
+  let onRegistryAvailable: (registry: BrpRegistrySchema) => void = () => {};
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -50,33 +50,31 @@ defineCustomElements();
             registryBuffer.delete(host);
           });
         registryBuffer.set(message.host, message.data);
-        if (buffer === undefined) break;
 
         // Success
-        syncRoot.syncRoot(message.data, buffer.focus, buffer.data);
-        postWebviewMessage({
-          cmd: 'ready_for_watch',
-          focus: buffer.focus,
-          components: Object.keys(buffer.data),
-        });
+        onRegistryAvailable(message.data);
+        onRegistryAvailable = () => {};
         break;
       }
       case 'update_all': {
-        // Buffer
-        buffer = { focus: EntityFocus.fromObject(message.focus), data: message.components };
+        const focus = EntityFocus.fromObject(message.focus);
 
         // Details
-        detailsSection.update(buffer.focus, 'online');
+        detailsSection.update(focus, 'online');
 
         // Components
-        const registry = registryBuffer.get(message.focus.host);
-        if (registry !== undefined) {
-          syncRoot.syncRoot(registry, buffer.focus, buffer.data);
+        onRegistryAvailable = (registry) => {
+          syncRoot.syncRoot(registry, focus, message.components);
           postWebviewMessage({
             cmd: 'ready_for_watch',
-            focus: buffer.focus,
-            components: Object.keys(buffer.data),
+            focus: focus,
+            components: Object.keys(message.components),
           });
+        };
+        const registry = registryBuffer.get(message.focus.host);
+        if (registry !== undefined) {
+          onRegistryAvailable(registry);
+          onRegistryAvailable = () => {};
         } else {
           postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
         }
@@ -90,7 +88,6 @@ defineCustomElements();
       }
       case 'update_all_offline': {
         const focus = EntityFocus.fromObject(message.focus);
-        if (buffer !== undefined) buffer.focus = focus;
         detailsSection.update(focus, 'offline');
         if (syncRoot.getFocus()?.compare(focus) !== true) {
           syncRoot.syncRoot({}, focus, {});
