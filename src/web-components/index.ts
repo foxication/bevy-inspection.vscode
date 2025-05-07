@@ -67,8 +67,9 @@ defineCustomElements();
           syncRoot.syncRoot(registry, focus, message.components);
           postWebviewMessage({
             cmd: 'ready_for_watch',
-            focus: focus,
-            components: Object.keys(message.components),
+            focus: focus.toObject(),
+            exceptions: Object.keys(message.errors),
+            interval: 100,
           });
         };
         const registry = registryBuffer.get(message.focus.host);
@@ -97,21 +98,16 @@ defineCustomElements();
           syncRoot.syncRoot({}, focus, {});
           errorsSection.update({});
         }
-        
+
         // Start Information
         onStartHTML.style.display = 'none';
         break;
       }
       case 'update_components': {
-        // Checks
         if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) !== true) break;
-
-        // Apply changes
-        for (const [typePath, value] of Object.entries(message.components)) {
-          syncRoot.syncComponent(typePath, value);
-        }
-        for (const typePath of message.removed) {
-          syncRoot.removeComponent(typePath);
+        syncRoot.syncComponents(message.components);
+        for (const [typePath, value] of Object.entries(message.errors)) {
+          errorsSection.push(typePath, value);
         }
         break;
       }

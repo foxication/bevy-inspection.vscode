@@ -100,11 +100,8 @@ export function activate(context: vscode.ExtensionContext) {
       );
     });
 
-    connection.onEntityRenamed(([renamed, isInserted]) => {
+    connection.onEntityRenamed((renamed) => {
       hierarchyData.update(renamed);
-      if (isInserted && renamed.host === connections.focus?.host) {
-        componentsView.updateAll(connections.focus);
-      }
     });
 
     connection.onDisconnection((connection) => {
@@ -136,8 +133,8 @@ export function activate(context: vscode.ExtensionContext) {
     areThereConnections(connections.all().length > 0);
     hierarchyData.update(undefined);
   });
-  connections.onGetWatchResult(([focus, components]) => {
-    componentsView.updateComponents(focus, components, []);
+  connections.onGetWatchResult(([focus, components, errors]) => {
+    componentsView.updateComponents(focus, components, errors);
 
     // Name update (workaround)
     if (!Object.keys(components).includes('bevy_ecs::name::Name')) return; // skip

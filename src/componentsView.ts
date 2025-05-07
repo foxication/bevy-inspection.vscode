@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { BrpObject, TypePath } from './protocol/types';
+import { BrpObject, BrpResponseErrors } from './protocol/types';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from './common';
 
 export function createComponentsView(
@@ -90,13 +90,16 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   updateAllAsOffline(focus: EntityFocus) {
+    if (this.visible === undefined) {
+      return console.error(`ComponentsViewProvider.updateComponents(): no view`);
+    }
     this.postVSCodeMessage({
       cmd: 'update_all_offline',
       focus: focus.toObject(),
     });
   }
 
-  updateComponents(focus: EntityFocus, components: BrpObject, removed: TypePath[]) {
+  updateComponents(focus: EntityFocus, components: BrpObject, errors: BrpResponseErrors) {
     if (this.visible === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
@@ -104,7 +107,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       cmd: 'update_components',
       focus: focus.toObject(),
       components,
-      removed,
+      errors,
     });
   }
 
@@ -142,7 +145,8 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
         case 'ready_for_watch':
           this.connections.startComponentWatch(
             EntityFocus.fromObject(message.focus),
-            message.components
+            message.exceptions,
+            message.interval
           );
           break;
         case 'write_clipboard':

@@ -1,5 +1,5 @@
 import { forcedShortPath } from '../common';
-import { BrpResponseErrors, BrpValue, TypePath } from '../protocol/types';
+import { BrpResponseError, BrpResponseErrors, BrpValue, TypePath } from '../protocol/types';
 import { HTMLMerged } from './elements';
 
 export class SectionErrors {
@@ -21,47 +21,49 @@ export class SectionErrors {
     return found?.htmlRight?.value.buffer;
   }
 
-  update(errors: BrpResponseErrors) {
-    // Toggle section visibility
-    if (Object.keys(errors).length > 0) this.section.style.removeProperty('display');
-    else this.section.style.display = 'none';
-
-    // Remove & Create
+  update(applyErrors: BrpResponseErrors) {
+    // Clear
+    if (Object.keys(applyErrors).length === 0) this.section.style.display = 'none';
     Object.values(this.errors).forEach((element) => element.remove());
     this.errors = {};
-    let anchor = this.title as HTMLElement;
-    for (const typePath of Object.keys(errors)) {
-      const element = new HTMLMerged();
-      const shortPath = forcedShortPath(typePath);
-      element.label = shortPath;
-      element.setTooltipFrom({
-        label: shortPath,
-        componentPath: typePath,
-        mutationPath: '',
-        sections: [
-          {
-            component: typePath,
-            code: errors[typePath].code.toString(),
-            hasData: `${errors[typePath].data !== undefined}`,
-          },
-        ],
-      });
-      element.setValue(errors[typePath].message);
-      element.allowValueWrapping();
-      element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
 
-      this.errors[typePath] = element;
+    // Update
+    for (const [typePath, error] of Object.entries(applyErrors)) this.push(typePath, error);
+  }
 
-      anchor.after(element);
-      anchor = element;
-    }
+  push(typePath: TypePath, error: BrpResponseError) {
+    // Update visibility of section
+    this.section.style.removeProperty('display');
 
-    // DebugList output
-    this.serialized = this.serialize(errors);
+    // Create element
+    const element = new HTMLMerged();
+    const shortPath = forcedShortPath(typePath);
+    element.label = shortPath;
+    element.setTooltipFrom({
+      label: shortPath,
+      componentPath: typePath,
+      mutationPath: '',
+      sections: [
+        {
+          component: typePath,
+          code: error.code.toString(),
+          hasData: `${error.data !== undefined}`,
+        },
+      ],
+    });
+    element.setValue(error.message);
+    element.allowValueWrapping();
+    element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
+
+    // Save access to element
+    this.errors[typePath] = element;
+
+    // Insert element
+    this.section.appendChild(element);
   }
 
   debugList(): string {
-    return this.serialized;
+    return this.serialized; // TODO: reimplement
   }
 
   private serialize(errors: BrpResponseErrors) {

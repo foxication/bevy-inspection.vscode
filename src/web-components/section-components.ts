@@ -205,28 +205,15 @@ export class ComponentListData extends RootOfData {
     });
 
     // Sync children
-    this.children.forEach((node) => {
-      if (node instanceof DataSync) node.sync();
-    });
+    this.children.sync();
 
     // Update visibility of 'Components' section
     if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
     else this.section.style.removeProperty('display');
   }
-  syncComponent(component: TypePath, data: BrpValue) {
-    if (!Object.keys(this.mapOfComponents).includes(component)) {
-      return console.error(`syncComponent(): specified component is not found`);
-    }
-    this.mapOfComponents[component] = data;
-    const node = this.children.get(component);
-    if (node instanceof DataSync) node.sync();
-  }
-  removeComponent(component: TypePath) {
-    if (!Object.keys(this.mapOfComponents).includes(component)) {
-      return console.error(`syncComponent(): specified component is not found`);
-    }
-    delete this.mapOfComponents[component];
-    this.children.remove(component);
+  syncComponents(components: BrpComponentRegistry) {
+    if (this.focus === undefined) return console.error(`syncRoot: focus is undefined`);
+    this.syncRoot(this.registry, this.focus, components);
   }
   getDebugTree(): string {
     let result = 'Components:\n';

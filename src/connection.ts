@@ -34,7 +34,7 @@ export class Connection {
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
   readonly onHierarchyUpdated = this.hierarchyUpdatedEmitter.event;
-  private entityRenamedEmitter = new vscode.EventEmitter<[EntityElement, boolean]>();
+  private entityRenamedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityRenamed = this.entityRenamedEmitter.event;
   private entityDestroyedEmitter = new vscode.EventEmitter<EntityElement>();
   readonly onEntityDestroyed = this.entityDestroyedEmitter.event;
@@ -178,8 +178,7 @@ export class Connection {
       if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
       element.name = newName;
     }
-    const isInserted = element.name === undefined;
-    this.entityRenamedEmitter.fire([element, isInserted]);
+    this.entityRenamedEmitter.fire(element);
     return 'success';
   }
 

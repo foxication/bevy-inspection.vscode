@@ -40,7 +40,8 @@ export type WebviewMessage =
   | {
       cmd: 'ready_for_watch';
       focus: EntityFocusAsObject;
-      components: TypePath[];
+      exceptions: TypePath[];
+      interval: number;
     }
   | {
       cmd: 'write_clipboard';
@@ -69,7 +70,7 @@ export type VSCodeMessage =
       cmd: 'update_components';
       focus: EntityFocusAsObject;
       components: BrpObject;
-      removed: TypePath[];
+      errors: BrpResponseErrors;
     }
   | {
       cmd: 'copy_error_message_to_clipboard';
