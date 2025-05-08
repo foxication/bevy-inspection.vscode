@@ -182,10 +182,21 @@ export class ComponentListData extends RootOfData {
     if (Object.keys(this.registry).includes(typePath)) return this.registry[typePath];
     return undefined;
   }
+  getComponentList(): TypePath[] {
+    return Object.keys(this.mapOfComponents);
+  }
   syncRoot(registry: BrpRegistrySchema, focus: EntityFocus, components: BrpComponentRegistry) {
     this.registry = registry;
     this.focus = focus;
-    this.mapOfComponents = components;
+    this.mapOfComponents = {};
+
+    this.insertComponents(components);
+  }
+  insertComponents(components: BrpComponentRegistry) {
+    const insert = Object.keys(components);
+
+    // Apply
+    for (const typePath of insert) this.mapOfComponents[typePath] = components[typePath];
 
     // Get TypePaths
     const TypePathListOrdered = Object.keys(this.mapOfComponents).sort((a, b) => {
@@ -204,21 +215,30 @@ export class ComponentListData extends RootOfData {
       return result;
     });
 
-    // Sync children
-    this.children.sync();
+    this.children.forEach((child) => {
+      if (insert.includes(child.getPath()[0]) && child instanceof DataSync) child.sync();
+    });
 
-    // Update visibility of 'Components' section
-    if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
-    else this.section.style.removeProperty('display');
+    this.updateVisibilityOfSection();
   }
-  syncComponents(components: BrpComponentRegistry) {
-    if (this.focus === undefined) return console.error(`syncRoot: focus is undefined`);
-    this.syncRoot(this.registry, this.focus, components);
+  removeComponent(component: TypePath) {
+    if (!this.getComponentList().includes(component)) {
+      return console.error(`syncComponent(): specified component is not found`);
+    }
+    delete this.mapOfComponents[component];
+    this.children.remove(component);
+
+    this.updateVisibilityOfSection();
   }
   getDebugTree(): string {
     let result = 'Components:\n';
     this.children.forEach((node) => (result += node.getDebugTree()));
     return result;
+  }
+
+  private updateVisibilityOfSection() {
+    if (Object.keys(this.mapOfComponents).length === 0) this.section.style.display = 'none';
+    else this.section.style.removeProperty('display');
   }
 }
 

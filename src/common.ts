@@ -1,6 +1,5 @@
 import {
   BrpComponentRegistry,
-  BrpObject,
   BrpRegistrySchema,
   BrpResponseErrors,
   BrpValue,
@@ -69,7 +68,8 @@ export type VSCodeMessage =
   | {
       cmd: 'update_components';
       focus: EntityFocusAsObject;
-      components: BrpObject;
+      list: TypePath[];
+      changes: BrpComponentRegistry;
       errors: BrpResponseErrors;
     }
   | {

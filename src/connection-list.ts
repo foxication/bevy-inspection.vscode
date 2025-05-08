@@ -33,7 +33,7 @@ export class ConnectionList {
   readonly onFocusChanged = this.focusChangedEmitter.event;
 
   private getWatchResultEmitter = new vscode.EventEmitter<
-    [EntityFocus, BrpComponentRegistry, BrpResponseErrors]
+    [EntityFocus, TypePath[], BrpComponentRegistry, BrpResponseErrors]
   >();
   readonly onGetWatchResult = this.getWatchResultEmitter.event;
 
@@ -105,6 +105,7 @@ export class ConnectionList {
     return this.connections.get(host);
   }
 
+  private watchBuffer: BrpComponentRegistry = {};
   public startComponentWatch(focus: EntityFocus, exceptions: TypePath[], interval: number) {
     const srcName = `${this.constructor.name}.watchingController`;
 
@@ -135,17 +136,25 @@ export class ConnectionList {
       // Update exceptions
       exceptions.push(...Object.keys(getResponse.result.errors));
 
+      // Filter out changes only (unfortunately first iteration will send all components)
+      const bufferKeys = Object.keys(this.watchBuffer);
+      const componentChanges = Object.fromEntries(
+        Object.entries(getResponse.result.components).filter(([key, value]) => {
+          if (!bufferKeys.includes(key)) return true;
+          if (JSON.stringify(value) !== JSON.stringify(this.watchBuffer[key])) return true;
+          return false;
+        })
+      );
+      this.watchBuffer = getResponse.result.components;
+
       // Signal
-      this.getWatchResultEmitter.fire([
-        focus,
-        getResponse.result.components,
-        getResponse.result.errors,
-      ]);
+      this.getWatchResultEmitter.fire([focus, whiteList, componentChanges, getResponse.result.errors]);
     }, interval);
   }
 
   public stopComponentWatch() {
     clearInterval(this.watchId);
     this.watchId = undefined;
+    this.watchBuffer = {};
   }
 }

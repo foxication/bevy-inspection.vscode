@@ -105,10 +105,20 @@ defineCustomElements();
       }
       case 'update_components': {
         if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) !== true) break;
-        syncRoot.syncComponents(message.components);
-        for (const [typePath, value] of Object.entries(message.errors)) {
-          errorsSection.push(typePath, value);
-        }
+
+        // Remove components
+        syncRoot
+          .getComponentList()
+          .filter((typePath) => !message.list.includes(typePath))
+          .forEach((typePath) => syncRoot.removeComponent(typePath));
+
+        // Apply component changes
+        syncRoot.insertComponents(message.changes);
+
+        // Add errors
+        Object.entries(message.errors).forEach(([typePath, value]) =>
+          errorsSection.push(typePath, value)
+        );
         break;
       }
       case 'copy_error_message_to_clipboard': {

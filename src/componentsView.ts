@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ConnectionList } from './connection-list';
-import { BrpObject, BrpResponseErrors } from './protocol/types';
+import { BrpComponentRegistry, BrpResponseErrors, TypePath } from './protocol/types';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from './common';
 
 export function createComponentsView(
@@ -99,14 +99,20 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  updateComponents(focus: EntityFocus, components: BrpObject, errors: BrpResponseErrors) {
+  updateComponents(
+    focus: EntityFocus,
+    list: TypePath[],
+    changes: BrpComponentRegistry,
+    errors: BrpResponseErrors
+  ) {
     if (this.visible === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
     this.postVSCodeMessage({
       cmd: 'update_components',
       focus: focus.toObject(),
-      components,
+      list,
+      changes,
       errors,
     });
   }

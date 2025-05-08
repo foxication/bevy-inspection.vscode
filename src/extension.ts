@@ -133,14 +133,14 @@ export function activate(context: vscode.ExtensionContext) {
     areThereConnections(connections.all().length > 0);
     hierarchyData.update(undefined);
   });
-  connections.onGetWatchResult(([focus, components, errors]) => {
-    componentsView.updateComponents(focus, components, errors);
+  connections.onGetWatchResult(([focus, list, changes, errors]) => {
+    componentsView.updateComponents(focus, list, changes, errors);
 
     // Name update (workaround)
-    if (!Object.keys(components).includes('bevy_ecs::name::Name')) return; // skip
+    if (!Object.keys(changes).includes('bevy_ecs::name::Name')) return; // skip
     const entity = connections.get(focus.host)?.getById(focus.entityId);
     if (entity === undefined) return console.error('connections.onGetWatchResult: no entity');
-    entity.name = components['bevy_ecs::name::Name'] as string;
+    entity.name = changes['bevy_ecs::name::Name'] as string;
     hierarchyData.update(entity);
   });
 
