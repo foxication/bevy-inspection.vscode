@@ -880,7 +880,7 @@ export class ErrorData extends DataWithAccess {
     const result = super.getTooltip();
     result.sections.push({
       treeItem: 'Error',
-      errorCode: JSON.stringify(this.code),
+      errorCode: (this.code ?? 'undefined').toString(),
     });
     return result;
   }

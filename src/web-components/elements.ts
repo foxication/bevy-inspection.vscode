@@ -44,13 +44,16 @@ export class HTMLMerged extends HTMLElement {
     this.htmlLeft.textContent = text;
   }
   setTooltipFrom(data: TooltipData) {
+    function fitText(text: string, width: number) {
+      return text.length > width ? text.substring(0, width) + '...' : text;
+    }
     let result = data.label + '\n\n';
     result += `componentPath = ${data.componentPath}\n`;
     result += `mutationPath = ${data.mutationPath}\n\n`;
     result += data.sections
       .map((section) =>
         Object.entries(section)
-          .map(([key, value]) => key + ' = ' + value)
+          .map(([key, value]) => key + ' = ' + fitText(value, 50))
           .join('\n')
       )
       .join('\n\n');
