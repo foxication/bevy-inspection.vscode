@@ -67,8 +67,8 @@ export class HierarchyDataProvider implements vscode.TreeDataProvider<HierarchyE
       element.children.length === 0 ? undefined : vscode.TreeItemCollapsibleState.Expanded;
     const treeItem = new vscode.TreeItem(element.id.toString(), collapsible);
     if (element.name !== undefined) treeItem.description = element.name;
-    treeItem.id = element.id.toString();
-    treeItem.tooltip = element.id.toString();
+    treeItem.id = element.host + '/' + element.id.toString();
+    treeItem.tooltip = treeItem.id;
     switch (element.network) {
       case 'offline':
         treeItem.contextValue = 'entityElementOffline';
