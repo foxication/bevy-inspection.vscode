@@ -124,7 +124,7 @@ defineCustomElements();
           if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) === true) {
             postWebviewMessage({ cmd: 'request_for_component_changes', focus: message.focus });
           }
-        }, 100);
+        }, detailsSection.getInterval());
         break;
       }
       case 'copy_error_message_to_clipboard': {

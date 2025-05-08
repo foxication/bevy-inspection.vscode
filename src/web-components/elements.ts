@@ -43,7 +43,12 @@ export class HTMLMerged extends HTMLElement {
   set label(text: string) {
     this.htmlLeft.textContent = text;
   }
-  setTooltipFrom(data: TooltipData) {
+  setTooltipFrom(data: TooltipData | string) {
+    if (typeof data === 'string') {
+      this.htmlLeft.title = data;
+      return;
+    }
+
     function fitText(text: string, width: number) {
       return text.length > width ? text.substring(0, width) + '...' : text;
     }
