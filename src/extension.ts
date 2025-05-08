@@ -165,7 +165,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   componentsView.onEntityChanges(([focus, list, changes]) => {
     const entity = connections.get(focus.host)?.getById(focus.entityId);
-    if (entity === undefined) return console.error('connections.onGetWatchResult: no entity');
+    if (entity === undefined) return; // expected when refresh hierarchy of entities
 
     // Name component removed
     if (!list.includes('bevy_ecs::name::Name') && entity.name !== undefined) {
