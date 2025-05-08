@@ -48,7 +48,7 @@ export class SectionDetails {
   private changeInterval = (v: BrpValue) => {
     if (typeof v !== 'number') return console.error(`interval is not number`);
     const minValue = 5;
-    const maxValue = 5000;
+    const maxValue = 1000;
     this.interval = Math.min(Math.max(v, minValue), maxValue);
     this.intervalRange.setValue(this.interval);
   };
