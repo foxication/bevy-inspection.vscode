@@ -75,6 +75,12 @@ export type VSCodeMessage =
   | {
       cmd: 'copy_value_to_clipboard';
       path: string;
+    }
+  | {
+      cmd: 'manual_update';
+    }
+  | {
+      cmd: 'live_update';
     };
 
 export function forcedShortPath(typePath: string) {

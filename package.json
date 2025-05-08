@@ -165,7 +165,7 @@
 				"command": "extension.updateEntities",
 				"title": "Refresh Hierarchy of Entities",
 				"category": "Bevy Inspection",
-				"icon": "$(debug-restart)",
+				"icon": "$(refresh)",
 				"enablement": "viewItem == entityElementOnline || viewItem == connectionElementOnline"
 			},
 			{
@@ -201,6 +201,18 @@
 				"command": "extension.copyError",
 				"title": "Copy Error Message",
 				"category": "Bevy Inspection"
+			},
+			{
+				"command": "extension.manualUpdate",
+				"title": "Manual Update",
+				"category": "Bevy Inspection",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "extension.liveUpdate",
+				"title": "Start Live Updates",
+				"category": "Bevy Inspection",
+				"icon": "$(sync)"
 			}
 		],
 		"menus": {
@@ -256,12 +268,30 @@
 				{
 					"command": "extension.copyError",
 					"when": "false"
+				},
+				{
+					"command": "extension.manualUpdate",
+					"when": "false"
+				},
+				{
+					"command": "extension.liveUpdate",
+					"when": "false"
 				}
 			],
 			"view/title": [
 				{
 					"command": "extension.addConnection",
 					"when": "view == hierarchyView",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.manualUpdate",
+					"when": "view == componentsView",
+					"group": "navigation"
+				},
+				{
+					"command": "extension.liveUpdate",
+					"when": "view == componentsView",
 					"group": "navigation"
 				}
 			],

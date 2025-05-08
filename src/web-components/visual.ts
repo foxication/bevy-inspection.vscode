@@ -1,5 +1,5 @@
 import { TypePath } from '../protocol/types';
-import { HTMLMerged, HTMLSelect } from './elements';
+import { HTMLMerged, HTMLSelectCustom } from './elements';
 import {
   ArraySync,
   BooleanSync,
@@ -170,7 +170,7 @@ export class EnumVisual extends VisualWithSync {
   }
   select(selection: string) {
     const errMsg = 'Wrong HTML in EnumVisual';
-    if (!(this.dom.htmlRight?.value instanceof HTMLSelect)) return console.error(errMsg);
+    if (!(this.dom.htmlRight?.value instanceof HTMLSelectCustom)) return console.error(errMsg);
     return this.dom.htmlRight.value.select(selection);
   }
 }

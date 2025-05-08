@@ -73,6 +73,12 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('extension.copyError', (context: { errorPath: string }) => {
       componentsView.copyErrorToClipboard(context.errorPath);
+    }),
+    vscode.commands.registerCommand('extension.manualUpdate', () => {
+      componentsView.manualUpdate();
+    }),
+    vscode.commands.registerCommand('extension.liveUpdate', () => {
+      componentsView.liveUpdate();
     })
   );
 

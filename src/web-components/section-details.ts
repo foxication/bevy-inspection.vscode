@@ -1,6 +1,6 @@
 import { EntityFocus } from '../common';
 import { BrpValue } from '../protocol';
-import { HTMLButtonCustom, HTMLMerged } from './elements';
+import { HTMLButtonCustom, HTMLMerged, HTMLSelectCustom } from './elements';
 
 export class SectionDetails {
   private title: HTMLElement;
@@ -31,20 +31,9 @@ export class SectionDetails {
     this.updateMode.label = 'Update Mode';
     this.updateMode.setTooltipFrom('Update Mode');
     this.updateMode.setOptionsManual('Live', ['Live', 'Manual'], (v: BrpValue) => {
-      if (typeof v !== 'string') return;
-      switch (v) {
-        case 'Live':
-          this.doUpdate = true;
-          this.intervalRange.removeAttribute('style');
-          this.manualUpdate.style.display = 'none';
-          this.onManualUpdate() // start watch
-          break;
-        case 'Manual':
-          this.doUpdate = false;
-          this.intervalRange.style.display = 'none';
-          this.manualUpdate.removeAttribute('style');
-          break;
-      }
+      if (v === 'Live') return this.switchToLiveAndUpdate();
+      if (v === 'Manual') return this.switchToManualAndUpdate();
+      console.error('cannot parse option from updateMode');
     });
 
     this.intervalRange = HTMLMerged.create();
@@ -99,4 +88,44 @@ export class SectionDetails {
   };
 
   onManualUpdate = () => {};
+
+  switchToManualAndUpdate() {
+    if (this.doUpdate) {
+      this.doUpdate = false;
+
+      // set selection
+      const select = this.updateMode.htmlRight?.value;
+      if (select instanceof HTMLSelectCustom && select.getAvailable().includes('Manual')) {
+        select.select('Manual');
+      } else {
+        console.error('Cannot update option for updateMode');
+      }
+
+      // visibility
+      this.intervalRange.style.display = 'none';
+      this.manualUpdate.removeAttribute('style');
+    }
+    // forced update
+    this.onManualUpdate();
+  }
+
+  switchToLiveAndUpdate() {
+    if (this.doUpdate === false) {
+      this.doUpdate = true;
+
+      // set selection
+      const select = this.updateMode.htmlRight?.value;
+      if (select instanceof HTMLSelectCustom && select.getAvailable().includes('Live')) {
+        select.select('Live');
+      } else {
+        console.error('Cannot update option for updateMode');
+      }
+
+      // visibility
+      this.intervalRange.removeAttribute('style');
+      this.manualUpdate.style.display = 'none';
+    }
+    // start watch
+    this.onManualUpdate();
+  }
 }

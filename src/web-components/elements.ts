@@ -15,7 +15,7 @@ export function defineCustomElements() {
   customElements.define(HTML_BUTTON_NAME, HTMLButtonCustom);
   customElements.define(HTML_MERGED_NAME, HTMLMerged);
   customElements.define(HTML_NUMBER_NAME, HTMLNumber);
-  customElements.define(HTML_SELECT_NAME, HTMLSelect);
+  customElements.define(HTML_SELECT_NAME, HTMLSelectCustom);
   customElements.define(HTML_STRING_NAME, HTMLString);
 }
 
@@ -127,7 +127,7 @@ export class HTMLMerged extends HTMLElement {
   setOptions(sync: EnumAsStringSync) {
     // Move label to left & create elements
     this.htmlLeft.classList.add('left-side');
-    const selectElement = HTMLSelect.create();
+    const selectElement = HTMLSelectCustom.create();
     selectElement.setAvailable(sync.getAvailableVariants(), sync.getVariant());
     this.htmlRight = {
       wrapper: document.createElement('div'),
@@ -141,7 +141,7 @@ export class HTMLMerged extends HTMLElement {
   }
   setOptionsManual(initial: string, options: string[], mutability: (v: BrpValue) => void) {
     // Initialize elements
-    const selectElement = HTMLSelect.create();
+    const selectElement = HTMLSelectCustom.create();
     selectElement.setAvailable(options, initial);
     this.htmlRight = {
       wrapper: document.createElement('div'),
@@ -439,13 +439,13 @@ export class HTMLBoolean extends HTMLMutatable<boolean> {
   allowWrapping(): void {}
 }
 
-export class HTMLSelect extends HTMLMutatable<string> {
+export class HTMLSelectCustom extends HTMLMutatable<string> {
   private selectElement: HTMLSelectElement;
   private selectedVariant: HTMLOptionElement;
   private availableVariants: { [variant: string]: HTMLOptionElement };
 
   static create() {
-    return document.createElement(HTML_SELECT_NAME) as HTMLSelect;
+    return document.createElement(HTML_SELECT_NAME) as HTMLSelectCustom;
   }
 
   constructor() {
@@ -491,6 +491,9 @@ export class HTMLSelect extends HTMLMutatable<string> {
     }, {} as typeof this.availableVariants);
     this.selectElement.replaceChildren(...Object.values(this.availableVariants));
     this.select(selection ?? available[0]);
+  }
+  getAvailable() {
+    return Object.keys(this.availableVariants);
   }
   select(selection: string) {
     if (!Object.keys(this.availableVariants).includes(selection)) {

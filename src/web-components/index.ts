@@ -167,6 +167,14 @@ defineCustomElements();
         }
         break;
       }
+      case 'manual_update': {
+        detailsSection.switchToManualAndUpdate();
+        break;
+      }
+      case 'live_update': {
+        detailsSection.switchToLiveAndUpdate();
+        break;
+      }
     }
   });
 })();
