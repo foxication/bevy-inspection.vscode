@@ -25,7 +25,7 @@ export class SectionDetails {
     this.entityId = HTMLMerged.create();
     this.entityId.label = 'Entity ID';
     this.entityId.setTooltipFrom('Protocol-specific ID (unused in Bevy application logic)');
-    this.entityId.vscodeContext({ details: 'entityId' });
+    this.entityId.vscodeContext({ details: 'entity_id' });
 
     this.updateMode = HTMLMerged.create();
     this.updateMode.label = 'Update Mode';
@@ -35,6 +35,7 @@ export class SectionDetails {
       if (v === 'Manual') return this.switchToManualAndUpdate();
       console.error('cannot parse option from updateMode');
     });
+    this.updateMode.vscodeContext({ details: 'update_mode' });
 
     this.intervalRange = HTMLMerged.create();
     this.intervalRange.label = 'Update Interval';
@@ -43,6 +44,7 @@ export class SectionDetails {
     if (this.intervalRange.htmlRight !== undefined) {
       this.intervalRange.htmlRight.value.mutability = this.changeInterval;
     }
+    this.intervalRange.vscodeContext({ details: 'interval' });
 
     this.manualUpdate = HTMLMerged.create();
     this.manualUpdate.style.display = 'none'; // hidden at start
@@ -71,11 +73,18 @@ export class SectionDetails {
     this.entityId.setValue(focus.entityId.toString());
   }
 
+  getConnection(): string | undefined {
+    const result = this.connection.htmlRight?.value.buffer;
+    return typeof result === 'string' ? result : undefined;
+  }
+  getEntityId(): string | undefined {
+    const result = this.entityId.htmlRight?.value.buffer;
+    return typeof result === 'string' ? result : undefined;
+  }
   getUpdateMode() {
     return this.doUpdate ? 'Live' : 'Manual';
   }
-
-  getInterval() {
+  getInterval(): number {
     return this.interval;
   }
 

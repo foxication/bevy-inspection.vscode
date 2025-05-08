@@ -132,7 +132,7 @@ defineCustomElements();
         );
 
         // Continue watch
-        if (detailsSection.getUpdateMode() === 'Manual') break;
+        if (detailsSection.getUpdateMode() !== 'Live') break;
         if (timeoutId !== undefined) clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
           postWebviewMessage({ cmd: 'request_for_component_changes', focus: message.focus });
@@ -143,6 +143,17 @@ defineCustomElements();
         const result = errorsSection.getErrorMessage(message.component)?.toString();
         if (result !== undefined) postWebviewMessage({ cmd: 'write_clipboard', text: result });
         else console.error(`Error message is not found: ${message.component}`);
+        break;
+      }
+      case 'copy_details_to_clipboard': {
+        let result: string | undefined = undefined;
+        if (message.details === 'connection') result = detailsSection.getConnection();
+        if (message.details === 'entity_id') result = detailsSection.getEntityId();
+        if (message.details === 'update_mode') result = detailsSection.getUpdateMode();
+        if (message.details === 'interval') result = detailsSection.getInterval().toString();
+
+        if (result !== undefined) postWebviewMessage({ cmd: 'write_clipboard', text: result });
+        else console.error(`Specific detail is not found: ${message.details}`);
         break;
       }
       case 'copy_value_to_clipboard': {

@@ -248,6 +248,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   copyValueToClipboard(path: string) {
     this.postVSCodeMessage({ cmd: 'copy_value_to_clipboard', path });
   }
+  copyDetailsToClipboard(details: string) {
+    this.postVSCodeMessage({ cmd: 'copy_details_to_clipboard', details });
+  }
   copyErrorToClipboard(component: string) {
     this.postVSCodeMessage({ cmd: 'copy_error_message_to_clipboard', component });
   }

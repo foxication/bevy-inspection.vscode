@@ -72,6 +72,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.copyValue', (context: { path: string }) => {
       componentsView.copyValueToClipboard(context.path);
     }),
+    vscode.commands.registerCommand('extension.copyDetails', (context: { details: string }) => {
+      componentsView.copyDetailsToClipboard(context.details);
+    }),
     vscode.commands.registerCommand('extension.copyError', (context: { errorPath: string }) => {
       componentsView.copyErrorToClipboard(context.errorPath);
     }),

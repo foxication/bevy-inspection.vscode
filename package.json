@@ -198,6 +198,11 @@
 				"category": "Bevy Inspection"
 			},
 			{
+				"command": "extension.copyDetails",
+				"title": "Copy Value",
+				"category": "Bevy Inspection"
+			},
+			{
 				"command": "extension.copyError",
 				"title": "Copy Error Message",
 				"category": "Bevy Inspection"
@@ -263,6 +268,10 @@
 				},
 				{
 					"command": "extension.copyValue",
+					"when": "false"
+				},
+				{
+					"command": "extension.copyDetails",
 					"when": "false"
 				},
 				{
@@ -376,6 +385,11 @@
 				{
 					"command": "extension.copyValue",
 					"when": "webviewId == componentsView && path",
+					"group": "copy@2"
+				},
+				{
+					"command": "extension.copyDetails",
+					"when": "webviewId == componentsView && details",
 					"group": "copy@2"
 				},
 				{

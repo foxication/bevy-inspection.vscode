@@ -73,6 +73,10 @@ export type VSCodeMessage =
       component: string;
     }
   | {
+      cmd: 'copy_details_to_clipboard';
+      details: string;
+    }
+  | {
       cmd: 'copy_value_to_clipboard';
       path: string;
     }
