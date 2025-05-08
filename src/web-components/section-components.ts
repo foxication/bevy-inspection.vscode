@@ -191,6 +191,7 @@ export class ComponentListData extends RootOfData {
     if (clearList) {
       this.mapOfComponents = {};
       this.children.clear(); // sync
+      this.updateVisibilityOfSection();
     }
   }
   insertComponents(components: BrpComponentRegistry) {
