@@ -1,12 +1,16 @@
 import { EntityFocus } from '../common';
 import { BrpValue } from '../protocol';
-import { HTMLMerged } from './elements';
+import { HTMLButtonCustom, HTMLMerged } from './elements';
 
 export class SectionDetails {
   private title: HTMLElement;
   private connection: HTMLMerged;
   private entityId: HTMLMerged;
+  private updateMode: HTMLMerged;
   private intervalRange: HTMLMerged;
+  private manualUpdate: HTMLMerged;
+
+  private doUpdate: boolean = true;
   private interval: number = 100; // by default
 
   constructor(private section: HTMLElement) {
@@ -15,30 +19,71 @@ export class SectionDetails {
 
     this.connection = HTMLMerged.create();
     this.connection.label = 'Connection';
+    this.connection.setTooltipFrom('Connection');
     this.connection.vscodeContext({ details: 'connection' });
 
     this.entityId = HTMLMerged.create();
-    this.entityId.label = 'ID';
+    this.entityId.label = 'Entity ID';
     this.entityId.setTooltipFrom('Protocol-specific ID (unused in Bevy application logic)');
     this.entityId.vscodeContext({ details: 'entityId' });
+
+    this.updateMode = HTMLMerged.create();
+    this.updateMode.label = 'Update Mode';
+    this.updateMode.setTooltipFrom('Update Mode');
+    this.updateMode.setOptionsManual('Live', ['Live', 'Manual'], (v: BrpValue) => {
+      if (typeof v !== 'string') return;
+      switch (v) {
+        case 'Live':
+          this.doUpdate = true;
+          this.intervalRange.removeAttribute('style');
+          this.manualUpdate.style.display = 'none';
+          this.onManualUpdate() // start watch
+          break;
+        case 'Manual':
+          this.doUpdate = false;
+          this.intervalRange.style.display = 'none';
+          this.manualUpdate.removeAttribute('style');
+          break;
+      }
+    });
 
     this.intervalRange = HTMLMerged.create();
     this.intervalRange.label = 'Update Interval';
     this.intervalRange.setTooltipFrom('Update Interval in Milliseconds');
+    this.intervalRange.setValue(this.interval);
+    if (this.intervalRange.htmlRight !== undefined) {
+      this.intervalRange.htmlRight.value.mutability = this.changeInterval;
+    }
+
+    this.manualUpdate = HTMLMerged.create();
+    this.manualUpdate.style.display = 'none'; // hidden at start
+    this.manualUpdate.label = 'Update Control';
+    this.manualUpdate.setTooltipFrom('Update Mode');
+    const clickable = HTMLButtonCustom.create();
+    clickable.setValue('Update (Clickable)');
+    clickable.mutability = () => this.onManualUpdate();
+    this.manualUpdate.insertMutatable(clickable);
 
     // Setup
     this.section.style.display = 'none';
-    this.section.append(this.title, this.connection, this.entityId, this.intervalRange);
+    this.section.append(
+      this.title,
+      this.connection,
+      this.entityId,
+      this.updateMode,
+      this.intervalRange,
+      this.manualUpdate
+    );
   }
 
   update(focus: EntityFocus, status: 'online' | 'offline') {
     this.section.removeAttribute('style');
     this.connection.setValue(status === 'online' ? focus.host : 'Offline');
     this.entityId.setValue(focus.entityId.toString());
-    this.intervalRange.setValue(this.interval);
-    if (this.intervalRange.htmlRight !== undefined) {
-      this.intervalRange.htmlRight.value.mutability = this.changeInterval;
-    }
+  }
+
+  getUpdateMode() {
+    return this.doUpdate ? 'Live' : 'Manual';
   }
 
   getInterval() {
@@ -50,6 +95,8 @@ export class SectionDetails {
     const minValue = 5;
     const maxValue = 1000;
     this.interval = Math.min(Math.max(v, minValue), maxValue);
-    this.intervalRange.setValue(this.interval);
+    this.intervalRange.htmlRight?.value.setValue(this.interval);
   };
+
+  onManualUpdate = () => {};
 }

@@ -4,6 +4,7 @@ import * as VslStyles from './styles';
 import { BrpValue, TypePath } from '../protocol/types';
 
 const HTML_BOOLEAN_NAME = 'visual-boolean';
+const HTML_BUTTON_NAME = 'visual-button';
 const HTML_MERGED_NAME = 'visual-merged';
 const HTML_NUMBER_NAME = 'visual-number';
 const HTML_SELECT_NAME = 'visual-select';
@@ -11,6 +12,7 @@ const HTML_STRING_NAME = 'visual-string';
 
 export function defineCustomElements() {
   customElements.define(HTML_BOOLEAN_NAME, HTMLBoolean);
+  customElements.define(HTML_BUTTON_NAME, HTMLButtonCustom);
   customElements.define(HTML_MERGED_NAME, HTMLMerged);
   customElements.define(HTML_NUMBER_NAME, HTMLNumber);
   customElements.define(HTML_SELECT_NAME, HTMLSelect);
@@ -122,25 +124,40 @@ export class HTMLMerged extends HTMLElement {
     }
     this.htmlRight.value.setValue(v);
   }
-  set options(sync: EnumAsStringSync) {
-    if (this.htmlRight === undefined) {
-      // Move label to left & create elements
-      this.htmlLeft.classList.add('left-side');
-      const selectElement = HTMLSelect.create();
-      selectElement.setAvailable(sync.getAvailableVariants(), sync.getVariant());
-      this.htmlRight = {
-        wrapper: document.createElement('div'),
-        value: selectElement,
-      };
-      this.htmlRight.wrapper.classList.add('right-side');
+  setOptions(sync: EnumAsStringSync) {
+    // Move label to left & create elements
+    this.htmlLeft.classList.add('left-side');
+    const selectElement = HTMLSelect.create();
+    selectElement.setAvailable(sync.getAvailableVariants(), sync.getVariant());
+    this.htmlRight = {
+      wrapper: document.createElement('div'),
+      value: selectElement,
+    };
+    this.htmlRight.wrapper.classList.add('right-side');
 
-      // Structurize
-      this.htmlRight.wrapper.append(this.htmlRight.value);
-      this.shadowRoot?.append(this.htmlRight.wrapper);
-    }
-    if (this.htmlRight.value instanceof HTMLString) {
-      this.htmlRight.value.setValue(sync.getVariant() ?? '...');
-    }
+    // Structurize
+    this.htmlRight.wrapper.append(this.htmlRight.value);
+    this.shadowRoot?.append(this.htmlRight.wrapper);
+  }
+  setOptionsManual(initial: string, options: string[], mutability: (v: BrpValue) => void) {
+    // Initialize elements
+    const selectElement = HTMLSelect.create();
+    selectElement.setAvailable(options, initial);
+    this.htmlRight = {
+      wrapper: document.createElement('div'),
+      value: selectElement,
+    };
+
+    // Styles
+    this.htmlLeft.classList.add('left-side');
+    this.htmlRight.wrapper.classList.add('right-side');
+
+    // Mutability
+    this.htmlRight.value.mutability = mutability;
+
+    // Structurize
+    this.htmlRight.wrapper.append(this.htmlRight.value);
+    this.shadowRoot?.append(this.htmlRight.wrapper);
   }
   private createConfiguredChevron() {
     const result = document.createElement('vscode-icon');
@@ -194,6 +211,21 @@ export class HTMLMerged extends HTMLElement {
       if (value !== undefined) result[key] = value;
     });
     this.setAttribute('data-vscode-context', JSON.stringify(data));
+  }
+  insertMutatable(mutatable: HTMLMutatable<BrpValue>) {
+    // Initialize
+    this.htmlRight = {
+      wrapper: document.createElement('div'),
+      value: mutatable,
+    };
+
+    // Styles
+    this.htmlLeft.classList.add('left-side');
+    this.htmlRight.wrapper.classList.add('right-side');
+
+    // Structurize
+    this.htmlRight.wrapper.append(this.htmlRight.value);
+    this.shadowRoot?.append(this.htmlRight.wrapper);
   }
 
   static create() {
@@ -467,4 +499,33 @@ export class HTMLSelect extends HTMLMutatable<string> {
     this.selectElement.value = selection;
     this.selectedVariant = this.availableVariants[selection];
   }
+}
+
+export class HTMLButtonCustom extends HTMLMutatable<string> {
+  private clickable: HTMLDivElement;
+
+  static create() {
+    return document.createElement(HTML_BUTTON_NAME) as HTMLButtonCustom;
+  }
+
+  constructor() {
+    super('???');
+    this.clickable = document.createElement('div');
+    this.clickable.onclick = () => {
+      this.mutate(this.buffer);
+    };
+  }
+
+  connectedCallback() {
+    if (this.shadowRoot !== null) return; // already exists
+    const shadow = this.attachShadow({ mode: 'open' });
+    shadow.adoptedStyleSheets = [VslStyles.editableText];
+    shadow.append(this.clickable);
+  }
+
+  renderValueFromBuffer() {
+    this.clickable.innerText = this.buffer;
+  }
+  allowEditing() {}
+  allowWrapping(): void {}
 }

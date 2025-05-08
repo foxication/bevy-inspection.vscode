@@ -158,7 +158,7 @@ export class SerializedVisual extends VisualWithSync {
 export class EnumVisual extends VisualWithSync {
   constructor(public sync: EnumAsStringSync, anchor: HTMLElement) {
     super(sync, anchor);
-    this.dom.options = sync;
+    this.dom.setOptions(sync);
     const variant = this.sync.getVariant();
     if (
       variant !== undefined &&

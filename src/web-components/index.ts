@@ -31,6 +31,13 @@ defineCustomElements();
   const onStartHTML = document.querySelector('#start-information') as HTMLDListElement;
   if (onStartHTML === null) return console.error('#start-information is not found in DOM');
 
+  // Configure manual update
+  detailsSection.onManualUpdate = () => {
+    const focus = syncRoot.getFocus();
+    if (focus === undefined) return;
+    postWebviewMessage({ cmd: 'request_for_component_changes', focus });
+  };
+
   // Registry schemas
   const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
   let afterRegistryAvailable: (registry: BrpRegistrySchema) => void = () => {};
@@ -120,6 +127,7 @@ defineCustomElements();
         );
 
         // Continue watch
+        if (detailsSection.getUpdateMode() === 'Manual') break;
         setTimeout(() => {
           if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) === true) {
             postWebviewMessage({ cmd: 'request_for_component_changes', focus: message.focus });
