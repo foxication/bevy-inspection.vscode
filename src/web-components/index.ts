@@ -35,8 +35,12 @@ defineCustomElements();
   detailsSection.onManualUpdate = () => {
     const focus = syncRoot.getFocus();
     if (focus === undefined) return;
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
     postWebviewMessage({ cmd: 'request_for_component_changes', focus });
   };
+
+  // Timeout Id
+  let timeoutId: NodeJS.Timeout | undefined = undefined;
 
   // Registry schemas
   const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
@@ -71,6 +75,7 @@ defineCustomElements();
         // Start watch (function to call)
         afterRegistryAvailable = (registry) => {
           syncRoot.switchFocus(registry, focus);
+          if (timeoutId !== undefined) clearTimeout(timeoutId);
           postWebviewMessage({
             cmd: 'request_for_component_changes',
             focus: focus.toObject(),
@@ -78,7 +83,7 @@ defineCustomElements();
           afterRegistryAvailable = () => {};
         };
 
-        // Start watch
+        // Request registry schema then start watch
         const registry = registryBuffer.get(message.focus.host);
         if (registry !== undefined) {
           afterRegistryAvailable(registry);
@@ -128,10 +133,9 @@ defineCustomElements();
 
         // Continue watch
         if (detailsSection.getUpdateMode() === 'Manual') break;
-        setTimeout(() => {
-          if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) === true) {
-            postWebviewMessage({ cmd: 'request_for_component_changes', focus: message.focus });
-          }
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          postWebviewMessage({ cmd: 'request_for_component_changes', focus: message.focus });
         }, detailsSection.getInterval());
         break;
       }
