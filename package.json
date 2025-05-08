@@ -299,42 +299,42 @@
 				{
 					"command": "extension.updateEntities",
 					"when": "viewItem == connectionElementOnline",
-					"group": "none@0"
+					"group": "inline@0"
 				},
 				{
 					"command": "extension.disonnect",
 					"when": "viewItem == connectionElementOnline",
-					"group": "none@1"
+					"group": "inline@1"
+				},
+				{
+					"command": "extension.reconnect",
+					"when": "viewItem == connectionElementOffline",
+					"group": "inline@1"
+				},
+				{
+					"command": "extension.removeConnection",
+					"when": "viewItem == connectionElementOnline || viewItem == connectionElementOffline",
+					"group": "inline@2"
 				},
 				{
 					"command": "extension.updateEntities",
 					"when": "viewItem == connectionElementOnline",
-					"group": "inline@0"
+					"group": "none@0"
 				},
 				{
 					"command": "extension.disonnect",
 					"when": "viewItem == connectionElementOnline",
-					"group": "inline@1"
-				},
-				{
-					"command": "extension.reconnect",
-					"when": "viewItem == connectionElementOffline",
-					"group": "none@0"
-				},
-				{
-					"command": "extension.removeConnection",
-					"when": "viewItem == connectionElementOffline",
 					"group": "none@1"
 				},
 				{
 					"command": "extension.reconnect",
 					"when": "viewItem == connectionElementOffline",
-					"group": "inline@0"
+					"group": "none@1"
 				},
 				{
 					"command": "extension.removeConnection",
 					"when": "viewItem == connectionElementOffline",
-					"group": "inline@1"
+					"group": "none@2"
 				},
 				{
 					"command": "extension.renameEntity",

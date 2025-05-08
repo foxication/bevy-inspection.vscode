@@ -49,9 +49,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.disonnect', (connection: Connection) =>
       connection.disconnect()
     ),
-    vscode.commands.registerCommand('extension.removeConnection', (connection: Connection) =>
-      connections.removeConnection(connection.getHost())
-    ),
+    vscode.commands.registerCommand('extension.removeConnection', (connection: Connection) => {
+      if (connection.getNetworkStatus() === 'online') connection.disconnect();
+      connections.removeConnection(connection.getHost());
+    }),
     vscode.commands.registerCommand('extension.destroyEntity', (element: EntityElement) =>
       connections.get(element.host)?.requestDestroyOfEntity(element)
     ),
