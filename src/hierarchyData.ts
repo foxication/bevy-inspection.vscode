@@ -113,7 +113,7 @@ function iconFromComponents(components: TypePath[]) {
     case 'bevy_window::window::Window':
       return new vscode.ThemeIcon('window');
     case 'bevy_picking::pointer::PointerId':
-      return new vscode.ThemeIcon('target');
+      return new vscode.ThemeIcon('inspect');
     case 'bevy_ui::ui_node::Node':
       return new vscode.ThemeIcon('layout');
     case 'bevy_ui::widget::text::Text':
@@ -123,7 +123,7 @@ function iconFromComponents(components: TypePath[]) {
     case 'bevy_render::camera::camera::Camera':
       return new vscode.ThemeIcon('device-camera');
     case 'bevy_render::mesh::components::Mesh3d':
-      return new vscode.ThemeIcon('symbol-misc');
+      return new vscode.ThemeIcon('symbol-method', new vscode.ThemeColor('icon.foreground'));
     case 'bevy_transform::components::transform::Transform':
       return new vscode.ThemeIcon('move');
   }
