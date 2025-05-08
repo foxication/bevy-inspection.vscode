@@ -1,10 +1,7 @@
 import * as vscode from 'vscode';
 import {
   EntityId,
-  TypePath,
-  BrpObject,
   BrpRegistrySchema,
-  BrpResponseErrors,
   BevyRemoteProtocolV016,
   BrpResponse,
   BrpError,
@@ -24,12 +21,8 @@ export class Connection {
   private network: NetworkStatus;
 
   // Bevy data
-  private registeredComponents: TypePath[] = [];
   private registrySchema: BrpRegistrySchema = {};
   private entityElements = new Map<EntityId, EntityElement>();
-  private inspectionList: TypePath[] = [];
-  private inspectionTree: BrpObject = {};
-  private inspectionErrors: BrpResponseErrors = {};
 
   // Events
   private hierarchyUpdatedEmitter = new vscode.EventEmitter<Connection>();
@@ -53,7 +46,7 @@ export class Connection {
     this.disconnectionEmitter.fire(this);
   }
 
-  private isCorrectResponseOrDisconnect<R>(
+  isCorrectResponseOrDisconnect<R>(
     response: BrpResponse<R> | BrpError
   ): response is { jsonrpc: string; id: number; result: R; error?: BrpResponseError } {
     if (typeof response === 'string' || response.result === undefined) {
@@ -95,14 +88,7 @@ export class Connection {
     return 'success';
   }
 
-  public async requestRegisteredComponents(): Promise<ProtocolResult> {
-    const response = await this.protocol.list();
-    if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
-    this.registeredComponents = response.result;
-    return 'success';
-  }
-
-  public async requestRegistrySchema(): Promise<ProtocolResult> {
+  private async requestRegistrySchema(): Promise<ProtocolResult> {
     const response = await this.protocol.registrySchema();
     if (!this.isCorrectResponseOrDisconnect(response)) return 'disconnection';
     this.registrySchema = response.result;
@@ -112,39 +98,10 @@ export class Connection {
   public async initialize(): Promise<ProtocolResult> {
     this.network = 'online';
 
-    for (const status of [
-      await this.requestRegisteredComponents(),
-      await this.requestRegistrySchema(),
-      await this.requestEntityElements(),
-    ]) {
+    for (const status of [await this.requestRegistrySchema(), await this.requestEntityElements()]) {
       if (status !== 'success') return status;
     }
     return 'success';
-  }
-
-  public async requestInspectionElements(entity: EntityId): Promise<ProtocolResult> {
-    const listResponse = await this.protocol.list(entity);
-    if (!this.isCorrectResponseOrDisconnect(listResponse)) return 'disconnection';
-
-    const getResponse = await this.protocol.get(entity, listResponse.result);
-    if (!this.isCorrectResponseOrDisconnect(getResponse)) return 'disconnection';
-
-    this.inspectionList = listResponse.result;
-    this.inspectionTree = getResponse.result.components;
-    this.inspectionErrors = getResponse.result.errors;
-    return 'success';
-  }
-
-  public getInspectionElements() {
-    return this.inspectionTree;
-  }
-
-  public getInspectionErrors() {
-    return this.inspectionErrors;
-  }
-
-  public getInspectionList() {
-    return this.inspectionList;
   }
 
   public getRegistrySchema() {

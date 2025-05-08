@@ -117,7 +117,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       // this seems to be workaround as connection status is not binded between connection and view
       if (connections.focus?.host === connection.getHost()) {
-        connections.stopComponentWatch();
         componentsView.updateDescription(false);
         componentsView.updateAllAsOffline(connections.focus);
       }
@@ -132,16 +131,6 @@ export function activate(context: vscode.ExtensionContext) {
   connections.onRemoved(() => {
     areThereConnections(connections.all().length > 0);
     hierarchyData.update(undefined);
-  });
-  connections.onGetWatchResult(([focus, list, changes, errors]) => {
-    componentsView.updateComponents(focus, list, changes, errors);
-
-    // Name update (workaround)
-    if (!Object.keys(changes).includes('bevy_ecs::name::Name')) return; // skip
-    const entity = connections.get(focus.host)?.getById(focus.entityId);
-    if (entity === undefined) return console.error('connections.onGetWatchResult: no entity');
-    entity.name = changes['bevy_ecs::name::Name'] as string;
-    hierarchyData.update(entity);
   });
 
   hierarchyData.onDidChangeTreeData(() => {}); // hierarchyView is already listening
@@ -164,7 +153,25 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   connections.onFocusChanged((focus) => {
-    connections.stopComponentWatch();
     componentsView.updateAll(focus);
+  });
+
+  componentsView.onEntityChanges(([focus, list, changes]) => {
+    const entity = connections.get(focus.host)?.getById(focus.entityId);
+    if (entity === undefined) return console.error('connections.onGetWatchResult: no entity');
+
+    // Name component removed
+    if (!list.includes('bevy_ecs::name::Name') && entity.name !== undefined) {
+      entity.name = undefined;
+      hierarchyData.update(entity);
+      return;
+    }
+
+    // Name component changed
+    if (Object.keys(changes).includes('bevy_ecs::name::Name')) {
+      entity.name = changes['bevy_ecs::name::Name'] as string;
+      hierarchyData.update(entity);
+      return;
+    }
   });
 }

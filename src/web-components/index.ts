@@ -33,7 +33,7 @@ defineCustomElements();
 
   // Registry schemas
   const registryBuffer: Map<string, BrpRegistrySchema> = new Map();
-  let onRegistryAvailable: (registry: BrpRegistrySchema) => void = () => {};
+  let afterRegistryAvailable: (registry: BrpRegistrySchema) => void = () => {};
 
   // Event listener
   window.addEventListener('message', (event) => {
@@ -52,8 +52,7 @@ defineCustomElements();
         registryBuffer.set(message.host, message.data);
 
         // Success
-        onRegistryAvailable(message.data);
-        onRegistryAvailable = () => {};
+        afterRegistryAvailable(message.data);
         break;
       }
       case 'update_all': {
@@ -62,26 +61,26 @@ defineCustomElements();
         // Details
         detailsSection.update(focus, 'online');
 
-        // Components
-        onRegistryAvailable = (registry) => {
-          syncRoot.syncRoot(registry, focus, message.components);
+        // Start watch (function to call)
+        afterRegistryAvailable = (registry) => {
+          syncRoot.switchFocus(registry, focus);
           postWebviewMessage({
-            cmd: 'ready_for_watch',
+            cmd: 'request_for_component_changes',
             focus: focus.toObject(),
-            exceptions: Object.keys(message.errors),
-            interval: 100,
           });
+          afterRegistryAvailable = () => {};
         };
+
+        // Start watch
         const registry = registryBuffer.get(message.focus.host);
         if (registry !== undefined) {
-          onRegistryAvailable(registry);
-          onRegistryAvailable = () => {};
+          afterRegistryAvailable(registry);
         } else {
           postWebviewMessage({ cmd: 'request_for_registry_schema', host: message.focus.host });
         }
 
         // Errors
-        errorsSection.update(message.errors);
+        errorsSection.update({});
 
         // Start Information
         onStartHTML.style.display = 'none';
@@ -95,7 +94,7 @@ defineCustomElements();
 
         // Components + Errors
         if (syncRoot.getFocus()?.compare(focus) !== true) {
-          syncRoot.syncRoot({}, focus, {});
+          syncRoot.switchFocus({}, focus, true);
           errorsSection.update({});
         }
 
@@ -119,6 +118,13 @@ defineCustomElements();
         Object.entries(message.errors).forEach(([typePath, value]) =>
           errorsSection.push(typePath, value)
         );
+
+        // Continue watch
+        setTimeout(() => {
+          if (syncRoot.getFocus()?.compare(EntityFocus.fromObject(message.focus)) === true) {
+            postWebviewMessage({ cmd: 'request_for_component_changes', focus: message.focus });
+          }
+        }, 100);
         break;
       }
       case 'copy_error_message_to_clipboard': {

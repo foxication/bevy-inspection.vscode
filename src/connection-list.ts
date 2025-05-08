@@ -1,11 +1,5 @@
 import * as vscode from 'vscode';
-import {
-  BrpComponentRegistry,
-  BrpResponseErrors,
-  DEFAULT_BEVY_URL,
-  initializeBevyRemoteProtocol,
-  TypePath,
-} from './protocol';
+import { DEFAULT_BEVY_URL, initializeBevyRemoteProtocol } from './protocol';
 import { Connection } from './connection';
 import { EntityFocus } from './common';
 
@@ -31,11 +25,6 @@ export class ConnectionList {
 
   private focusChangedEmitter = new vscode.EventEmitter<EntityFocus>();
   readonly onFocusChanged = this.focusChangedEmitter.event;
-
-  private getWatchResultEmitter = new vscode.EventEmitter<
-    [EntityFocus, TypePath[], BrpComponentRegistry, BrpResponseErrors]
-  >();
-  readonly onGetWatchResult = this.getWatchResultEmitter.event;
 
   public async tryCreateConnection(behavior: AddBehavior = 'prompt'): Promise<void> {
     let url: URL;
@@ -103,58 +92,5 @@ export class ConnectionList {
 
   public get(host: string): Connection | undefined {
     return this.connections.get(host);
-  }
-
-  private watchBuffer: BrpComponentRegistry = {};
-  public startComponentWatch(focus: EntityFocus, exceptions: TypePath[], interval: number) {
-    const srcName = `${this.constructor.name}.watchingController`;
-
-    // Stop previous watch
-    this.stopComponentWatch();
-
-    // Get protocol
-    const protocol = this.get(focus.host)?.getProtocol();
-    if (protocol === undefined) return console.error(`${srcName}: no connection`);
-
-    this.watchId = setInterval(async () => {
-      const onError = (message: string | undefined) => {
-        this.stopComponentWatch();
-        if (message !== undefined) console.error(message);
-        return this.connections.get(focus.host)?.disconnect();
-      };
-      // Get component list
-      const listResponse = await protocol.list(focus.entityId);
-      if (typeof listResponse === 'string') return onError(undefined);
-      if (listResponse.result === undefined) return onError('list in watch responses with error');
-
-      // Get result
-      const whiteList = listResponse.result.filter((c) => !exceptions.includes(c));
-      const getResponse = await protocol.get(focus.entityId, whiteList);
-      if (typeof getResponse === 'string') return onError(undefined);
-      if (getResponse.result === undefined) return onError('get in watch responses with error');
-
-      // Update exceptions
-      exceptions.push(...Object.keys(getResponse.result.errors));
-
-      // Filter out changes only (unfortunately first iteration will send all components)
-      const bufferKeys = Object.keys(this.watchBuffer);
-      const componentChanges = Object.fromEntries(
-        Object.entries(getResponse.result.components).filter(([key, value]) => {
-          if (!bufferKeys.includes(key)) return true;
-          if (JSON.stringify(value) !== JSON.stringify(this.watchBuffer[key])) return true;
-          return false;
-        })
-      );
-      this.watchBuffer = getResponse.result.components;
-
-      // Signal
-      this.getWatchResultEmitter.fire([focus, whiteList, componentChanges, getResponse.result.errors]);
-    }, interval);
-  }
-
-  public stopComponentWatch() {
-    clearInterval(this.watchId);
-    this.watchId = undefined;
-    this.watchBuffer = {};
   }
 }

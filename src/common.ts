@@ -37,10 +37,8 @@ export type WebviewMessage =
       host: string;
     }
   | {
-      cmd: 'ready_for_watch';
+      cmd: 'request_for_component_changes';
       focus: EntityFocusAsObject;
-      exceptions: TypePath[];
-      interval: number;
     }
   | {
       cmd: 'write_clipboard';
@@ -52,8 +50,6 @@ export type VSCodeMessage =
   | {
       cmd: 'update_all';
       focus: EntityFocusAsObject;
-      components: BrpComponentRegistry;
-      errors: BrpResponseErrors;
     }
   | {
       cmd: 'update_all_offline';

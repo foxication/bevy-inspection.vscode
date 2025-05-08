@@ -21,6 +21,11 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private extensionUri: vscode.Uri;
   private visible?: { view: vscode.WebviewView; focus?: EntityFocus };
 
+  private onEntityChangesEmitter = new vscode.EventEmitter<
+    [EntityFocus, TypePath[], BrpComponentRegistry, BrpResponseErrors]
+  >();
+  readonly onEntityChanges = this.onEntityChangesEmitter.event;
+
   constructor(extensionUri: vscode.Uri, connections: ConnectionList) {
     this.connections = connections;
     this.extensionUri = extensionUri;
@@ -75,14 +80,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
       }
       case 'online': {
         this.updateDescription(true);
-        await connection.requestInspectionElements(focus.entityId);
-        const entityData = connection.getInspectionElements();
-        const errorData = connection.getInspectionErrors();
         this.postVSCodeMessage({
           cmd: 'update_all',
           focus: focus.toObject(),
-          components: entityData,
-          errors: errorData,
         });
         break;
       }
@@ -99,22 +99,68 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  updateComponents(
-    focus: EntityFocus,
-    list: TypePath[],
-    changes: BrpComponentRegistry,
-    errors: BrpResponseErrors
-  ) {
+  private watchBuffer: {
+    focus: EntityFocus | undefined;
+    changes: BrpComponentRegistry;
+    exceptions: TypePath[];
+  } = {
+    focus: undefined,
+    changes: {},
+    exceptions: [],
+  };
+  async updateComponents(focus: EntityFocus) {
     if (this.visible === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
+
+    // Reset buffer if focus changed
+    if (this.watchBuffer.focus === undefined || !this.watchBuffer.focus.compare(focus)) {
+      this.watchBuffer = { focus: focus, changes: {}, exceptions: [] };
+    }
+
+    const connection = this.connections.get(focus.host);
+    if (connection === undefined) return console.error(`connection ${focus.host} is not found`);
+
+    // Get component list
+    const listResponse = await connection.getProtocol().list(focus.entityId);
+    if (!connection.isCorrectResponseOrDisconnect(listResponse)) return;
+
+    // Get result
+    let whiteList = listResponse.result.filter((c) => !this.watchBuffer.exceptions.includes(c));
+    const getResponse = await connection.getProtocol().get(focus.entityId, whiteList);
+    if (!connection.isCorrectResponseOrDisconnect(getResponse)) return;
+
+    // Update exceptions and whitelist
+    this.watchBuffer.exceptions.push(...Object.keys(getResponse.result.errors));
+    whiteList = whiteList.filter((c) => !this.watchBuffer.exceptions.includes(c));
+
+    // Filter out changes only (first iteration will send all components)
+    const bufferKeys = Object.keys(this.watchBuffer.changes);
+    const componentChanges = Object.fromEntries(
+      Object.entries(getResponse.result.components).filter(([key, value]) => {
+        if (!bufferKeys.includes(key)) return true;
+        if (JSON.stringify(value) !== JSON.stringify(this.watchBuffer.changes[key])) return true;
+        return false;
+      })
+    );
+    this.watchBuffer.changes = getResponse.result.components;
+
+    // Send
     this.postVSCodeMessage({
       cmd: 'update_components',
       focus: focus.toObject(),
-      list,
-      changes,
-      errors,
+      list: whiteList,
+      changes: componentChanges,
+      errors: getResponse.result.errors,
     });
+
+    // Signal
+    this.onEntityChangesEmitter.fire([
+      focus,
+      whiteList,
+      componentChanges,
+      getResponse.result.errors,
+    ]);
   }
 
   public async resolveWebviewView(
@@ -148,13 +194,12 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           this.syncRegistrySchema(message.host);
           break;
         }
-        case 'ready_for_watch':
-          this.connections.startComponentWatch(
-            EntityFocus.fromObject(message.focus),
-            message.exceptions,
-            message.interval
-          );
+        case 'request_for_component_changes': {
+          const connection = this.connections.get(message.focus.host);
+          if (connection === undefined || connection.getNetworkStatus() === 'offline') break;
+          this.updateComponents(EntityFocus.fromObject(message.focus));
           break;
+        }
         case 'write_clipboard':
           vscode.env.clipboard.writeText(message.text);
           break;
@@ -163,7 +208,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     this.visible = { view: webviewView };
     webviewView.onDidDispose(() => {
       this.visible = undefined;
-      this.connections.stopComponentWatch(); // if watch is active
     });
     if (this.connections.focus !== undefined) this.updateAll(this.connections.focus);
   }

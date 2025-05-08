@@ -185,12 +185,13 @@ export class ComponentListData extends RootOfData {
   getComponentList(): TypePath[] {
     return Object.keys(this.mapOfComponents);
   }
-  syncRoot(registry: BrpRegistrySchema, focus: EntityFocus, components: BrpComponentRegistry) {
+  switchFocus(registry: BrpRegistrySchema, focus: EntityFocus, clearList = false) {
     this.registry = registry;
     this.focus = focus;
-    this.mapOfComponents = {};
-
-    this.insertComponents(components);
+    if (clearList) {
+      this.mapOfComponents = {};
+      this.children.clear(); // sync
+    }
   }
   insertComponents(components: BrpComponentRegistry) {
     const insert = Object.keys(components);
