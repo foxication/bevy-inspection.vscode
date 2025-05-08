@@ -44,24 +44,36 @@ export class HTMLMerged extends HTMLElement {
     this.htmlLeft.textContent = text;
   }
   setTooltipFrom(data: TooltipData | string) {
+    // Simple
     if (typeof data === 'string') {
       this.htmlLeft.title = data;
       return;
     }
 
+    // Label
+    let result = data.label + '\n\n';
+
+    // Path
+    result += '[Path]\n';
+    result += `componentPath = ${data.componentPath}\n`;
+    if (data.mutationPath !== '') result += `mutationPath = ${data.mutationPath}\n`;
+    result += '\n';
+
+    // Schema
     function fitText(text: string, width: number) {
       return text.length > width ? text.substring(0, width) + '...' : text;
     }
-    let result = data.label + '\n\n';
-    result += `componentPath = ${data.componentPath}\n`;
-    result += `mutationPath = ${data.mutationPath}\n\n`;
     result += data.sections
-      .map((section) =>
-        Object.entries(section)
-          .map(([key, value]) => key + ' = ' + fitText(value, 50))
-          .join('\n')
+      .map(
+        (section, index) =>
+          `[Schema ${index + 1}]\n` +
+          Object.entries(section)
+            .map(([key, value]) => key + ' = ' + fitText(value, 50))
+            .join('\n')
       )
       .join('\n\n');
+
+    // Apply
     this.htmlLeft.title = result;
   }
   setValue(v: string | number | boolean | null) {
