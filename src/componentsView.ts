@@ -19,7 +19,8 @@ export function createComponentsView(
 export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private connections: ConnectionList;
   private extensionUri: vscode.Uri;
-  private visible?: { view: vscode.WebviewView; focus?: EntityFocus };
+  private view?: vscode.WebviewView;
+  private focus?: EntityFocus;
 
   private onEntityChangesEmitter = new vscode.EventEmitter<
     [EntityFocus, TypePath[], BrpComponentRegistry, BrpResponseErrors]
@@ -32,19 +33,19 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   updateDescription(isOnline: boolean) {
-    if (this.visible !== undefined) {
-      this.visible.view.description = isOnline ? undefined : 'Disconnected';
+    if (this.view !== undefined) {
+      this.view.description = isOnline ? undefined : 'Disconnected';
     }
   }
   getFocus() {
-    return this.visible?.focus;
+    return this.focus;
   }
 
   private async postVSCodeMessage(message: VSCodeMessage) {
-    if (this.visible === undefined) {
+    if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.postVSCodeMessage: no view`);
     }
-    await this.visible.view.webview.postMessage(message);
+    await this.view.webview.postMessage(message);
   }
 
   public async syncRegistrySchema(host: string) {
@@ -63,7 +64,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
 
   // Called on componentsData.onDidChangeTreeData
   async updateAll(focus: EntityFocus): Promise<void> {
-    if (this.visible === undefined) return vscode.commands.executeCommand('componentsView.focus');
+    if (this.view === undefined) return vscode.commands.executeCommand('componentsView.focus');
     const connection = this.connections.get(focus.host);
     if (connection === undefined) {
       return console.error(`ComponentsViewProvider.updateAll(): no connection`);
@@ -90,7 +91,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   }
 
   updateAllAsOffline(focus: EntityFocus) {
-    if (this.visible === undefined) {
+    if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
     this.postVSCodeMessage({
@@ -109,7 +110,7 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     exceptions: [],
   };
   async updateComponents(focus: EntityFocus) {
-    if (this.visible === undefined) {
+    if (this.view === undefined) {
       return console.error(`ComponentsViewProvider.updateComponents(): no view`);
     }
 
@@ -205,9 +206,9 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
           break;
       }
     });
-    this.visible = { view: webviewView };
+    this.view = webviewView;
     webviewView.onDidDispose(() => {
-      this.visible = undefined;
+      this.view = undefined;
     });
     if (this.connections.focus !== undefined) this.updateAll(this.connections.focus);
   }
