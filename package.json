@@ -2,7 +2,7 @@
 	"name": "bevy-inspection",
 	"displayName": "Bevy Inspection",
 	"description": "Runtime Monitoring & Modification Tool for Bevy Engine",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"license": "Apache-2.0",
 	"icon": "assets/extension-logo.png",
 	"publisher": "foxication",
