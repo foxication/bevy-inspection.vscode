@@ -37,7 +37,7 @@ Built on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.ht
 bevy = { version = "0.16", features = ["bevy_remote"] }
 ```
 
-2. Initialize plugins in your Bevy app:
+2. Initialize plugins in your Bevy App:
 
 ```rust
 fn main() {

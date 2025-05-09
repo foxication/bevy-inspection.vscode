@@ -118,7 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
       hierarchyData.update(undefined);
 
       vscode.window
-        .showInformationMessage('Bevy instance has been disconnected', 'Reconnect')
+        .showInformationMessage('Bevy App has been disconnected', 'Reconnect')
         .then((reaction) => {
           if (reaction === 'Reconnect') {
             connections.tryCreateConnection('last');

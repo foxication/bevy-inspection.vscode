@@ -35,7 +35,7 @@ export class ConnectionList {
     } else {
       // Input URL
       const input = await vscode.window.showInputBox({
-        title: 'Connection to Bevy Instance',
+        title: 'Connection to Bevy App',
         value: DEFAULT_BEVY_URL.toString(),
       });
       if (input === undefined) return console.error(errSrc + 'no url');
@@ -52,7 +52,7 @@ export class ConnectionList {
     // try to initialize protocol
     const newProtocol = await initializeBevyRemoteProtocol(url);
     if (typeof newProtocol === 'string') {
-      vscode.window.showErrorMessage('Bevy instance refused to connect');
+      vscode.window.showErrorMessage('Bevy App refused to connect');
       return; // error in ui
     }
 
@@ -60,7 +60,7 @@ export class ConnectionList {
     const newConnection = new Connection(newProtocol);
     newConnection.initialize().then((protocolStatus) => {
       if (protocolStatus !== 'success') {
-        vscode.window.showErrorMessage('Bevy instance refused to connect');
+        vscode.window.showErrorMessage('Bevy App refused to connect');
         return; // error in ui
       }
 
