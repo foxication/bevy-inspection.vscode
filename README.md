@@ -7,18 +7,18 @@
 
 ![Screenshot](https://github.com/user-attachments/assets/10db60e5-9902-47d1-a252-ef1918c50ad1)
 
-## :warning: Warning
+## ⚠️ Warning
 
 - **Not Official**: This is a community-driven project, not affiliated with the official Bevy Engine team.
 - **Early Development**: Currently in alpha stage - expect bugs and missing features. Contributions welcome!
 
-## :sparkles: Features
+## ✨ Features
 
 - Review hierarchy of all entities in your scene
 - Rename and destroy entities
 - Review and modify components of entities in real time
 
-## :date: Upcoming Features
+## 📅 Upcoming Features
 
 ### v0.1.3 - Core Functionality
 
@@ -46,7 +46,7 @@ Focus: Scene composition tools
 - Spawn new entities
 - Drag-and-drop reparenting of entities
 
-## :triangular_ruler: Supported Versions
+## 📐 Supported Versions
 
 | Bevy Version | Status      |
 | ------------ | ------------|
@@ -54,7 +54,7 @@ Focus: Scene composition tools
 
 Built on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.html) via JSON-RPC 2.0 over HTTP.
 
-## :green_book: Getting Started
+## 📗 Getting Started
 
 ### Configure Bevy Project
 
@@ -112,12 +112,12 @@ Resource inspection not supported - work in progress
 Refer to the [examples](https://github.com/foxication/bevy-inspection.vscode/tree/main/examples/) directory
 for fully functional Bevy applications demonstrating correct configuration.
 
-## :mag: Related Documentation
+## 🔍 Related Documentation
 
 - Reflection - https://docs.rs/bevy/latest/bevy/reflect/index.html
 - RemoteHttpPlugin - https://docs.rs/bevy/latest/bevy/remote/http/struct.RemoteHttpPlugin.html
 
-## :star: Support
+## ⭐ Support
 
 As a solo developer, I'm passionate about creating tools that empower the Bevy community.
 To keep pushing new features and improvements, I need your help to gauge interest and prioritize efforts.
@@ -135,7 +135,7 @@ Here's how you can contribute:
 
 Your engagement keeps Bevy Inspection thriving. Thank you!  
 
-## :globe_with_meridians: Alternative Solutions
+## 🌐 Alternative Solutions
 
 - [splo/bevy-inspector-vscode](https://github.com/splo/vscode-bevy-inspector) - vscode extension
 - [Lommix/bevy_inspector.nvim](https://github.com/Lommix/bevy_inspector.nvim) - nvim extension
