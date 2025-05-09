@@ -20,26 +20,31 @@
 
 ## :date: Upcoming Features
 
-### v0.1.3 - Component, List & Enum Enhancements (Important)
+### v0.1.3 - Core Functionality
 
-- Component Creation
-- List Modification
-- Map Modification
-- Enum Modification
+Focus: Critical inspector capabilities
 
-### v0.1.4 - UX Improvements (Fun)
+- Component modification
+- Collection modification
+- Enum modification
 
-- Collapse/expand all components with a single click
+### v0.1.4 - UX Improvements
+
+Focus: Quality-of-life improvements
+
+- Collapse/expand all components with one-click toggles
 - Custom UI adapters for `Transform` and `Vec3` types
 - Redesign of number inputs with drag-to-adjust functionality
-- Redesign of selection interfaces
-- Redesign of button interfaces
+- Redesign of selection state
+- Redesign of buttons
 
-### v0.1.5 - Entity Creation (Important)
+### v0.1.5 - Entity Management
 
-- Tree of entities in **real time**
-- Entity creation
-- Reparent entities in hierarchy
+Focus: Scene composition tools
+
+- Visualize entity tree in **real-time**
+- Spawn new entities
+- Drag-and-drop reparenting of entities
 
 ## :triangular_ruler: Supported Versions
 
