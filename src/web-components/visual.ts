@@ -145,12 +145,6 @@ export abstract class VisualWithSync extends Visual {
   }
 }
 
-export class SerializedVisual extends VisualWithSync {
-  constructor(public sync: SerializedSync, anchor: HTMLElement) {
-    super(sync, anchor);
-  }
-}
-
 //
 // Expandable visual
 //

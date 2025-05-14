@@ -32,7 +32,6 @@ import {
   MapVisual,
   JsonNullVisual,
   JsonNumberVisual,
-  SerializedVisual,
   SetVisual,
   JsonStringVisual,
   StructVisual,
@@ -691,7 +690,7 @@ export class TupleSync extends DataSyncWithSchema {
 }
 
 export class SerializedSync extends DataSyncWithSchema {
-  visual: SerializedVisual | JsonNullVisual | JsonStringVisual | JsonNumberVisual | ErrorVisual;
+  visual: JsonNullVisual | JsonStringVisual | JsonNumberVisual | ErrorVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
