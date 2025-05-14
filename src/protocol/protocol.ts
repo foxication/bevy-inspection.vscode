@@ -19,7 +19,7 @@ import {
 } from './types';
 import { TextDecoder } from 'util';
 
-export const DEFAULT_BEVY_URL = new URL('http://127.0.0.1:15702');
+export const DEFAULT_BEVY_URL = new URL('http://localhost:15702');
 
 function requestWrapper(
   id: number,
