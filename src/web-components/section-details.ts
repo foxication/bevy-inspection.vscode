@@ -24,7 +24,7 @@ export class SectionDetails {
 
     this.entityId = HTMLMerged.create();
     this.entityId.label = 'Entity ID';
-    this.entityId.setTooltipFrom('Protocol-specific ID (unused in Bevy application logic)');
+    this.entityId.setTooltipFrom('Entity ID');
     this.entityId.vscodeContext({ details: 'entity_id' });
 
     this.updateMode = HTMLMerged.create();
