@@ -114,7 +114,7 @@ export abstract class VisualWithSync extends Visual {
     this.dom.setTooltipFrom(this.sync.getTooltip());
     this.dom.vscodeContext({
       label: label,
-      type: types.length === 0 ? undefined : types[types.length - 1],
+      type: types.length === 0 ? undefined : types.join('(') + ')'.repeat(types.length - 1),
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);
