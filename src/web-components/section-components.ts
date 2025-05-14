@@ -1,5 +1,5 @@
 import { postWebviewMessage } from '.';
-import { EntityFocus, forcedShortPath } from '../common';
+import { EntityFocus, forcedShortPath, resolveTypePathFromRef } from '../common';
 import {
   BrpArraySchema,
   BrpComponentRegistry,
@@ -17,7 +17,6 @@ import {
   isBrpArray,
   isBrpObject,
   TypePath,
-  TypePathReference,
 } from '../protocol/types';
 import { TooltipData } from './elements';
 import {
@@ -437,7 +436,7 @@ export abstract class BrpValueSync extends DataSync {
 }
 
 //
-// Implementations
+// Schema Defined Data
 //
 
 function createSyncFromSchema(
@@ -697,6 +696,10 @@ export class TupleSync extends DataSyncWithSchema {
   }
 }
 
+//
+// Serialized Data
+//
+
 export class SerializedSync extends DataSyncWithSchema {
   visual: JsonNullVisual | JsonStringVisual | JsonNumberVisual | ErrorVisual;
   constructor(
@@ -872,6 +875,10 @@ export class JsonArraySync extends BrpValueSync {
   }
 }
 
+//
+// Error Data
+//
+
 export class ErrorData extends DataWithAccess {
   visual: ErrorVisual;
 
@@ -896,8 +903,4 @@ export class ErrorData extends DataWithAccess {
   getDebugTree(): string {
     return `${this.getLabelToRender()} => ${this.visual.error.message}\n`;
   }
-}
-
-export function resolveTypePathFromRef(ref: TypePathReference): TypePath {
-  return ref.type.$ref.slice('#/$defs/'.length);
 }

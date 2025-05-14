@@ -5,6 +5,7 @@ import {
   BrpValue,
   EntityId,
   TypePath,
+  TypePathReference,
 } from './protocol/types';
 
 export type EntityFocusAsObject = { host: string; entityId: number };
@@ -90,4 +91,8 @@ export type VSCodeMessage =
 export function forcedShortPath(typePath: string) {
   const splitted = typePath.split('<')[0].split('::');
   return splitted[splitted.length - 1];
+}
+
+export function resolveTypePathFromRef(ref: TypePathReference): TypePath {
+  return ref.type.$ref.slice('#/$defs/'.length);
 }

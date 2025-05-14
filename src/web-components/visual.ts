@@ -1,3 +1,4 @@
+import { resolveTypePathFromRef } from '../common';
 import { TypePath } from '../protocol/types';
 import { HTMLMerged, HTMLSelectCustom } from './elements';
 import {
@@ -19,7 +20,6 @@ import {
   StringSync,
   StructSync,
   TupleSync,
-  resolveTypePathFromRef,
 } from './section-components';
 
 //
