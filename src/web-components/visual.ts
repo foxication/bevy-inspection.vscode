@@ -5,7 +5,6 @@ import {
   BooleanSync,
   ComponentListData,
   DataSync,
-  DataSyncWithSchema,
   EnumAsStringSync,
   ErrorData,
   JsonArraySync,
@@ -109,12 +108,13 @@ export abstract class VisualWithSync extends Visual {
   constructor(public sync: DataSync, anchor: HTMLElement) {
     super();
     const label = this.sync.getLabelToRender();
+    const types = this.sync.getSchema().map((schema) => schema.typePath);
     this.dom.level = this.getLevel();
     this.dom.label = label;
     this.dom.setTooltipFrom(this.sync.getTooltip());
     this.dom.vscodeContext({
       label: label,
-      type: this.sync instanceof DataSyncWithSchema ? this.sync.schema.typePath : undefined,
+      type: types.length === 0 ? undefined : types[types.length - 1],
       path: this.sync.getPathSerialized(),
     });
     anchor.after(this.dom);

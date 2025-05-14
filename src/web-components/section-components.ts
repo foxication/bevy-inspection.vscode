@@ -365,6 +365,12 @@ export abstract class DataWithAccess extends RootOfData {
     this.children.forEach((node) => (result += shifted(node.getDebugTree())));
     return result;
   }
+  // return schema, if segment undefined => schema of parent is added
+  getSchema(): BrpSchemaUnit[] {
+    if (this.parent instanceof ComponentListData) return [];
+    if (this.segment === undefined) return this.parent.getSchema();
+    return [];
+  }
 
   abstract parent: ComponentListData | DataWithAccess;
   abstract segment: OptionalPathSegment;
@@ -387,6 +393,11 @@ export abstract class DataSyncWithSchema extends DataSync {
   getLabelToRender(): string {
     if (this.parent instanceof ComponentListData) return this.schema.shortPath;
     return super.getLabelToRender();
+  }
+  getSchema(): BrpSchemaUnit[] {
+    if (this.parent instanceof ComponentListData) return [this.schema];
+    if (this.segment === undefined) return [...this.parent.getSchema(), this.schema];
+    return [this.schema];
   }
 
   abstract schema: BrpSchemaUnit;
