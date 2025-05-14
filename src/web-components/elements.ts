@@ -56,10 +56,12 @@ export class HTMLMerged extends HTMLElement {
     // Label
     let result = data.label;
 
-    // Path
-    result += '\n\n[Path]';
-    result += `\ncomponentPath = ${data.componentPath}`;
-    if (data.mutationPath !== '') result += `\nmutationPath = ${data.mutationPath}`;
+    // Path - if not part of serialized value
+    if (data.schemas.length > 0) {
+      result += '\n\n[Path]';
+      result += `\ncomponentPath = ${data.componentPath}`;
+      if (data.mutationPath !== '') result += `\nmutationPath = ${data.mutationPath}`;
+    }
 
     // Schema
     let index = 0;
