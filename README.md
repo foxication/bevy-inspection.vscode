@@ -56,6 +56,11 @@ Built on [Bevy Remote Protocol](https://docs.rs/bevy/latest/bevy/remote/index.ht
 
 ## 📗 Getting Started
 
+### Installation
+
+- Install the extension from the official [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=foxication.bevy-inspection)
+- Also available on [Open VSX](https://open-vsx.org/extension/foxication/bevy-inspection)
+
 ### Configure Bevy Project
 
 1. Add required dependencies to your `Cargo.toml`:
