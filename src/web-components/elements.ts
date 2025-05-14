@@ -1,7 +1,7 @@
 import { DataWithAccess, EnumAsStringSync } from './section-components';
 import { VscodeIcon } from '@vscode-elements/elements/dist/vscode-icon';
 import * as VslStyles from './styles';
-import { BrpValue, TypePath } from '../protocol/types';
+import { BrpSchemaUnit, BrpValue, TypePath } from '../protocol/types';
 
 const HTML_BOOLEAN_NAME = 'visual-boolean';
 const HTML_BUTTON_NAME = 'visual-button';
@@ -23,7 +23,8 @@ export type TooltipData = {
   label: string;
   componentPath: TypePath;
   mutationPath: string;
-  sections: { [key: string]: string }[];
+  schemas: BrpSchemaUnit[];
+  propertiesList: { [key: string]: string }[];
 };
 
 export class HTMLMerged extends HTMLElement {
@@ -53,27 +54,38 @@ export class HTMLMerged extends HTMLElement {
     }
 
     // Label
-    let result = data.label + '\n\n';
+    let result = data.label;
 
     // Path
-    result += '[Path]\n';
-    result += `componentPath = ${data.componentPath}\n`;
-    if (data.mutationPath !== '') result += `mutationPath = ${data.mutationPath}\n`;
-    result += '\n';
+    result += '\n\n[Path]';
+    result += `\ncomponentPath = ${data.componentPath}`;
+    if (data.mutationPath !== '') result += `\nmutationPath = ${data.mutationPath}`;
 
     // Schema
+    let index = 0;
     function fitText(text: string, width: number) {
       return text.length > width ? text.substring(0, width) + '...' : text;
     }
-    result += data.sections
+    result += data.schemas
       .map(
-        (section, index) =>
-          `[Schema ${index + 1}]\n` +
-          Object.entries(section)
-            .map(([key, value]) => key + ' = ' + fitText(value, 50))
-            .join('\n')
+        (schema) =>
+          `\n\n${++index}: [Schema]` +
+          Object.entries(schema)
+            .map(([key, value]) => '\n' + key + ' = ' + fitText(value, 50))
+            .join('')
       )
-      .join('\n\n');
+      .join('');
+
+    // More in properties
+    result += data.propertiesList
+      .map(
+        (properties) =>
+          `\n\n${++index}: [Properties]` +
+          Object.entries(properties)
+            .map(([key, value]) => '\n' + key + ' = ' + fitText(value, 50))
+            .join('')
+      )
+      .join('');
 
     // Apply
     this.htmlLeft.title = result;

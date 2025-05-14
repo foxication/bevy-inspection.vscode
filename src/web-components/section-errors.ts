@@ -42,7 +42,8 @@ export class SectionErrors {
       label: shortPath,
       componentPath: typePath,
       mutationPath: '',
-      sections: [
+      schemas: [],
+      propertiesList: [
         {
           component: typePath,
           code: error.code.toString(),

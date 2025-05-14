@@ -345,7 +345,8 @@ export abstract class DataWithAccess extends RootOfData {
         label: this.getLabelToRender(),
         componentPath,
         mutationPath,
-        sections: [],
+        schemas: [],
+        propertiesList: [],
       };
       return result;
     }
@@ -383,11 +384,7 @@ export abstract class DataSync extends DataWithAccess {
 export abstract class DataSyncWithSchema extends DataSync {
   getTooltip(): TooltipData {
     const result = super.getTooltip();
-    result.sections.push(
-      Object.fromEntries(
-        Object.entries(this.schema).map(([key, value]) => [key, JSON.stringify(value)])
-      )
-    );
+    result.schemas.push(this.schema);
     return result;
   }
   getLabelToRender(): string {
@@ -406,7 +403,7 @@ export abstract class DataSyncWithSchema extends DataSync {
 export abstract class BrpValueSync extends DataSync {
   getTooltip(): TooltipData {
     const result = super.getTooltip();
-    const addSection = (name: string) => result.sections.push({ treeItem: name });
+    const addSection = (name: string) => result.propertiesList.push({ jsonValueType: name });
     if (this instanceof NullSync) addSection('Null');
     if (this instanceof StringSync) addSection('String');
     if (this instanceof NumberSync) addSection('Number');
@@ -890,7 +887,7 @@ export class ErrorData extends DataWithAccess {
   }
   getTooltip(): TooltipData {
     const result = super.getTooltip();
-    result.sections.push({
+    result.propertiesList.push({
       treeItem: 'Error',
       errorCode: (this.code ?? 'undefined').toString(),
     });
