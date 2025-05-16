@@ -513,6 +513,7 @@ export class EnumAsStringSync extends DataSyncWithSchema {
     super();
     this.visual = TreeItemVisual.createWithLabel(this);
     this.editor = SelectionEditor.create();
+    this.editor.extSetAvailable(this.getAvailableVariants(), this.getVariant());
     this.editor.extAllowMutation(this.requestValueMutation);
     this.visual.extInsertEditor(this.editor);
     anchor.after(this.visual);

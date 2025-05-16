@@ -40,7 +40,7 @@ export class SectionDetails {
     this.updateMode[0].extSetTooltipFrom('Update Mode');
     this.updateMode[0].extVscodeContext({ details: 'update_mode' });
     this.updateMode[0].extInsertEditor(this.updateMode[1]);
-    this.updateMode[1].setAvailable(['Live', 'Manual'], 'Live');
+    this.updateMode[1].extSetAvailable(['Live', 'Manual'], 'Live');
     this.updateMode[1].extAllowMutation((v: string) => {
       if (v === 'Live') return this.switchToLiveAndUpdate();
       if (v === 'Manual') return this.switchToManualAndUpdate();
@@ -109,7 +109,7 @@ export class SectionDetails {
       this.doUpdate = false;
 
       // set selection
-      if (this.updateMode[1].getAvailable().includes('Manual')) {
+      if (this.updateMode[1].extGetAvailable().includes('Manual')) {
         this.updateMode[1].extSetValue('Manual');
       } else {
         console.error('Cannot update option for updateMode');
@@ -128,7 +128,7 @@ export class SectionDetails {
       this.doUpdate = true;
 
       // set selection
-      if (this.updateMode[1].getAvailable().includes('Live')) {
+      if (this.updateMode[1].extGetAvailable().includes('Live')) {
         this.updateMode[1].extSetValue('Live');
       } else {
         console.error('Cannot update option for updateMode');

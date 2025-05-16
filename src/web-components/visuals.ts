@@ -516,7 +516,7 @@ export class SelectionEditor extends ValueEditor<string> {
     }
     this.extInternal.value = this.extGetValue();
   }
-  setAvailable(available: string[], selection?: string) {
+  extSetAvailable(available: string[], selection?: string) {
     if (available.length < 1) return console.error(`Cannot set empty variants`);
     this.extAvailableVariants = available.reduce((acc, variant) => {
       const element = document.createElement('option');
@@ -528,7 +528,7 @@ export class SelectionEditor extends ValueEditor<string> {
     this.extInternal.replaceChildren(...Object.values(this.extAvailableVariants));
     this.extSetValue(selection ?? available[0]);
   }
-  getAvailable() {
+  extGetAvailable() {
     return Object.keys(this.extAvailableVariants);
   }
 }
