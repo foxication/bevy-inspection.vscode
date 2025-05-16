@@ -60,7 +60,7 @@ export class SectionDetails {
     this.manualUpdate[0].extSetLabel('Update Control');
     this.manualUpdate[0].extSetTooltipFrom('Update Mode');
     this.manualUpdate[0].extInsertEditor(this.manualUpdate[1]);
-    this.manualUpdate[1].extSetActionTitle('Update (Clickable)');
+    this.manualUpdate[1].extSetActionTitle('Update');
     this.manualUpdate[1].extAllowMutation(() => this.onManualUpdate());
 
     // Setup

@@ -50,7 +50,7 @@ export class TreeItemVisual extends HTMLElement {
   connectedCallback() {
     if (this.shadowRoot !== null) return; // already exists
     const shadow = this.attachShadow({ mode: 'open' });
-    shadow.adoptedStyleSheets = [VslStyles.merged];
+    shadow.adoptedStyleSheets = [VslStyles.treeItem];
     shadow.append(this.extLeft, ...(this.extRight ? [this.extRight.wrapper] : []));
     this.extReplaceRightMembers();
   }
@@ -459,8 +459,9 @@ export class StringEditor extends ValueEditor<string> {
 }
 
 export class BooleanEditor extends ValueEditor<boolean> {
-  extStyles = [VslStyles.editableText];
+  extStyles = [VslStyles.buttons];
   extInternal: HTMLDivElement;
+  private extButton: HTMLButtonElement;
 
   static create() {
     return document.createElement(EXT_BOOLEAN_NAME) as BooleanEditor;
@@ -468,15 +469,18 @@ export class BooleanEditor extends ValueEditor<boolean> {
 
   constructor() {
     super(false);
-    this.extInternal = document.createElement('div');
-
-    this.extInternal.onclick = () => {
+    this.extButton = document.createElement('button');
+    this.extButton.onclick = () => {
       this.extTryMutation(!this.extGetValue());
     };
+
+    this.extInternal = document.createElement('div');
+    this.extInternal.classList.add('background');
+    this.extInternal.replaceChildren(this.extButton);
   }
 
   extRenderOnValueChanged() {
-    this.extInternal.innerText = this.extGetValue() ? 'True' : 'False';
+    this.extButton.innerText = this.extGetValue() ? 'True' : 'False';
   }
 }
 
@@ -534,8 +538,9 @@ export class SelectionEditor extends ValueEditor<string> {
 }
 
 export class ButtonAsEditor extends ValueEditor<undefined> {
-  extStyles = [VslStyles.editableText];
+  extStyles = [VslStyles.buttons];
   extInternal: HTMLDivElement;
+  extButton: HTMLButtonElement;
 
   static create() {
     return document.createElement(EXT_BUTTON_NAME) as ButtonAsEditor;
@@ -543,16 +548,20 @@ export class ButtonAsEditor extends ValueEditor<undefined> {
 
   constructor() {
     super(undefined);
-    this.extInternal = document.createElement('div');
-    this.extInternal.innerText = 'Unknown';
-    this.extInternal.onclick = () => {
+    this.extButton = document.createElement('button');
+    this.extButton.innerText = 'Button';
+    this.extButton.onclick = () => {
       this.extTryMutation(undefined);
     };
+
+    this.extInternal = document.createElement('div');
+    this.extInternal.classList.add('background');
+    this.extInternal.replaceChildren(this.extButton);
   }
 
   extRenderOnValueChanged() {}
 
   extSetActionTitle(title: string) {
-    this.extInternal.innerText = title;
+    this.extButton.innerText = title;
   }
 }
