@@ -513,6 +513,7 @@ export class EnumAsStringSync extends DataSyncWithSchema {
     super();
     this.visual = TreeItemVisual.createWithLabel(this);
     this.editor = SelectionEditor.create();
+    this.editor.extAllowMutation(this.requestValueMutation);
     this.visual.extInsertEditor(this.editor);
     anchor.after(this.visual);
   }
@@ -802,6 +803,7 @@ export class StringSync extends BrpValueSync {
     super();
     this.visual = TreeItemVisual.createWithLabel(this);
     this.editor = StringEditor.create();
+    this.editor.extAllowMutation(this.requestValueMutation);
     this.visual.extInsertEditor(this.editor);
     anchor.after(this.visual);
   }
@@ -823,6 +825,7 @@ export class NumberSync extends BrpValueSync {
     super();
     this.visual = TreeItemVisual.createWithLabel(this);
     this.editor = NumberEditor.create();
+    this.editor.extAllowMutation(this.requestValueMutation);
     this.visual.extInsertEditor(this.editor);
     anchor.after(this.visual);
   }
@@ -844,6 +847,7 @@ export class BooleanSync extends BrpValueSync {
     super();
     this.visual = TreeItemVisual.createWithLabel(this);
     this.editor = BooleanEditor.create();
+    this.editor.extAllowMutation(this.requestValueMutation);
     this.visual.extInsertEditor(this.editor);
     anchor.after(this.visual);
   }
