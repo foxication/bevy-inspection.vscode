@@ -1,14 +1,20 @@
 import { EntityFocus } from '../common';
 import { BrpValue } from '../protocol';
-import { HTMLButtonCustom, HTMLMerged, HTMLSelectCustom } from './elements';
+import {
+  ButtonAsEditor,
+  InformationRenderer,
+  NumberEditor,
+  SelectionEditor,
+  TreeItemVisual,
+} from './visuals';
 
 export class SectionDetails {
   private title: HTMLElement;
-  private connection: HTMLMerged;
-  private entityId: HTMLMerged;
-  private updateMode: HTMLMerged;
-  private intervalRange: HTMLMerged;
-  private manualUpdate: HTMLMerged;
+  private connection: [TreeItemVisual, InformationRenderer];
+  private entityId: [TreeItemVisual, InformationRenderer];
+  private updateMode: [TreeItemVisual, SelectionEditor];
+  private intervalRange: [TreeItemVisual, NumberEditor];
+  private manualUpdate: [TreeItemVisual, ButtonAsEditor];
 
   private doUpdate: boolean = true;
   private interval: number = 100; // by default
@@ -17,69 +23,69 @@ export class SectionDetails {
     this.title = document.createElement('h3');
     this.title.textContent = 'Entity';
 
-    this.connection = HTMLMerged.create();
-    this.connection.label = 'Connection';
-    this.connection.setTooltipFrom('Connection');
-    this.connection.vscodeContext({ details: 'connection' });
+    this.connection = [TreeItemVisual.createEmpty(), InformationRenderer.create()];
+    this.connection[0].extSetLabel('Connection');
+    this.connection[0].extSetTooltipFrom('Connection');
+    this.connection[0].extVscodeContext({ details: 'connection' });
+    this.connection[0].extInsertRenderer(this.connection[1]);
 
-    this.entityId = HTMLMerged.create();
-    this.entityId.label = 'Entity ID';
-    this.entityId.setTooltipFrom('Entity ID');
-    this.entityId.vscodeContext({ details: 'entity_id' });
+    this.entityId = [TreeItemVisual.createEmpty(), InformationRenderer.create()];
+    this.entityId[0].extSetLabel('Entity ID');
+    this.entityId[0].extSetTooltipFrom('Entity ID');
+    this.entityId[0].extVscodeContext({ details: 'entity_id' });
+    this.entityId[0].extInsertRenderer(this.entityId[1]);
 
-    this.updateMode = HTMLMerged.create();
-    this.updateMode.label = 'Update Mode';
-    this.updateMode.setTooltipFrom('Update Mode');
-    this.updateMode.setOptionsManual('Live', ['Live', 'Manual'], (v: BrpValue) => {
+    this.updateMode = [TreeItemVisual.createEmpty(), SelectionEditor.create()];
+    this.updateMode[0].extSetLabel('Update Mode');
+    this.updateMode[0].extSetTooltipFrom('Update Mode');
+    this.updateMode[0].extVscodeContext({ details: 'update_mode' });
+    this.updateMode[0].extInsertEditor(this.updateMode[1]);
+    this.updateMode[1].setAvailable(['Live', 'Manual'], 'Live');
+    this.updateMode[1].extAllowMutation((v: string) => {
       if (v === 'Live') return this.switchToLiveAndUpdate();
       if (v === 'Manual') return this.switchToManualAndUpdate();
       console.error('cannot parse option from updateMode');
     });
-    this.updateMode.vscodeContext({ details: 'update_mode' });
 
-    this.intervalRange = HTMLMerged.create();
-    this.intervalRange.label = 'Update Interval';
-    this.intervalRange.setTooltipFrom('Update Interval in Milliseconds');
-    this.intervalRange.setValue(this.interval);
-    if (this.intervalRange.htmlRight !== undefined) {
-      this.intervalRange.htmlRight.value.mutability = this.changeInterval;
-    }
-    this.intervalRange.vscodeContext({ details: 'interval' });
+    this.intervalRange = [TreeItemVisual.createEmpty(), NumberEditor.create()];
+    this.intervalRange[0].extSetLabel('Update Interval');
+    this.intervalRange[0].extSetTooltipFrom('Update Interval in Milliseconds');
+    this.intervalRange[0].extVscodeContext({ details: 'interval' });
+    this.intervalRange[0].extInsertEditor(this.intervalRange[1]);
+    this.intervalRange[1].extSetValue(this.interval);
+    this.intervalRange[1].extAllowMutation(this.changeInterval);
 
-    this.manualUpdate = HTMLMerged.create();
-    this.manualUpdate.style.display = 'none'; // hidden at start
-    this.manualUpdate.label = 'Update Control';
-    this.manualUpdate.setTooltipFrom('Update Mode');
-    const clickable = HTMLButtonCustom.create();
-    clickable.setValue('Update (Clickable)');
-    clickable.mutability = () => this.onManualUpdate();
-    this.manualUpdate.insertMutatable(clickable);
+    this.manualUpdate = [TreeItemVisual.createEmpty(), ButtonAsEditor.create()];
+    this.manualUpdate[0].style.display = 'none'; // hidden at start
+    this.manualUpdate[0].extSetLabel('Update Control');
+    this.manualUpdate[0].extSetTooltipFrom('Update Mode');
+    this.manualUpdate[0].extInsertEditor(this.manualUpdate[1]);
+    this.manualUpdate[1].extSetActionTitle('Update (Clickable)');
+    this.manualUpdate[1].extAllowMutation(() => this.onManualUpdate());
 
     // Setup
     this.section.style.display = 'none';
     this.section.append(
       this.title,
-      this.connection,
-      this.entityId,
-      this.updateMode,
-      this.intervalRange,
-      this.manualUpdate
+      this.connection[0],
+      this.entityId[0],
+      this.updateMode[0],
+      this.intervalRange[0],
+      this.manualUpdate[0]
     );
   }
 
   update(focus: EntityFocus, status: 'online' | 'offline') {
     this.section.removeAttribute('style');
-    this.connection.setValue(status === 'online' ? focus.host : 'Offline');
-    this.entityId.setValue(focus.entityId.toString());
+    this.connection[1].extSetValue(status === 'online' ? focus.host : 'Offline');
+    this.entityId[1].extSetValue(focus.entityId.toString());
   }
 
-  getConnection(): string | undefined {
-    const result = this.connection.htmlRight?.value.buffer;
-    return typeof result === 'string' ? result : undefined;
+  getConnection(): string {
+    return this.connection[1].extGetValue();
   }
-  getEntityId(): string | undefined {
-    const result = this.entityId.htmlRight?.value.buffer;
-    return typeof result === 'string' ? result : undefined;
+  getEntityId(): string {
+    return this.entityId[1].extGetValue();
   }
   getUpdateMode() {
     return this.doUpdate ? 'Live' : 'Manual';
@@ -93,7 +99,7 @@ export class SectionDetails {
     const minValue = 5;
     const maxValue = 1000;
     this.interval = Math.min(Math.max(v, minValue), maxValue);
-    this.intervalRange.htmlRight?.value.setValue(this.interval);
+    this.intervalRange[1].extSetValue(this.interval);
   };
 
   onManualUpdate = () => {};
@@ -103,16 +109,15 @@ export class SectionDetails {
       this.doUpdate = false;
 
       // set selection
-      const select = this.updateMode.htmlRight?.value;
-      if (select instanceof HTMLSelectCustom && select.getAvailable().includes('Manual')) {
-        select.select('Manual');
+      if (this.updateMode[1].getAvailable().includes('Manual')) {
+        this.updateMode[1].extSetValue('Manual');
       } else {
         console.error('Cannot update option for updateMode');
       }
 
       // visibility
-      this.intervalRange.style.display = 'none';
-      this.manualUpdate.removeAttribute('style');
+      this.intervalRange[0].style.display = 'none';
+      this.manualUpdate[0].removeAttribute('style');
     }
     // forced update
     this.onManualUpdate();
@@ -123,16 +128,15 @@ export class SectionDetails {
       this.doUpdate = true;
 
       // set selection
-      const select = this.updateMode.htmlRight?.value;
-      if (select instanceof HTMLSelectCustom && select.getAvailable().includes('Live')) {
-        select.select('Live');
+      if (this.updateMode[1].getAvailable().includes('Live')) {
+        this.updateMode[1].extSetValue('Live');
       } else {
         console.error('Cannot update option for updateMode');
       }
 
       // visibility
-      this.intervalRange.removeAttribute('style');
-      this.manualUpdate.style.display = 'none';
+      this.intervalRange[0].removeAttribute('style');
+      this.manualUpdate[0].style.display = 'none';
     }
     // start watch
     this.onManualUpdate();

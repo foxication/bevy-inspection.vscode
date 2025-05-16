@@ -18,26 +18,15 @@ import {
   isBrpObject,
   TypePath,
 } from '../protocol/types';
-import { TooltipData } from './elements';
 import {
-  ArrayVisual,
-  JsonBooleanVisual,
-  ComponentListVisual,
-  EnumVisual,
-  ErrorVisual,
-  JsonArrayVisual,
-  JsonObjectVisual,
-  ListVisual,
-  MapVisual,
-  JsonNullVisual,
-  JsonNumberVisual,
-  SetVisual,
-  JsonStringVisual,
-  StructVisual,
-  TupleVisual,
-  Visual,
-  VisualWithSync,
-} from './visual';
+  BooleanEditor,
+  NullRenderer,
+  NumberEditor,
+  SelectionEditor,
+  StringEditor,
+  TooltipData,
+  TreeItemVisual,
+} from './visuals';
 
 export type PathSegment = string | number;
 export type OptionalPathSegment = PathSegment | undefined;
@@ -46,18 +35,20 @@ export type OptionalPathSegment = PathSegment | undefined;
 // Children of DataSync
 //
 
-class ChildrenOfSyncNode {
+class ChildCollection {
   private collection: DataWithAccess[] = [];
   constructor(public node: RootOfData) {}
 
   private updateIsExpandable() {
-    if (this.node.visual instanceof VisualWithSync) {
-      this.node.visual.isExpandable = this.collection.length > 0;
+    if (this.node.visual instanceof TreeItemVisual) {
+      if (this.collection.length > 0 === this.node.visual.extGetIsExpandable()) return;
+      if (this.collection.length > 0) this.node.visual.extEnableExpansibility(this.node);
+      else this.node.visual.extRemoveExpansibility();
     }
   }
   private removeVisualsRecursively(node: DataWithAccess) {
     node.children.forEach((child) => this.removeVisualsRecursively(child));
-    node.visual.dom.remove();
+    node.visual.remove();
   }
   private filter(segments: PathSegment[], onWithoutLabel = false) {
     this.collection = this.collection.filter((child) => {
@@ -136,19 +127,19 @@ class ChildrenOfSyncNode {
 //
 
 export abstract class RootOfData {
-  children = new ChildrenOfSyncNode(this);
+  children = new ChildCollection(this);
   getByPath(path: PathSegment[]): DataWithAccess | undefined {
     if (path.length === 0) return this instanceof DataWithAccess ? this : undefined;
     return this.children.get(path[0])?.getByPath(path.splice(1));
   }
   getStartAnchor() {
-    return this.visual.dom;
+    return this.visual;
   }
   getEndAnchor() {
-    return this.children.getLast()?.visual.dom ?? this.getStartAnchor();
+    return this.children.getLast()?.visual ?? this.getStartAnchor();
   }
 
-  abstract visual: Visual;
+  abstract visual: TreeItemVisual | HTMLHeadingElement;
   abstract getValue(): BrpValue | undefined;
   abstract getDebugTree(): string;
 }
@@ -158,16 +149,18 @@ export abstract class RootOfData {
 //
 
 export class ComponentListData extends RootOfData {
-  visual: ComponentListVisual;
+  visual: HTMLHeadingElement;
   private mapOfComponents: BrpComponentRegistry = {};
   private registry: BrpRegistrySchema = {};
   private focus: EntityFocus | undefined = undefined;
 
   constructor(public section: HTMLElement) {
     super();
-    this.visual = new ComponentListVisual(this, section);
+    this.visual = document.createElement('h3');
+    this.visual.textContent = 'Components';
+
     this.section.style.display = 'none';
-    return this;
+    this.section.append(this.visual);
   }
 
   getValue(): BrpObject {
@@ -320,6 +313,10 @@ export abstract class DataWithAccess extends RootOfData {
         })
         .join(''),
     ];
+  }
+  getLevel(): number {
+    const [, ...path] = this.getPath();
+    return path.length;
   }
   requestValueMutation: (value: BrpValue) => void = (value: BrpValue) => {
     const [component, path] = this.getMutationPath();
@@ -480,7 +477,7 @@ function createSyncFromSchema(
 }
 
 export class ArraySync extends DataSyncWithSchema {
-  visual: ArrayVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -488,7 +485,8 @@ export class ArraySync extends DataSyncWithSchema {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new ArrayVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsArray();
@@ -504,7 +502,8 @@ export class ArraySync extends DataSyncWithSchema {
 }
 
 export class EnumAsStringSync extends DataSyncWithSchema {
-  visual: EnumVisual;
+  visual: TreeItemVisual;
+  editor: SelectionEditor;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -512,12 +511,15 @@ export class EnumAsStringSync extends DataSyncWithSchema {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new EnumVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    this.editor = SelectionEditor.create();
+    this.visual.extInsertEditor(this.editor);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValue();
     if (typeof value !== 'string') return console.error(`BrpValue is not string`);
-    this.visual.select(value);
+    this.editor.extSetValue(value);
   }
   getVariant(): string | undefined {
     const value = this.getValue();
@@ -538,7 +540,7 @@ export class EnumAsStringSync extends DataSyncWithSchema {
 }
 
 export class ListSync extends DataSyncWithSchema {
-  visual: ListVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -546,7 +548,8 @@ export class ListSync extends DataSyncWithSchema {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new ListVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsArray();
@@ -562,7 +565,7 @@ export class ListSync extends DataSyncWithSchema {
 }
 
 export class MapSync extends DataSyncWithSchema {
-  visual: MapVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -570,7 +573,8 @@ export class MapSync extends DataSyncWithSchema {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new MapVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsObject();
@@ -586,7 +590,7 @@ export class MapSync extends DataSyncWithSchema {
 }
 
 export class SetSync extends DataSyncWithSchema {
-  visual: SetVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -594,7 +598,8 @@ export class SetSync extends DataSyncWithSchema {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new SetVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsArray();
@@ -610,7 +615,7 @@ export class SetSync extends DataSyncWithSchema {
 }
 
 export class StructSync extends DataSyncWithSchema {
-  visual: StructVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -618,7 +623,8 @@ export class StructSync extends DataSyncWithSchema {
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new StructVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     // Scenario: empty struct
@@ -644,7 +650,7 @@ export class StructSync extends DataSyncWithSchema {
 }
 
 export class TupleSync extends DataSyncWithSchema {
-  visual: Visual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -655,7 +661,8 @@ export class TupleSync extends DataSyncWithSchema {
     // Scenario: tuple struct by default
     const prefixItems = this.schema.prefixItems ?? [];
     if (prefixItems.length !== 1) {
-      this.visual = new TupleVisual(this, anchor);
+      this.visual = TreeItemVisual.createWithLabel(this);
+      anchor.after(this.visual);
       return;
     }
     // Scenario: tuple struct with controls/visuals of single child
@@ -701,7 +708,7 @@ export class TupleSync extends DataSyncWithSchema {
 //
 
 export class SerializedSync extends DataSyncWithSchema {
-  visual: JsonNullVisual | JsonStringVisual | JsonNumberVisual | ErrorVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: ComponentListData | DataWithAccess,
     public segment: OptionalPathSegment,
@@ -764,82 +771,99 @@ function createBrpValueSync(
 }
 
 export class NullSync extends BrpValueSync {
-  visual: JsonNullVisual;
+  visual: TreeItemVisual;
+  renderer: NullRenderer;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public segment: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new JsonNullVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    this.renderer = NullRenderer.create();
+    this.visual.extInsertRenderer(this.renderer);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsNull();
-    if (value !== undefined) this.visual.set(value);
+    if (value !== undefined) this.renderer.extSetValue(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class StringSync extends BrpValueSync {
-  visual: JsonStringVisual;
+  visual: TreeItemVisual;
+  editor: StringEditor;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public segment: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new JsonStringVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    this.editor = StringEditor.create();
+    this.visual.extInsertEditor(this.editor);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsString();
-    if (value !== undefined) this.visual.set(value);
+    if (value !== undefined) this.editor.extSetValue(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class NumberSync extends BrpValueSync {
-  visual: JsonNumberVisual;
+  visual: TreeItemVisual;
+  editor: NumberEditor;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public segment: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new JsonNumberVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    this.editor = NumberEditor.create();
+    this.visual.extInsertEditor(this.editor);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsNumber();
-    if (value !== undefined) this.visual.set(value);
+    if (value !== undefined) this.editor.extSetValue(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class BooleanSync extends BrpValueSync {
-  visual: JsonBooleanVisual;
+  visual: TreeItemVisual;
+  editor: BooleanEditor;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public segment: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new JsonBooleanVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    this.editor = BooleanEditor.create();
+    this.visual.extInsertEditor(this.editor);
+    anchor.after(this.visual);
   }
   sync(): void {
-    const value = this.getValue();
-    this.visual.set(typeof value === 'boolean' ? value : null);
+    const value = this.getValueAsBoolean();
+    if (value !== undefined) this.editor.extSetValue(value);
     if (value === undefined) console.error(`BrpValue is not found`);
   }
 }
 
 export class JsonObjectSync extends BrpValueSync {
-  visual: JsonObjectVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public segment: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new JsonObjectVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsObject();
@@ -854,14 +878,15 @@ export class JsonObjectSync extends BrpValueSync {
 }
 
 export class JsonArraySync extends BrpValueSync {
-  visual: JsonArrayVisual;
+  visual: TreeItemVisual;
   constructor(
     public parent: SerializedSync | BrpValueSync,
     public segment: OptionalPathSegment,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new JsonArrayVisual(this, anchor);
+    this.visual = TreeItemVisual.createWithLabel(this);
+    anchor.after(this.visual);
   }
   sync(): void {
     const value = this.getValueAsArray();
@@ -880,17 +905,18 @@ export class JsonArraySync extends BrpValueSync {
 //
 
 export class ErrorData extends DataWithAccess {
-  visual: ErrorVisual;
+  visual: TreeItemVisual;
 
   constructor(
     public parent: DataWithAccess | ComponentListData,
     public segment: OptionalPathSegment,
     public code: number | undefined,
-    message: string,
+    public message: string,
     anchor: HTMLElement
   ) {
     super();
-    this.visual = new ErrorVisual(this, anchor, { code, message });
+    this.visual = TreeItemVisual.createFromErrorData(this);
+    anchor.after(this.visual);
   }
   getTooltip(): TooltipData {
     const result = super.getTooltip();
@@ -901,6 +927,6 @@ export class ErrorData extends DataWithAccess {
     return result;
   }
   getDebugTree(): string {
-    return `${this.getLabelToRender()} => ${this.visual.error.message}\n`;
+    return `${this.getLabelToRender()} => ${this.message}\n`;
   }
 }

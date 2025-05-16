@@ -1,10 +1,11 @@
 import { forcedShortPath } from '../common';
 import { BrpResponseError, BrpResponseErrors, BrpValue, TypePath } from '../protocol/types';
-import { HTMLMerged } from './elements';
+import { InformationRenderer, TreeItemVisual } from './visuals';
 
 export class SectionErrors {
   private title: HTMLElement;
-  private errors: { [typePath: TypePath]: { error: BrpResponseError; html: HTMLMerged } } = {};
+  private errors: { [typePath: TypePath]: { error: BrpResponseError; visual: TreeItemVisual } } =
+    {};
 
   constructor(private section: HTMLElement) {
     this.title = document.createElement('h3');
@@ -20,7 +21,7 @@ export class SectionErrors {
 
   update(applyErrors: BrpResponseErrors) {
     // Clear
-    Object.values(this.errors).forEach((item) => item.html.remove());
+    Object.values(this.errors).forEach((item) => item.visual.remove());
     this.errors = {};
 
     // Set section visibility
@@ -35,10 +36,10 @@ export class SectionErrors {
     this.section.style.removeProperty('display');
 
     // Create element
-    const element = new HTMLMerged();
+    const visual = TreeItemVisual.createEmpty();
     const shortPath = forcedShortPath(typePath);
-    element.label = shortPath;
-    element.setTooltipFrom({
+    visual.extSetLabel(shortPath);
+    visual.extSetTooltipFrom({
       label: shortPath,
       componentPath: typePath,
       mutationPath: '',
@@ -51,15 +52,18 @@ export class SectionErrors {
         },
       ],
     });
-    element.setValue(error.message);
-    element.allowValueWrapping();
-    element.vscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
+    visual.extVscodeContext({ label: shortPath, type: typePath, errorPath: typePath });
+
+    // Add information
+    const renderer = InformationRenderer.create();
+    renderer.extSetValue(error.message);
+    visual.extInsertRenderer(renderer);
 
     // Save access to element
-    this.errors[typePath] = { error, html: element };
+    this.errors[typePath] = { error, visual: visual };
 
     // Insert element
-    this.section.appendChild(element);
+    this.section.appendChild(visual);
   }
 
   debugList(): string {

@@ -1,5 +1,5 @@
 import { BrpRegistrySchema, isBrpIterable } from '../protocol/types';
-import { defineCustomElements } from './elements';
+import { defineCustomElements } from './visuals';
 import { EntityFocus, VSCodeMessage, WebviewMessage } from '../common';
 import { SectionErrors } from './section-errors';
 import { SectionDetails } from './section-details';

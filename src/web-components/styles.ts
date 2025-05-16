@@ -17,8 +17,9 @@ export const merged = createStyleSheet(`
     background-color: var(--vscode-list-hoverBackground);
   }
   span {
-    flex: auto;
+    flex: 3;
     line-height: 22px;
+    margin-right: 8px;
     overflow: hidden;
     text-indent: 0px;
     text-overflow: ellipsis;
@@ -28,13 +29,12 @@ export const merged = createStyleSheet(`
     flex: none;
     padding: 3px;
   }
-  .left-side {
-    flex: 3;
-    margin-right: 8px;
-  }
   .right-side {
-    flex: 5;
+    flex: none;
     overflow-x: overlay;
+  }
+  .right-side-extend {
+    flex: 5;
   }
   .icons {
     display: flex;
