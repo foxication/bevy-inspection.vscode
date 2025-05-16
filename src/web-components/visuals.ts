@@ -483,8 +483,6 @@ export class BooleanEditor extends ValueEditor<boolean> {
 export class SelectionEditor extends ValueEditor<string> {
   extStyles = [VslStyles.select];
   extInternal: HTMLSelectElement;
-
-  // private selectedVariant: HTMLOptionElement;
   private extAvailableVariants: { [variant: string]: HTMLOptionElement };
 
   static create() {
@@ -492,19 +490,23 @@ export class SelectionEditor extends ValueEditor<string> {
   }
 
   constructor() {
-    const defaultVariantValue = 'unknown';
-    super(defaultVariantValue);
+    const defaultVariant = 'unknown';
+    super(defaultVariant);
 
-    const defaultVariant = document.createElement('option');
-    defaultVariant.value = defaultVariantValue;
-    defaultVariant.textContent = defaultVariantValue;
-    this.extAvailableVariants = { [defaultVariantValue]: defaultVariant };
+    // Create single variant
+    const variant = document.createElement('option');
+    variant.value = defaultVariant;
+    variant.textContent = defaultVariant;
 
+    // Create select element
     this.extInternal = document.createElement('select');
-    this.extInternal.replaceChildren(defaultVariant);
+    this.extInternal.replaceChildren(variant);
     this.extInternal.onchange = () => {
       this.extTryMutation(this.extInternal.value);
     };
+
+    // Set map of variants
+    this.extAvailableVariants = { [defaultVariant]: variant };
   }
 
   extRenderOnValueChanged() {
@@ -512,7 +514,7 @@ export class SelectionEditor extends ValueEditor<string> {
     if (!Object.keys(this.extAvailableVariants).includes(selection)) {
       return console.error(`No such variant in available`);
     }
-    this.extInternal.innerText = this.extGetValue();
+    this.extInternal.value = this.extGetValue();
   }
   setAvailable(available: string[], selection?: string) {
     if (available.length < 1) return console.error(`Cannot set empty variants`);
