@@ -64,12 +64,17 @@ export class TreeItemVisual extends HTMLElement {
 
     // Left side
     const label = sync.getLabelToRender();
-    const types = sync.getSchema().map((schema) => schema.typePath);
+    const schemas = sync.getSchema();
+    const types = schemas.map((schema) => schema.typePath);
+    const component = schemas.find(() => true)?.reflectTypes?.includes('Component')
+      ? schemas[0].typePath
+      : undefined;
     creation.extSetLevel(sync.getLevel());
     creation.extSetLabel(label);
     creation.extSetTooltipFrom(sync.getTooltip());
     creation.extVscodeContext({
-      label: label,
+      label,
+      component,
       type: types.length === 0 ? undefined : types.join('(') + ')'.repeat(types.length - 1),
       path: sync.getPathSerialized(),
     });

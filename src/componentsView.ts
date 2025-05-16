@@ -20,7 +20,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
   private connections: ConnectionList;
   private extensionUri: vscode.Uri;
   private view?: vscode.WebviewView;
-  private focus?: EntityFocus;
 
   private onEntityChangesEmitter = new vscode.EventEmitter<
     [EntityFocus, TypePath[], BrpComponentRegistry, BrpResponseErrors]
@@ -36,9 +35,6 @@ export class ComponentsViewProvider implements vscode.WebviewViewProvider {
     if (this.view !== undefined) {
       this.view.description = isOnline ? undefined : 'Disconnected';
     }
-  }
-  getFocus() {
-    return this.focus;
   }
 
   private async postVSCodeMessage(message: VSCodeMessage) {

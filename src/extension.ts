@@ -78,6 +78,17 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('extension.copyError', (context: { errorPath: string }) => {
       componentsView.copyErrorToClipboard(context.errorPath);
     }),
+    vscode.commands.registerCommand(
+      'extension.removeComponent',
+      (context: { component: string }) => {
+        const focus = connections.focus;
+        if (focus === undefined) return;
+        const connection = connections.get(focus.host);
+        if (connection === undefined) return;
+
+        connection.getProtocol().remove(focus.entityId, [context.component]);
+      }
+    ),
     vscode.commands.registerCommand('extension.manualUpdate', () => {
       componentsView.manualUpdate();
     }),

@@ -208,6 +208,11 @@
 				"category": "Bevy Inspection"
 			},
 			{
+				"command": "extension.removeComponent",
+				"title": "Remove Component",
+				"category": "Bevy Inspection"
+			},
+			{
 				"command": "extension.manualUpdate",
 				"title": "Manual Update",
 				"category": "Bevy Inspection",
@@ -276,6 +281,10 @@
 				},
 				{
 					"command": "extension.copyError",
+					"when": "false"
+				},
+				{
+					"command": "extension.removeComponent",
 					"when": "false"
 				},
 				{
@@ -375,27 +384,32 @@
 				{
 					"command": "extension.copyLabel",
 					"when": "webviewId == componentsView && label",
-					"group": "copy@0"
+					"group": "groupA@0"
 				},
 				{
 					"command": "extension.copyType",
 					"when": "webviewId == componentsView && type",
-					"group": "copy@1"
+					"group": "groupA@1"
 				},
 				{
 					"command": "extension.copyValue",
 					"when": "webviewId == componentsView && path",
-					"group": "copy@2"
+					"group": "groupA@2"
 				},
 				{
 					"command": "extension.copyDetails",
 					"when": "webviewId == componentsView && details",
-					"group": "copy@2"
+					"group": "groupA@2"
 				},
 				{
 					"command": "extension.copyError",
 					"when": "webviewId == componentsView && errorPath",
-					"group": "copy@2"
+					"group": "groupA@2"
+				},
+				{
+					"command": "extension.removeComponent",
+					"when": "webviewId == componentsView && component",
+					"group": "groupB@0"
 				}
 			]
 		}
