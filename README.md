@@ -18,34 +18,6 @@
 - Rename and destroy entities
 - Review and modify components of entities in real time
 
-## 📅 Upcoming Features
-
-### v0.1.3 - Core Functionality
-
-Focus: Critical inspector capabilities
-
-- Component modification
-- Collection modification
-- Enum modification
-
-### v0.1.4 - UX Improvements
-
-Focus: Quality-of-life improvements
-
-- Collapse/expand all components with one-click toggles
-- Custom UI adapters for `Transform` and `Vec3` types
-- Redesign of number inputs with drag-to-adjust functionality
-- Redesign of selection state
-- Redesign of buttons
-
-### v0.1.5 - Entity Management
-
-Focus: Scene composition tools
-
-- Visualize entity tree in **real-time**
-- Spawn new entities
-- Drag-and-drop reparenting of entities
-
 ## 📐 Supported Versions
 
 | Bevy Version | Status      |
@@ -121,22 +93,6 @@ for fully functional Bevy applications demonstrating correct configuration.
 
 - Reflection - https://docs.rs/bevy/latest/bevy/reflect/index.html
 - RemoteHttpPlugin - https://docs.rs/bevy/latest/bevy/remote/http/struct.RemoteHttpPlugin.html
-
-## ⭐ Support
-
-As a solo developer, I'm passionate about creating tools that empower the Bevy community.
-To keep pushing new features and improvements, I need your help to gauge interest and prioritize efforts.
-Here's how you can contribute:
-
-- **Star the Repository** - Show that this tool matters and help others discover this tool.
-- **Share ideas & feedback** - Even simple comments in [Issues](https://github.com/foxication/bevy-inspection.vscode/issues) guide prioritization.
-- **Sponsor development** - Funds development efforts, ensuring long-term updates and maintenance.
-
-| Currency   | Address                                             |
-| ---------- | ----------------------------------------------------|
-| Bitcoin    | 12bECwhD8JDvc8t2K37uj69M9SucEUxWuw                  |
-| Ton        | UQC4a4h6AW8MbOmS45iSHRj1gMBsYtAdd1GGmqD_tEEC3ZV8    |
-| USDT TRC20 | TRDQzvcKydMUiyVicZa78doS3uZeqHQJ3b                  |
 
 Your engagement keeps Bevy Inspection thriving. Thank you!  
 
